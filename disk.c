@@ -355,6 +355,24 @@ disk_throw_interrupt(void)
 	assert_xbus_interrupt();
 }
 
+static int disk_interrupt_delay;
+
+void
+disk_future_interrupt()
+{
+	disk_interrupt_delay = 100;
+}
+
+void
+disk_poll()
+{
+	if (disk_interrupt_delay) {
+		if (--disk_interrupt_delay == 0) {
+			disk_throw_interrupt();
+		}
+	}
+}
+
 void
 disk_show_cur_addr(void)
 {
@@ -439,7 +457,11 @@ disk_start_read(void)
 	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
+#if 0
 		disk_throw_interrupt();
+#else
+		disk_future_interrupt();
+#endif
 	}
 }
 
@@ -498,7 +520,11 @@ disk_start_write(void)
 	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
+#if 0
 		disk_throw_interrupt();
+#else
+		disk_future_interrupt();
+#endif
 	}
 #endif
 }

@@ -310,7 +310,7 @@ map = map_vtop(vaddr, &l1, &offset);
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
 		access_fault_bit = 1;
-page_fault_flag = 1;
+		page_fault_flag = 1;
 		opc = pn;
 		*pv = 0;
 		tracef("read_mem(vaddr=%o) access fault\n", vaddr);
@@ -333,7 +333,7 @@ page_fault_flag = 1;
 
 	/* simulate no memory above 2mb */
 //	if (pn > 8192 && pn < 9162)
-	if (pn >= 8192/16/*8*/ && pn <= 035777)
+	if (pn >= 8192/*/16/*8*/ && pn <= 035777)
 	{
 		*pv = 0xffffffff;
 		return 0;
@@ -395,7 +395,7 @@ write_mem(int vaddr, unsigned int v)
 
 //if (vaddr >= 01440000) printf("write_mem(paddr=%o, v=%o)\n", vaddr, v);
 	write_fault_bit = 0;
-page_fault_flag = 0;
+	page_fault_flag = 0;
 
 	map = map_vtop(vaddr, (int *)0, &offset);
 
@@ -410,7 +410,7 @@ page_fault_flag = 0;
 	if ((map & (1 << 22)) == 0) {
 		/* no write perm */
 		write_fault_bit = 1;
-page_fault_flag = 1;
+		page_fault_flag = 1;
 		opc = pn;
 		return -1;
 	}
@@ -1025,6 +1025,7 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
 {
 
 //	trace = 1;
+	max_cycles = 1000;
 //	max_cycles = 300000;
 //	max_cycles = 350000;
 //	max_cycles = 100000*20;
@@ -1075,9 +1076,6 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
 int
 run(void)
 {
-	int old_pc;
-	int no_incr_pc = 0;
-	int fetch_next = 0;
 	int trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
 
@@ -1098,9 +1096,10 @@ run(void)
 	timing_start();
 
 	while (run_ucode_flag) {
+		char op_code, no_exec_next;
+		char invert_sense, take_jump;
 		int a_src, m_src, new_pc, dest, alu_op;
 		int r_bit, p_bit, n_bit, ir8, ir7;
-		int invert_sense, take_jump;
 		int m_src_value, a_src_value;
 
 		int widthm1, pos;
@@ -1112,28 +1111,72 @@ run(void)
 		int map, len, rot;
 		int out_bus;
 		int carry_in, do_add, do_sub;
-		int pc;
 
 		long long lv;
 
 		ucw_t u, w;
+		ucw_t p1;
+		int p0_pc, p1_pc;
+#define p0 u
 
-		int n_plus1, enable_ish;
-		int i_long, popj;
-int was_dispatch;
+		char n_plus1, enable_ish;
+		char i_long, popj;
 
-#if 0
-		/* test unibus prom enable flag */
-		if (u_pc == 0421) u_pc = 0477;
-#endif
+		if (cycles == 0) {
+			p0 = p1 = 0;
+			p0_pc = p1_pc = 0;
+			no_exec_next = 0;
+		}
 
-		/* */
-		if (trace_label_pt && u_pc == trace_label_pt) {
+	next:
+		disk_poll();
+
+#define FETCH()	(prom_enabled_flag ? prom_ucode[u_pc] : ucode[u_pc])
+
+		/* pipeline */
+		p0 = p1;
+		p0_pc = p1_pc;
+
+		/* fetch next instruction from prom or ram */
+		p1 = FETCH();
+		p1_pc = u_pc;
+		u_pc++;
+
+		/* effectively stall pipe for one cycle */
+		if (no_exec_next) {
+			tracef("no_exec_next; u_pc %o\n", u_pc);
+			no_exec_next = 0;
+
+			p0 = p1;
+			p0_pc = p1_pc;
+
+			p1 = FETCH();
+			p1_pc = u_pc;
+			u_pc++;
+		}
+
+		/* next-instruction modify */
+		if (oa_reg_lo_set) {
+			tracef("merging oa lo %o\n", oa_reg_lo);
+			oa_reg_lo_set = 0;
+			u |= oa_reg_lo;
+		}
+
+		if (oa_reg_hi_set) {
+			tracef("merging oa hi %o\n", oa_reg_hi);
+			oa_reg_hi_set = 0;
+			u |= (ucw_t)oa_reg_hi << 26;
+		}
+
+		/* ----------- trace ------------- */
+
+		/* see if we hit a label trace point */
+		if (trace_label_pt && p0_pc == trace_label_pt) {
 			trace_mcr_labels_flag = 1;
 		}
 
 		/* see if we hit a trace point */
-		if (trace_pt && u_pc == trace_pt && trace == 0) {
+		if (trace_pt && p0_pc == trace_pt && trace == 0) {
 
 			if (prom_enabled_flag == 0) {
 				
@@ -1157,37 +1200,7 @@ int was_dispatch;
 			if (prom_enabled_flag == 1) trace = 1;
 		}
 
-		/* we need to execute instruction after jump first */
-		if (fetch_next) {
-			tracef("fetch_next; old_pc %o, u_pc %o\n",
-			       old_pc, u_pc);
-			pc = old_pc + 1;
-			old_pc--;
-			no_incr_pc = 1;
-			fetch_next = 0;
-		} else {
-			old_pc = u_pc;
-			pc = u_pc;
-		}
-
-		/* fetch from prom or ram */
-		if (prom_enabled_flag)
-			u = prom_ucode[pc];
-		else
-			u = ucode[pc];
-
-		/* next-instruction modify */
-		if (oa_reg_lo_set) {
-			tracef("merging oa lo %o\n", oa_reg_lo);
-			oa_reg_lo_set = 0;
-			u |= oa_reg_lo;
-		}
-
-		if (oa_reg_hi_set) {
-			tracef("merging oa hi %o\n", oa_reg_hi);
-			oa_reg_hi_set = 0;
-			u |= (ucw_t)oa_reg_hi << 26;
-		}
+		/* ----------- end trace ------------- */
 
 		/* enforce max trace count */
 		if (trace) {
@@ -1203,7 +1216,7 @@ int was_dispatch;
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
 
-			if (sym = sym_find_last(1, pc, &offset)) {
+			if (sym = sym_find_last(1, u_pc, &offset)) {
 				if (offset == 0)
 					printf("%s:\n", sym);
 				else
@@ -1222,11 +1235,11 @@ int was_dispatch;
 			printf("------\n");
 
 #if 1
-			if (sym = sym_find_by_val(1, pc)) {
+			if (sym = sym_find_by_val(1, p0_pc)) {
 				printf("%s:\n", sym);
 			}
 #else
-			if (sym = sym_find_last(1, pc, &offset)) {
+			if (sym = sym_find_last(1, p0_pc, &offset)) {
 				if (offset == 0)
 					printf("%s:\n", sym);
 				else
@@ -1235,15 +1248,15 @@ int was_dispatch;
 #endif
 
 			printf("%03o %016Lo %s\n",
-			       pc, u, i_long ? "(i-long)" : "");
-			disassemble_ucode_loc(pc, u);
+			       p0_pc, u, i_long ? "(i-long)" : "");
+			disassemble_ucode_loc(p0_pc, u);
 		}
 
 		/* trace label names in mcr */
 		if (trace_mcr_labels_flag && !trace) {
 			if (!prom_enabled_flag) {
 				int offset;
-				if (sym = sym_find_last(1, pc, &offset)) {
+				if (sym = sym_find_last(1, p0_pc, &offset)) {
 					if (offset == 0 && sym != last_sym) {
 						printf("%s: (lc=%011o)\n",
 						       sym, lc);
@@ -1299,7 +1312,7 @@ int was_dispatch;
 				m_src_value = 
 					(write_fault_bit << 31) |
 					(access_fault_bit << 30) |
-					(l1_data << 24) |
+					((l1_data & 037) << 24) |
 					(l2_data & 077777777);
 
 				if (trace) {
@@ -1344,8 +1357,7 @@ int was_dispatch;
 		 * decode instruction
 		 */
 
-was_dispatch = 0;
-		switch ((u >> 43) & 03) {
+		switch (op_code = (u >> 43) & 03) {
 		case 0: /* alu */
 
 			/* nop short cut */
@@ -1371,7 +1383,6 @@ was_dispatch = 0;
 				       alu_op, ir8, ir7, carry_in,
 				       dest, out_bus);
 			}
-
 
 		        if (ir8 == 0 && ir7 == 0) {
 				/* logic */
@@ -1685,10 +1696,6 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			}
 
 		process_jump:
-			if (!n_bit) {
-				fetch_next = 1;
-			}
-
 			/* jump condition */
 			if (u & (1<<5)) {
 				switch (u & 017) {
@@ -1708,15 +1715,13 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					take_jump = page_fault_flag;
 					break;
 				case 5:
-//printf("jump i|pf\n");
-tracef("jump i|pf\n");
+					tracef("jump i|pf\n");
 					take_jump = page_fault_flag |
 						(interrupt_enable_flag ?
 						 interrupt_pending_flag :0);
 					break;
 				case 6:
-//printf("jump i|pf|sb\n");
-tracef("jump i|pf|sb\n");
+					tracef("jump i|pf|sb\n");
 					take_jump = page_fault_flag |
 						(interrupt_enable_flag ?
 						 interrupt_pending_flag:0) |
@@ -1739,22 +1744,14 @@ tracef("jump i|pf|sb\n");
 				take_jump = !take_jump;
 
 			if (p_bit && take_jump) {
-				if (fetch_next)
-					push_spc(u_pc+2);
-				else {
-/* this is a total hack; further pointing out how badly I need to make a read pc pipeline */
-if (pc != u_pc && !was_dispatch) {
-printf("PUSHING %o; pc %o, u_pc %o, fn %d\n",
-u_pc+1, pc, u_pc, fetch_next);
+				if (!n_bit)
 					push_spc(u_pc);
-} else
-					push_spc(u_pc+1);
-}
+				else
+					push_spc(u_pc-1);
 			}
 
-			
 			/* P & R & jump-inst -> write ucode */
-			if (p_bit && r_bit && ((u >> 43) & 03) == 1) {
+			if (p_bit && r_bit && op_code == 1) {
 				w = ((ucw_t)(a_src_value & 0177777) << 32) |
 					(unsigned int)m_src_value;
 				write_ucode(new_pc, w);
@@ -1769,25 +1766,22 @@ u_pc+1, pc, u_pc, fetch_next);
 				}
 
 				new_pc &= 037777;
-
-				no_incr_pc = 1;
 			}
 
 			if (take_jump) {
 
-				if (new_pc == u_pc && !fetch_next && !p_bit) {
-					printf("loop detected pc %o\n", u_pc);
-					run_ucode_flag = 0;
-				}
+//				if (new_pc == u_pc && n_bit && !p_bit) {
+//					printf("loop detected pc %o\n", u_pc);
+//					run_ucode_flag = 0;
+//				}
 
-				old_pc = u_pc;
+				if (n_bit)
+					no_exec_next = 1;
+
 				u_pc = new_pc;
-				no_incr_pc = 1;
+
+				/* inhibit possible popj */
 				popj = 0;
-			} else {
-/* this is bogus; we should only set fetch_next if take_jump and we should
-   use !n_bit above, instead of fetch_next */
-				fetch_next = 0;
 			}
 			break;
 
@@ -1838,9 +1832,6 @@ u_pc+1, pc, u_pc, fetch_next);
 				goto dispatch_done;
 			}
 
-//			tracef("disp-addr %o, map %o, len %o, pos %o\n",
-//			       disp_addr, map, len, pos);
-
 			tracef("m-src %o, ", m_src_value);
 
 			/* rotate m-source */
@@ -1878,9 +1869,6 @@ u_pc+1, pc, u_pc, fetch_next);
 				tracef("md %o, l2_map %o, b15 %o, b14 %o\n",
 				       md, l2_map, bit15, bit14);
 
-//temp hack for debugging
-//bit15 = 1;
-
 				switch (map) {
 				case 1: disp_addr |= bit14; break;
 				case 2: disp_addr |= bit15; break;
@@ -1914,7 +1902,6 @@ u_pc+1, pc, u_pc, fetch_next);
 			invert_sense = 0;
 			take_jump = 1;
 			u = 1<<5;
-was_dispatch = 1;
 
 			/* enable instruction sequence hardware */
 			if (enable_ish) {
@@ -1974,8 +1961,8 @@ was_dispatch = 1;
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);
 
-				tracef("ldb; mask %o, result %o\n", 
-				       mask, out_bus);
+				tracef("ldb; m-rot %o, mask %o, result %o\n", 
+				       m_src_value, mask, out_bus);
 				break;
 			case 2: /* selective desposit */
 				out_bus = (m_src_value & mask) |
@@ -2003,12 +1990,6 @@ was_dispatch = 1;
 			break;
 		}
 
-		/*
-		 * this fetch_next thing is such a hack;  I should
-		 * just make a "pc fifo" which simulates the fetch pipe
-		 * in the hardware and feed pc's into that...
-		 */
-
 		if (popj) {
 			tracef("popj; ");
 			u_pc = pop_spc();
@@ -2019,16 +2000,8 @@ was_dispatch = 1;
 			}
 
 			u_pc &= 037777;
-
-			no_incr_pc = 1;
-			fetch_next = 1;
+//			no_exec_next = 1;
 		}
-		
-	next:
-		if (no_incr_pc)
-			no_incr_pc = 0;
-		else
-			u_pc++;
 	}
 
 	timing_stop();

@@ -267,12 +267,15 @@ CLEAR-LEVEL-2-MAP
 407 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 410 0000025203150030 (alu) SETM a=0 m=52 MD C=0 alu-> ->a_mem[63] 
 411 0002340000510050 (alu) SETA a=47 m=0 m[0] C=0 alu-> -><none>,m[12] 
+
 PROCESS-SECTION
 412 4200000005130647 (jump) a=0 m=m[0] pc 513, P !next jump-always 
 413 0200000005130447 (jump) a=0 m=m[0] pc 513, P jump-always 
 414 4000002000250030 (alu) SETM a=0 m=4 m[4] C=0 alu-> -><none>,m[5] 
+
 415 0200000005130447 (jump) a=0 m=m[0] pc 513, P jump-always 
 416 4000002000310030 (alu) SETM a=0 m=4 m[4] C=0 alu-> -><none>,m[6] 
+
 417 0000002000350030 (alu) SETM a=0 m=4 m[4] C=0 alu-> -><none>,m[7] 
 420 4202002404250243 (jump) a=40 m=m[5] pc 425, !next M-src = A-src 
 421 0202042404400243 (jump) a=41 m=m[5] pc 440, !next M-src = A-src 
@@ -283,9 +286,12 @@ PROCESS-I-MEM-SECTION
 425 4200103404120243 (jump) a=2 m=m[7] pc 412, !next M-src = A-src 
 426 0600103000211062 (byte) a=2 m=m[6] ldb pos=22, width=22 -><none>,m[4] 
 427 0200102000340343 (jump) a=2 m=m[4] pc 34, !next !jump M-src = A-src 
+
 430 0200000005130447 (jump) a=0 m=m[0] pc 513, P jump-always 
 431 4002003400350264 (alu) M-A-1 [M-A-1] a=40 m=7 m[7] C=1 alu-> -><none>,m[7] 
+
 432 0200000005130447 (jump) a=0 m=m[0] pc 513, P jump-always 
+
 433 4000002000250030 (alu) SETM a=0 m=4 m[4] C=0 alu-> -><none>,m[5] 
 434 0600103034030654 (byte) a=2 m=m[6] dpb pos=14, width=16 ->OA-reg-lo ,m[0] 
 435 0200242000001647 (jump) a=5 m=m[4] pc 0, R P !next jump-always 
