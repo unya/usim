@@ -6,6 +6,9 @@
 
 #include "ucode.h"
 
+#include <sys/time.h>
+
+#include <SDL/SDL_keysym.h>
 
 int iob_key_scan;
 
@@ -22,12 +25,12 @@ int iob_key_scan;
  410 ether collision
 
 764100
-0 read kbd
-1 read kbd
-2 read mouse y (12 bits)
-3 read mouse x (12 bits)
-4 click audio
-5 kbd/mouse csr
+0	0 read kbd
+2	1 read kbd
+4	2 read mouse y (12 bits)
+6	3 read mouse x (12 bits)
+10	4 click audio
+12	5 kbd/mouse csr
 
 csr - write
 0 remote mouse enable
@@ -70,6 +73,7 @@ keyboard
 #define LM_K_SYSTEM 0
 #define LM_K_ABORT 0
 #define LM_K_END 0
+
 unsigned char kb_old_table[64][3] = {
 	/* none,shift,top */
 	0201,	0201,	LM_K_NETWORK,	//BREAK,BREAK,NETWORK
@@ -138,7 +142,7 @@ unsigned char kb_old_table[64][3] = {
 	' ',	' ',	' '
 };
 
-unsigned short kb_ascii_to_scancode[512];
+unsigned short kb_sdl_to_scancode[256][3];
 
 /*
 keys we need to map
@@ -193,12 +197,15 @@ iob_unibus_read(int offset, int *pv)
 
 	switch (offset) {
 	case 0100:
-		traceio("unibus: kbd low\n");
 		*pv = iob_key_scan & 0177777;
+		traceio("unibus: kbd low %011o\n", *pv);
+iob_kbd_csr &= ~(1 << 5);
 		break;
 	case 0102:
-		traceio("unibus: kbd high\n");
-		*pv = (iob_key_scan >> 16) & 0177777;
+//		*pv = (iob_key_scan >> 16) & 0177777;
+		*pv = 0177777;
+iob_kbd_csr &= ~(1 << 5);
+		traceio("unibus: kbd high %011o\n", *pv);
 		break;
 	case 0104:
 		traceio("unibus: mouse y\n");
@@ -210,14 +217,38 @@ iob_unibus_read(int offset, int *pv)
 		traceio("unibus: beep\n");
 		break;
 	case 0112:
-		traceio("unibus: kbd csr\n");
 		*pv = iob_kbd_csr;
+		traceio("unibus: kbd csr %011o\n", *pv);
 		break;
 	case 0120:
-		traceio("unibus: usec clock\n");
+		traceio("unibus: usec clock low\n");
+#if 1
+	{
+		static struct timeval tv;
+		struct timeval tv2;
+		unsigned long ds, du;
+		if (tv.tv_sec == 0) {
+			gettimeofday(&tv, 0);
+			*pv = 0;
+		} else {
+			unsigned int newsec;
+			gettimeofday(&tv2, 0);
+
+			ds = tv2.tv_sec - tv.tv_sec;
+			if (tv2.tv_usec < tv.tv_usec) {
+				ds--;
+				tv2.tv_usec += 1000*1000;
+			}
+			du = tv2.tv_usec - tv.tv_usec;
+
+			*pv = (ds * 100) + (du / 10000);
+			printf("delta %lu\n", *pv);
+		}
+	}
+#endif
 		break;
 	case 0122:
-		traceio("unibus: usec clock\n");
+		traceio("unibus: usec clock high\n");
 		break;
 	case 0140:
 		traceio("unibus: chaos\n");
@@ -250,6 +281,8 @@ iob_unibus_write(int offset, int v)
 			(iob_kbd_csr & ~017) | (v & 017);
 		break;
 	case 0120:
+		traceio("unibus: usec clock\n");
+		break;
 	case 0122:
 		traceio("unibus: usec clock\n");
 		break;
@@ -268,7 +301,55 @@ iob_get_key_scan(void)
 void
 iob_sdl_key_event(int code, int extra)
 {
-	iob_key_scan = kb_ascii_to_scancode[code] | extra;
+	int s, c;
+
+	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
+
+	if (code == 0 || code == 0x130)
+		return;
+
+	/*
+	  network
+	  system
+	  abort
+	  clear
+	  help
+	*/
+	switch(code) {
+	case SDLK_F1:
+		iob_key_scan = 0 | (3 << 8);
+		break;
+	case SDLK_F2:
+		iob_key_scan = 1 | (3 << 8);
+		break;
+	case SDLK_F3:
+		iob_key_scan = 16 | (3 << 8);
+		break;
+	case SDLK_F4:
+		iob_key_scan = 17;
+		break;
+	case SDLK_F5:
+		iob_key_scan = 44 | (3 << 8);
+		break;
+	case SDLK_F6:
+		iob_key_scan = 50 | (3 << 8);
+		break;
+	default:
+		s = 0;
+		if (extra & (3 << 6))
+			s = 1;
+		if (extra & (3 << 10))
+			s = 2;
+		if (extra & (3 << 12))
+			s = 3;
+
+		c = kb_sdl_to_scancode[code][s];
+
+		if (0) printf("s %d, c %x, code %x\n",  s, c, code);
+		iob_key_scan = c;
+		break;
+	}
+
 	iob_kbd_csr |= 1 << 5;
 	assert_unibus_interrupt(0260);
 }
@@ -276,8 +357,12 @@ iob_sdl_key_event(int code, int extra)
 void
 iob_sdl_mouse_event(int dx, int dy, int buttons)
 {
+#if 0
+	printf("iob_sdl_mouse_event(dx=%x,dy=%x,buttons=%x)\n",
+	       dx, dy, buttons);
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0260);
+#endif
 }
 
 //xxx tv interrupt
@@ -295,22 +380,38 @@ iob_sdl_clock_event()
 int
 iob_init(void)
 {
-	int i;
+	int i, j;
 
-	memset((char *)kb_ascii_to_scancode, 0, sizeof(kb_ascii_to_scancode));
+	memset((char *)kb_sdl_to_scancode, 0, sizeof(kb_sdl_to_scancode));
 
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
-
-		kb_ascii_to_scancode[k] = i;
+		kb_sdl_to_scancode[k][0] = i;
 	}
 
-	for (i = 0; i < 64; i++) {
-		char k;
-		k = kb_old_table[i][1];
+	kb_sdl_to_scancode['`'][0] = 13 | (3 << 6);
+	kb_sdl_to_scancode['`'][1] = 14 | (3 << 6);
 
-		kb_ascii_to_scancode[k] = i;
+	kb_sdl_to_scancode['\''][0] = 8 | (3<<6);
+	kb_sdl_to_scancode['\''][1] = 3 | (3<<6);
+	kb_sdl_to_scancode['='][0] = 12 | (3<<6);
+	kb_sdl_to_scancode['2'][1] = 13;
+
+	kb_sdl_to_scancode['6'][1] = 14;
+	kb_sdl_to_scancode['7'][1] = 7 | (3<<6);
+	kb_sdl_to_scancode['8'][1] = 8 | (3<<6);
+	kb_sdl_to_scancode['9'][1] = 9 | (3<<6);
+	kb_sdl_to_scancode['0'][1] = 10 | (3<<6);
+	kb_sdl_to_scancode['-'][1] = 11 | (3<<6);
+	kb_sdl_to_scancode['='][1] = 48 | (3<<6);
+
+	kb_sdl_to_scancode[';'][1] = 49;
+
+	for (i = 0; i < 256; i++) {
+		if (kb_sdl_to_scancode[i][1] == 0)
+			kb_sdl_to_scancode[i][1] = kb_sdl_to_scancode[i][0] |
+				(3 << 6);
 	}
 
 	return 0;

@@ -51,6 +51,9 @@ write.
 <pre>
 		;NOTE THAT THE LC HARDWARE IGNORES THE LOW BIT
 		;AND READS IT BACK AS ZERO IN HALFWORD MODE
+<p>
+<li>It seems a page fault should be generated on a write access if the
+read access bit is not set, even if the write access bit is set.
 </pre>
 <p>
 <li>The dispatch instruction is affected by the instruction pipeline.  Below some of the

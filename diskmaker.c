@@ -20,6 +20,7 @@ char *lod2_filename;
 unsigned int buffer[256];
 
 int cyls, heads, blocks_per_track;
+int use_lod2;
 
 void
 swapbytes(unsigned int *buf)
@@ -65,10 +66,21 @@ struct {
 	{ "PAGE", 0524,    020464 },
 	{ "LOD1", 021210,  020464 },
 	{ "LOD2", 041674,  020464 },
-#else
+#endif
+#if 0
 	{ "PAGE", 0524,    045600 },
 	{ "LOD1", 046324,  045600 },
 	{ "LOD2", 0114124,  045600 },
+#endif
+#if 0
+	{ "PAGE", 0524,    061400 },
+	{ "LOD1", 062124,  061400 },
+	{ "LOD2", 0143524,  061400 },
+#endif
+#if 1
+	{ "PAGE", 0524,    062000 },
+	{ "LOD1", 062524,  062000 },
+	{ "LOD2", 0144524,  062000 },
 #endif
 	{ "LOD3", 062360,  020464 },
 	{ "LOD4", 0103044, 020464 },
@@ -123,10 +135,10 @@ make_labl(int fd)
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
 	buffer[6] = str4("MCR1");	/* name of micr part */
 	buffer[7] = str4("LOD1");	/* name of load part */
-//#define BOOT_LOD2
-#ifdef BOOT_LOD2
-	buffer[7] = str4("LOD2");	/* name of load part */
-#endif
+
+	if (use_lod2) {
+		buffer[7] = str4("LOD2");	/* name of load part */
+	}
 
 	{
 		int i, count;
@@ -275,7 +287,7 @@ make_lod1(int fd)
 int
 make_lod2(int fd)
 {
-	int ret, count, i, fd1;
+	int ret, count, i, fd1, offset;
 	unsigned char b[256*4];
 
 	printf("making LOD2...\n");
@@ -283,13 +295,16 @@ make_lod2(int fd)
 	fd1 = open(lod2_filename, O_RDONLY);
 
 	count = 0;
+	offset = part_offset("LOD2");
+	printf("offset %o\n", offset);
+
 	while (1) {
 		ret = read(fd1, b, 256*4);
 		if (ret <= 0)
 			break;
 
-		/* LOD1 start XXX */
-		write_block(fd, 041674+count, b);
+		/* LOD2 start XXX */
+		write_block(fd, offset/*041674*/+count, b);
 
 		count++;
 
@@ -305,13 +320,15 @@ main(int argc, char *argv[])
 {
 	int fd;
 
+	use_lod2 = 0;
+
 	img_filename = strdup("disk.img");
 //	mcr_filename = strdup("ucadr.mcr.979");
 	mcr_filename = strdup("ucadr.mcr.841");
 	lod1_filename = strdup("partition.lod1.841");
-#ifdef BOOT_LOD2
 	lod2_filename = strdup("partition.lod2.841");
-#endif
+mcr_filename = strdup("ucadr.mcr.979");
+lod1_filename = strdup("partition.lod2.841");
 
 	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
 	if (fd < 0) {
@@ -322,9 +339,9 @@ main(int argc, char *argv[])
 	make_labl(fd);
 	make_mcr1(fd);
 	make_lod1(fd);
-#ifdef BOOT_LOD2
-	make_lod2(fd);
-#endif
+	if (use_lod2) {
+		make_lod2(fd);
+	}
 
 	exit(0);
 }

@@ -15,7 +15,8 @@
 
 static SDL_Surface *screen;
 static int video_width = 768;
-static int video_height = 512/*1024*/;
+//static int video_height = 512/*1024*/;
+static int video_height = 1024;
 
 typedef struct DisplayState {
     unsigned char *data;
@@ -32,7 +33,7 @@ static DisplayState *ds = &display_state;
 #define MOUSE_EVENT_MBUTTON 2
 #define MOUSE_EVENT_RBUTTON 3
 
-static void sdl_process_key(SDL_KeyboardEvent *ev)
+static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 {
 	int mod_state, extra;
 
@@ -48,7 +49,14 @@ static void sdl_process_key(SDL_KeyboardEvent *ev)
 	if (mod_state & (KMOD_LCTRL | KMOD_RCTRL))
 		extra |= 3 << 10;
 
-	iob_sdl_key_event(ev->keysym.sym, extra);
+	if (updown) {
+		printf("scancode %x, sym %x, mod %x, unicode %x\n",
+		       ev->keysym.scancode,
+		       ev->keysym.sym,
+		       ev->keysym.mod,
+		       ev->keysym.unicode);
+		iob_sdl_key_event(ev->keysym.sym, extra);
+	}
 }
 
 static void sdl_send_mouse_event(void)
@@ -109,11 +117,11 @@ sdl_refresh(void)
 				}
 			}
 
-			sdl_process_key(&ev->key);
+			sdl_process_key(&ev->key, 1);
 			break;
 
 		case SDL_KEYUP:
-			sdl_process_key(&ev->key);
+			sdl_process_key(&ev->key, 0);
 			break;
 		case SDL_QUIT:
 			sdl_system_shutdown_request();
@@ -229,10 +237,12 @@ video_read(int offset, unsigned int *pv)
 		v = offset / video_width;
 		h = offset % video_width;
 
+#if 0
 		if (v >= video_height) {
 			v -= 400;
 			offset = v*video_width + h;
 		}
+#endif
 
 		bits = 0;
 		for (i = 0; i < 32; i++)
@@ -259,7 +269,6 @@ video_write(int offset, unsigned int bits)
 		v = offset / video_width;
 		h = offset % video_width;
 
-
 		if (0) printf("v,h %d,%d <- %o (offset %d)\n", v, h, bits, offset);
 
 #if 0
@@ -275,11 +284,13 @@ video_write(int offset, unsigned int bits)
 #endif
 
 
+#if 0
 //		if (v >= video_height) return;
 		if (v >= video_height) {
 			v -= 400;
 			offset = v*video_width + h;
 		}
+#endif
 
 		for (i = 0; i < 32; i++)
 		{

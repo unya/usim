@@ -460,8 +460,8 @@ read_virt(int fd, int addr, unsigned int *pv)
 	return 0;
 }
 
-char *
-show_string(unsigned int loc)
+static char *
+read_string(unsigned int loc)
 {
 	unsigned int v;
 	int t, i, j;
@@ -490,11 +490,20 @@ show_string(unsigned int loc)
 		}
 
 		s[t] = 0;
-		printf(" '%s' ", s);
 		return s;
 	}
 
 	return (char *)0;
+}
+
+static char *
+show_string(unsigned int loc)
+{
+	char *s;
+
+	s = read_string(loc);
+	printf(" '%s' ", s);
+	return s;
 }
 
 /*
@@ -502,7 +511,7 @@ show_string(unsigned int loc)
  * the function name.  helpful for debugging.
  */
 char *
-show_function_header(int the_lc)
+find_function_name(int the_lc)
 {
 	int i, tag;
 	unsigned int loc = the_lc >> 2;
@@ -534,11 +543,18 @@ show_function_header(int the_lc)
 			if (0) printf("%o ptr %o\n", loc, v);
 
 			loc = v;
+			tag = (v >> 24) & 077;
 
 			if (read_virt(disk_fd, loc, &v))
 				return;
 
-			return show_string(v);
+			/* hack - it's a list */
+			if (tag == 016) {
+				if (read_virt(disk_fd, v, &v))
+					return;
+			}
+
+			return read_string(v);
 		}
 	}
 

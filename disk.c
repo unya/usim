@@ -237,7 +237,8 @@ _disk_read(int block_no, unsigned int *buffer)
 
 	ret = read(disk_fd, buffer, size);
 	if (ret != size) {
-		printf("disk read error; ret %d, size %d\n", ret, size);
+		printf("disk read error; ret %d, offset %lu, size %d\n",
+		       ret, offset, size);
 		perror("read");
 
 		memset((char *)buffer, 0, size);

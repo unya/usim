@@ -80,6 +80,7 @@ unsigned int dispatch_constant;
 
 int trace;
 int trace_mcr_labels_flag;
+int trace_lod_labels_flag;
 int trace_prom_flag;
 int trace_io_flag;
 int trace_disk_flag;
@@ -92,7 +93,7 @@ int phys_ram_pages;
 unsigned int alu_stat0[16], alu_stat1[16];
 
 void show_label_closest(unsigned int upc);
-char *show_function_header(int the_lc);
+char *find_function_name(int the_lc);
 
 void
 set_interrupt_status_reg(int new)
@@ -186,10 +187,11 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 
 	if ((virt & 077700000) == 077000000) {
 		/*  077000000, size = 210560(8) */
-		traceio("tv: frame buffer %o\n", virt);
 
 		if (virt >= 077051757 && virt <= 077051763) {
 			traceio("disk run light\n");
+		} else {
+			if (0) traceio("tv: frame buffer %o\n", virt);
 		}
 
 		if (poffset)
@@ -197,6 +199,12 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 
 		return (1 << 22) | (1 << 23) | 036000;
 	}
+
+if ((virt & 077700000) == 077200000) {
+	if (poffset)
+		*poffset = virt & 0377;
+	return (1 << 22) | (1 << 23) | 036000;
+}
 
 /* this should be move below - I'm not sure it has to happen anymore */
 	if ((virt & 077777400) == 077377400) {
@@ -228,6 +236,13 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	last_virt = virt & 0xffffff00;
 	last_l1 = l1;
 	last_l2 = l2;
+
+#if 0
+	if ((virt & 0077777000) == 0076776000) {
+		printf("vtop: pdl? %011o l1 %d %011o l2 %d %011o\n",
+		       virt, l1_index, l1, l2_index, l2);
+	}
+#endif
 
 	return l2;
 }
@@ -329,6 +344,7 @@ read_mem(int vaddr, unsigned int *pv)
 	struct page_s *page;
 //int l1;
 	access_fault_bit = 0;
+write_fault_bit = 0;
 	page_fault_flag = 0;
 
 	map = map_vtop(vaddr, (int *)0, &offset);
@@ -362,6 +378,13 @@ read_mem(int vaddr, unsigned int *pv)
 	}
 
 	if (pn == 036000) {
+/* thwart the color probe */
+if ((vaddr & 077700000) == 077200000) {
+	printf("read from %o\n", vaddr);
+	*pv = 0x0;
+	return 0;
+}
+//		offset = vaddr & 077777;
 		offset = vaddr & 077777;
 		video_read(offset, pv);
 		return 0;
@@ -444,6 +467,7 @@ write_mem(int vaddr, unsigned int v)
 	struct page_s *page;
 
 	write_fault_bit = 0;
+access_fault_bit = 0;
 	page_fault_flag = 0;
 
 	map = map_vtop(vaddr, (int *)0, &offset);
@@ -456,17 +480,34 @@ write_mem(int vaddr, unsigned int v)
 	tracef("write_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
 	       vaddr, pn, offset, map, 1 << 22);
 
+#if 1
+	if ((map & (1 << 23)) == 0) {
+		/* no access perm */
+		access_fault_bit = 1;
+		page_fault_flag = 1;
+		opc = pn;
+		tracef("write_mem(vaddr=%o) access fault\n", vaddr);
+		return -1;
+	}
+#endif
+
 	if ((map & (1 << 22)) == 0) {
 		/* no write perm */
 		write_fault_bit = 1;
 		page_fault_flag = 1;
 		opc = pn;
+		tracef("write_mem(vaddr=%o) write fault\n", vaddr);
 		return -1;
 	}
 
 	if (pn == 036000) {
+if ((vaddr & 077700000) == 077200000) {
+	printf("write to %o\n", vaddr);
+	return 0;
+}
+//		offset = vaddr & 077777;
 		offset = vaddr & 077777;
-		traceio("video_write %o %o\n", offset, v);
+		if (0) traceio("video_write %o %o (%011o)\n", offset, v, vaddr);
 		video_write(offset, v);
 		return 0;
 	}
@@ -552,8 +593,8 @@ write_mem(int vaddr, unsigned int v)
 
 #if 1
 	if (pn >= 036000) {
-		printf("??: reg write %o, offset %o, v %o\n",
-		       vaddr, offset, v);
+		printf("??: reg write %o, offset %o, v %o; u_pc %o\n",
+		       vaddr, offset, v, u_pc);
 	}
 #endif
 
@@ -760,6 +801,27 @@ advance_lc(int *ppc)
 	}
 }
 
+void
+show_pdl_local(void)
+{
+	int i, min, max;
+
+	printf("pdl-ptr %o, pdl-index %o\n", pdl_ptr, pdl_index);
+
+	min = pdl_ptr > 4 ? pdl_ptr - 4 : 0;
+	max = pdl_ptr < 1024-4 ? pdl_ptr + 4 : 1024;
+
+if (pdl_index > 0 && pdl_index < pdl_ptr) min = pdl_index;
+
+	/* PDL */
+	for (i = min; i < max; i += 4) {
+		printf("PDL[%04o] %011o %011o %011o %011o\n",
+		       i, pdl_memory[i], pdl_memory[i+1],
+		       pdl_memory[i+2], pdl_memory[i+3]);
+	}
+}
+
+
 /*
  * write value to decoded destination
  */
@@ -789,21 +851,33 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 
 #if 1
 { char *s;
-show_label_closest(u_pc);
-printf(": lc <- %o (%o)", lc, lc>>2);
-s = show_function_header(lc);
-printf("\n");
+
+ s = find_function_name(lc);
+//if (s && strcmp(s, "SHEET-PREPARE-FOR-EXPOSE") == 0) 
+//	trace_lod_labels_flag = 1;
+
+ if (trace_lod_labels_flag) {
+	 show_label_closest(u_pc);
+	 printf(": lc <- %o (%o)", lc, lc>>2);
+	 if (s) printf(" '%s'", s);
+	 printf("\n");
+ }
+
+// if (pdl_ptr > 01770) trace = 1;
+// if (lc == 011030114652) trace=1;
 
  if (s) {
-if (strcmp(s, "DISK-RUN") == 0) 
+//if (strcmp(s, "DISK-RUN") == 0) 
 //trace = 1;
-	 trace_disk_flag = 1;
-if (strcmp(s, "FIND-DISK-PARTITION") == 0) 
+//	 trace_disk_flag = 1;
+
+//if (strcmp(s, "FIND-DISK-PARTITION") == 0) 
 //trace = 1;
-	 trace = 1;
-if (strcmp(s, "LISP-ERROR-HANDLER") == 0) 
+//	 trace = 1;
+
+//if (strcmp(s, "LISP-ERROR-HANDLER") == 0) 
 //trace = 1;
-	 trace = 0;
+//	 trace = 0;
  }
 }
 #endif
@@ -812,7 +886,8 @@ if (strcmp(s, "LISP-ERROR-HANDLER") == 0)
 show_label_closest(u_pc);
 printf(": lc <- %o (%o)", lc, lc>>2);
  { char *s;
-s = show_function_header(lc);
+s = find_function_name(lc);
+if (s) printf("%s", s);
 // if (strcmp(s, "INITIALIZATIONS") == 0)
 if (strcmp(s, "CLEAR-UNIBUS-MAP") == 0) trace = 1;
 if (strcmp(s, "INITIALIZATIONS") == 0) {
@@ -863,17 +938,20 @@ trace_disk_flag = 1;
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
+if (0) show_pdl_local();
 		break;
 	case 011: /* PDL (addressed by pointer, push */
 		pdl_ptr = (pdl_ptr + 1) & 01777;
 		tracef("writing pdl[%o] <- %o, push\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
+if (0) show_pdl_local();
 		break;
 	case 012: /* PDL (addressed by index) */
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_index, out_bus);
 		write_pdl_mem(USE_PDL_INDEX, out_bus);
+if (0) show_pdl_local();
 		break;
 	case 013: /* PDL index */
 		tracef("pdl-index <- %o\n", out_bus);
@@ -999,6 +1077,81 @@ trace_disk_flag = 1;
 }
 
 void
+dump_l1_map()
+{
+	int i;
+
+#if 0
+	for (i = 0; i < 32; i += 4) {
+		printf("l1[%02o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+	}
+	printf("...\n");
+	for (i = 2048-32; i < 2048; i += 4) {
+		printf("l1[%02o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+	}
+	printf("\n");
+#else
+	for (i = 0; i < 2048; i += 4) {
+		int skipped;
+		printf("l1[%02o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+
+		skipped = 0;
+		while (l1_map[i+0] == l1_map[i+0+4] &&
+		       l1_map[i+1] == l1_map[i+1+4] &&
+		       l1_map[i+2] == l1_map[i+2+4] &&
+		       l1_map[i+3] == l1_map[i+3+4] &&
+			i < 2048)
+		{
+			if (skipped++ == 0)
+				printf("...\n");
+			i += 4;
+		}
+	}
+	printf("\n");
+#endif
+}
+
+void
+dump_l2_map()
+{
+	int i;
+#if 0
+	for (i = 0; i < 32; i += 4) {
+		printf("l2[%02o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
+	}
+	printf("...\n");
+	for (i = 1024-32; i < 1024; i += 4) {
+		printf("l2[%02o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
+	}
+	printf("\n");
+#else
+	for (i = 0; i < 1024; i += 4) {
+		int skipped;
+		printf("l2[%02o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
+
+		skipped = 0;
+		while (l2_map[i+0] == l2_map[i+0+4] &&
+		       l2_map[i+1] == l2_map[i+1+4] &&
+		       l2_map[i+2] == l2_map[i+2+4] &&
+		       l2_map[i+3] == l2_map[i+3+4] &&
+			i < 1024)
+		{
+			if (skipped++ == 0)
+				printf("...\n");
+			i += 4;
+		}
+	}
+	printf("\n");
+#endif
+}
+
+void
 dump_pdl_memory(void)
 {
 	int i;
@@ -1041,7 +1194,7 @@ dump_state(void)
 	printf("oa-lo %011o, oa-hi %011o, ", oa_reg_lo, oa_reg_hi);
 	printf("pdl-ptr %o, pdl-index %o, spc-ptr %o\n", pdl_ptr, pdl_index, spc_stack_ptr);
 	printf("\n");
-	printf("lc increments %d (macro instructions execcuted)\n",
+	printf("lc increments %d (macro instructions executed)\n",
 	       macro_pc_incrs);
 	printf("\n");
 
@@ -1059,75 +1212,30 @@ dump_state(void)
 	}
 	printf("\n");
 
+	if (spc_stack_ptr > 0) {
+		printf("stack backtrace:\n");
+		for (i = spc_stack_ptr; i >= 0; i--) {
+			char *sym;
+			int offset, pc;
+			pc = spc_stack[i] & 037777;
+			sym = sym_find_last(!prom_enabled_flag, pc, &offset);
+			printf("%2o %011o %s+%d\n",
+			       i, spc_stack[i], sym, offset);
+
+		}
+		printf("\n");
+	}
+
 	for (i = 0; i < 32; i += 4) {
 		printf("m[%02o] %011o %011o %011o %011o\n",
 		       i, m_memory[i], m_memory[i+1], m_memory[i+2], m_memory[i+3]);
 	}
 	printf("\n");
 
-#if 0
-	for (i = 0; i < 32; i += 4) {
-		printf("l1[%02o] %011o %011o %011o %011o\n",
-		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+	if (0) {
+		dump_l1_map();
+		dump_l2_map();
 	}
-	printf("...\n");
-	for (i = 2048-32; i < 2048; i += 4) {
-		printf("l1[%02o] %011o %011o %011o %011o\n",
-		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
-	}
-	printf("\n");
-#else
-	for (i = 0; i < 2048; i += 4) {
-		int skipped;
-		printf("l1[%02o] %011o %011o %011o %011o\n",
-		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
-
-		skipped = 0;
-		while (l1_map[i+0] == l1_map[i+0+4] &&
-		       l1_map[i+1] == l1_map[i+1+4] &&
-		       l1_map[i+2] == l1_map[i+2+4] &&
-		       l1_map[i+3] == l1_map[i+3+4] &&
-			i < 2048)
-		{
-			if (skipped++ == 0)
-				printf("...\n");
-			i += 4;
-		}
-	}
-	printf("\n");
-#endif
-
-#if 0
-	for (i = 0; i < 32; i += 4) {
-		printf("l2[%02o] %011o %011o %011o %011o\n",
-		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
-	}
-	printf("...\n");
-	for (i = 1024-32; i < 1024; i += 4) {
-		printf("l2[%02o] %011o %011o %011o %011o\n",
-		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
-	}
-	printf("\n");
-#else
-	for (i = 0; i < 1024; i += 4) {
-		int skipped;
-		printf("l2[%02o] %011o %011o %011o %011o\n",
-		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
-
-		skipped = 0;
-		while (l2_map[i+0] == l2_map[i+0+4] &&
-		       l2_map[i+1] == l2_map[i+1+4] &&
-		       l2_map[i+2] == l2_map[i+2+4] &&
-		       l2_map[i+3] == l2_map[i+3+4] &&
-			i < 1024)
-		{
-			if (skipped++ == 0)
-				printf("...\n");
-			i += 4;
-		}
-	}
-	printf("\n");
-#endif
 
 	dump_pdl_memory();
 
@@ -1175,6 +1283,8 @@ dump_state(void)
 			}
 		}
 	}
+
+	printf("\n");
 
 #if 1
 	printf("ALU op-code usage:\n");
@@ -1319,7 +1429,9 @@ run(void)
 
 //	phys_ram_pages = 8192;
 	phys_ram_pages = 8192/8;
-	phys_ram_pages = 8192/2;
+//	phys_ram_pages = 8192/2;
+	phys_ram_pages = 8192;
+	phys_ram_pages = 8192/4;
 
 	u_pc = 0;
 	prom_enabled_flag = 1;
@@ -1412,6 +1524,13 @@ run(void)
 
 		/* ----------- trace ------------- */
 
+#if 0
+ if (p0_pc == 02220 && pdl_ptr > 01700) {
+	 trace = 1;
+	 trace_lod_labels_flag = 1;
+ }
+#endif
+
 		/* see if we hit a label trace point */
 		if (trace_label_pt && p0_pc == trace_label_pt) {
 			trace_mcr_labels_flag = 1;
@@ -1466,6 +1585,10 @@ run(void)
 			}
 
 			break;
+		}
+
+		if ((cycles & 0xffff) == 0) {
+			display_poll();
 		}
 
 		i_long = (u >> 45) & 1;
@@ -1538,6 +1661,7 @@ run(void)
 			case 5: /* PDL buffer (addressed by index) */
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_index, pdl_memory[pdl_index]);
+if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_index];
 				break;
@@ -1591,6 +1715,7 @@ printf("read opc %o\n", opc);
 			case 024:
 				tracef("reading pdl[%o] -> %o, pop\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
+if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_ptr];
 				pdl_ptr = (pdl_ptr - 1) & 01777;
@@ -1598,6 +1723,7 @@ printf("read opc %o\n", opc);
 			case 025:
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
+if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_ptr];
 				break;
@@ -2054,12 +2180,17 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 				u_pc = new_pc;
 
-				/* inhibit possible popj */
-//				if (popj) {
-//					pop_spc();
-//				}
+				if (popj && r_bit == 0 && p_bit == 0) {
+printf("jump popped! pc %o, prom %d\n", p0_pc, prom_enabled_flag);
+{
+	int offset;
+	sym = sym_find_last(!prom_enabled_flag, u_pc, &offset);
+	printf("%s+%o:\n", sym, offset);
+}
+					pop_spc();
+				}
 
-//if (op_code != 2)
+				/* inhibit possible popj */
 				popj = 0;
 			}
 
@@ -2157,6 +2288,7 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			tracef("dispatch[%o] -> %o ",
 			       disp_addr, dispatch_memory[disp_addr]);
 
+disp_addr &= 03777;
 			disp_addr = dispatch_memory[disp_addr];
 
 			dispatch_constant = disp_const;
@@ -2187,15 +2319,16 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			}
 
 			if (p_bit && r_bit) {
-				if (n_bit)
-					printf("NPR! u_pc %o\n", p0_pc);
+//				if (n_bit)
+//					printf("NPR! u_pc %o\n", p0_pc);
 				if (n_bit)
 					no_exec_next = 1;
 				goto dispatch_done;
 			}
 
 //if (popj && r_bit == 0 && p_bit == 0) {
-//	printf("popped!\n");
+//	popj = 0;
+//	printf("dispatch popped!\n");
 //	pop_spc();
 //}
 

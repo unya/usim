@@ -841,12 +841,25 @@ main(int argc, char *argv[])
 			}
 
 			if (i == 2) {
+				int tag;
+
 				printf(" "); v = show(inst, 0);
-				printf(" "); showstr(v, 1);
+
+				tag = (v >> 24) & 077;
+				if (0) printf("tag %o\n", tag);
+
+				if (tag == 3) {
+					printf("\n");
+					printf(" "); v = show(v, 0);
+					tag = (v >> 24) & 077;
+				}
+				if (tag == 4) {
+					printf(" "); showstr(v, 1);
+				}
 			}
 		}
 
-		for (i = o; i < o+40; i++) {
+		for (i = o; i < o+128; i++) {
 			unsigned int loc;
 			loc = pc+i/2;
 			disass(loc, (i%2) ? 0 : 1, ib[i]);

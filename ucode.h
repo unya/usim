@@ -18,6 +18,7 @@ extern int trace_int_flag;
 #define traceint if (trace_int_flag) printf
 
 extern int trace_mcr_labels_flag;
+extern int trace_lod_labels_flag;
 extern int trace_prom_flag;
 extern int stop_after_prom_flag;
 

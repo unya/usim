@@ -9,8 +9,8 @@ USIM_HDR = ucode.h config.h
 USIM_LIBS = -lSDL -lpthread
 
 #CFLAGS = -O -pg -g -fprofile-arcs
-CFLAGS = -g
-#CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686
+#CFLAGS = -g
+CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686
 
 all: usim readmcr diskmaker
 

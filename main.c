@@ -106,7 +106,7 @@ main(int argc, char *argv[])
 			case 'o': trace_io_flag = 1; break;
 			case 'p': trace_prom_flag = 1; break;
 			case 'm': trace_mcr_labels_flag = 1; break;
-			case 'l': trace_mcr_labels_flag = 1; break;
+			case 'l': trace_lod_labels_flag = 1; break;
 			}
 			break;
 		case 's':
