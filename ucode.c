@@ -189,6 +189,10 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	return l2;
 }
 
+/*
+ * add a new physical memory page,
+ * in response to l2 mapping
+ */
 int
 add_new_page_no(int pn)
 {
@@ -206,6 +210,10 @@ add_new_page_no(int pn)
 	}
 }
 
+/*
+ * read phys memory, with no virt-to-phys mapping
+ * (used by disk controller)
+ */
 int
 read_phy_mem(int paddr, unsigned int *pv)
 {
@@ -286,7 +294,7 @@ read_mem(int vaddr, unsigned int *pv)
 		/* unibus */
 		int paddr = pn << 10;
 
-//tracef("paddr %o\n", paddr);
+		//tracef("paddr %o\n", paddr);
 
 		switch (offset) {
 		case 040:
@@ -534,6 +542,10 @@ pop_spc(void)
 	return spc_stack[spc_stack_ptr];
 }
 
+/*
+ * advance the LC register,
+ * following the rules; will read next vma if needed
+ */
 void
 advance_lc(int *ppc)
 {
@@ -566,6 +578,10 @@ advance_lc(int *ppc)
 	{
 		char lc0b, lc1, last_byte_in_word;
 
+		/*
+		 * this is ugly, but follows the hardware logic
+		 * (I need to distill it to intent but it seems correct)
+		 */
 		lc0b =
 			/* byte-mode */
 			(lc_byte_mode_flag ? 1 : 0) &
@@ -702,7 +718,6 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			l1_data = (vma >> 27) & 037;
 			l1_map[l1_index] = l1_data;
 
-//if (l1_index > 03000) printf("l1_map[%o] <- %o\n", l1_index, l1_data);
 			tracef("l1_map[%o] <- %o\n", l1_index, l1_data);
 		}
 
@@ -716,8 +731,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			l2_data = vma;
 			l2_map[l2_index] = l2_data;
 
-//if (l1_index > 03000) printf("l2_map[%o] <- %o\n", l2_index, l2_data);
-			tracef("l2_map[%o] <- %o\n", l2_index, l2_data);
+			printf/*tracef*/("l2_map[%o] <- %o\n", l2_index, l2_data);
 
 			add_new_page_no(l2_data & 037777);
 		}
@@ -757,35 +771,36 @@ dump_state(void)
 {
 	int i;
 
-	printf("u-code pc %o\n", u_pc);
+	printf("\n-------------------------------------------------\n");
+	printf("CADR machine state:\n\n");
+
+	printf("u-code pc %o, lc %o\n", u_pc, lc);
 	printf("vma %o, md %o, q %o, opc %o, disp-const %o\n",
 	       vma, md, q, opc, dispatch_constant);
 	printf("oa-lo %o, oa-hi %o\n", oa_reg_lo, oa_reg_hi);
-	printf("pdl-ptr %o\n", pdl_ptr);
-	printf("lc %o\n", lc);
-	printf("spc-ptr %o\n", spc_stack_ptr);
+	printf("pdl-ptr %o, spc-ptr %o\n", pdl_ptr, spc_stack_ptr);
 
 	for (i = 0; i < 32; i++) {
-		printf("%cspc[%o] %o\n",
+		printf("%cspc[%02o] %o\n",
 		       (i == spc_stack_ptr) ? '*' : ' ',
 		       i, spc_stack[i]);
 	}
 	printf("\n");
 
 	for (i = 0; i < 32; i += 4) {
-		printf("m[%o] %011o %011o %011o %011o\n",
+		printf("m[%02o] %011o %011o %011o %011o\n",
 		       i, m_memory[i], m_memory[i+1], m_memory[i+2], m_memory[i+3]);
 	}
 	printf("\n");
 
 	for (i = 0; i < 32; i += 4) {
-		printf("l1[%o] %011o %011o %011o %011o\n",
+		printf("l1[%02o] %011o %011o %011o %011o\n",
 		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
 	}
 	printf("\n");
 
 	for (i = 0; i < 32; i += 4) {
-		printf("l2[%o] %011o %011o %011o %011o\n",
+		printf("l2[%02o] %011o %011o %011o %011o\n",
 		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
 	}
 	printf("\n");

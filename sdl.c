@@ -1,6 +1,7 @@
 /*
  * sdl.c
- * interface to sdl video/keyboard
+ * interface to sdl (x-window) video/keyboard emulation
+ *
  * $Id$
  */
 
@@ -177,6 +178,9 @@ static void sdl_cleanup(void)
     SDL_Quit();
 }
 
+#define COLOR_WHITE	0xff
+#define COLOR_BLACK	0
+
 void
 sdl_blah(void)
 {
@@ -186,12 +190,11 @@ sdl_blah(void)
 
 	for (i = 0; i < video_width; i++) {
 		for (j = 0; j < video_height; j++)
-			*p++ = 0xff;
+			*p++ = COLOR_WHITE;
 	}
 
 #if 0
 	logo = IMG_ReadXPMFromArray(logo_xpm);
-
 	SDL_BlitSurface(logo, NULL, screen, NULL);
 #else
 	{
@@ -201,16 +204,14 @@ sdl_blah(void)
 			p = logo_xpm[3+j];
 			for (i = 0; i < 432; i++) {
 				if (p[i] != '.')
-					ps[i] = 0;
+					ps[i] = COLOR_BLACK;
 			}
 			ps += video_width;
 		}
-
-//		ps = screen->pixels;
-//		for (i = 0; i < 32; i++)
-//			ps[017040+i] = 0x50;
 	}
 #endif
+
+	SDL_UpdateRect(screen, 0, 0, video_width, video_height);
 }
 
 void
@@ -225,16 +226,19 @@ video_write(int offset, unsigned int bits)
 		unsigned char *ps = screen->pixels;
 		int i, h, v;
 
-offset *= 16;
+		offset *= 16;
 		v = offset / video_width;
 		h = offset % video_width;
 		printf("v,h %o,%o <- %o (offset %o)\n", v, h, bits, offset);
 
 		for (i = 0; i < 32; i++) {
-			ps[offset + i] = (bits & 1) ? 0 : 0xff;
+			ps[offset + i] =
+//				(bits & 1) ? COLOR_BLACK : COLOR_WHITE;
+				(bits & 1) ? COLOR_WHITE : COLOR_BLACK;
 			bits >>= 1;
 		}
-SDL_UpdateRect(screen, h, v, 32, 1);
+
+		SDL_UpdateRect(screen, h, v, 32, 1);
 	}
 }
 
