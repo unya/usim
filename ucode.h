@@ -14,3 +14,6 @@ extern int trace_io_flag;
 extern int trace_disk_flag;
 #define tracedio if (trace_disk_flag) printf
 
+extern char *sym_find_by_val(int mcr, int v);
+extern char *sym_find_last(int mcr, int v, int *poffset);
+

@@ -3,7 +3,9 @@
 # $Id$
 #
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c syms.c sdl.c
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c syms.c config.c sdl.c
+USIM_HDR = ucode.h config.h
+
 USIM_LIBS = -lSDL -lpthread
 
 #CFLAGS = -O -pg -g -fprofile-arcs
@@ -12,7 +14,7 @@ CFLAGS = -g
 
 all: usim readmcr diskmaker
 
-usim: $(USIM_SRC)
+usim: $(USIM_SRC) $(USIM_HDR)
 	cc -o usim $(CFLAGS) $(USIM_SRC) $(USIM_LIBS)
 #	./usim >xx
 

@@ -5,10 +5,16 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+#include "config.h"
+
 int show_video_flag;
 extern unsigned long cycles;
 
 struct timeval tv1;
+
+/*
+ * simple wall clock timing to get a notion of the basic cycle time
+ */
 
 void
 timing_start()
@@ -49,19 +55,27 @@ timing_stop()
 
 
 extern char *optarg;
+extern int trace;
+extern int trace_mcr_labels_flag;
 
 main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.0\n");
+	printf("CADR emulator v0.1\n");
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "n")) != -1) {
+	while ((c = getopt(argc, argv, "ntl")) != -1) {
 		switch (c) {
 		case 'n':
 			show_video_flag = 0;
+			break;
+		case 't':
+			trace = 1;
+			break;
+		case 'l':
+			trace_mcr_labels_flag = 1;
 			break;
 		}
 	}
@@ -75,7 +89,7 @@ main(int argc, char *argv[])
 
 	read_sym_files();
 
-	disk_init("disk.img");
+	disk_init( config_get_disk_filename() );
 
 	iob_init();
 

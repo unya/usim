@@ -1,5 +1,9 @@
 /*
  * syms.c
+ *
+ * really simple symbol table routines to keep a sorted list of
+ * prom and mcr load symbols.
+ *
  * $Id$
  */
 
@@ -7,22 +11,30 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "config.h"
+
 struct sym_s {
 	struct sym_s *next;
 	char *name;
 	unsigned int v;
 	int mtype;
-	int prom;
 };
 
-struct sym_s *syms;
-int sym_count;
-struct sym_s **sorted_syms;
+struct symtab_s {
+	char *name;
+	struct sym_s *syms;
+	int sym_count;
+	struct sym_s **sorted_syms;
+};
+
+
+struct symtab_s sym_prom;
+struct symtab_s sym_mcr;
 
 extern int prom_enabled_flag;
 
-int
-sym_add(int memory, char *name, int v, int prom_sym)
+static int
+_sym_add(struct symtab_s *tab, int memory, char *name, int v)
 {
 	struct sym_s *s;
 
@@ -30,26 +42,25 @@ sym_add(int memory, char *name, int v, int prom_sym)
 
 	s = (struct sym_s *)malloc(sizeof(struct sym_s));
 	if (s) {
-		sym_count++;
+		tab->sym_count++;
 
 		s->name = strdup(name);
 		s->v = v;
 		s->mtype = memory;
-		s->prom = prom_sym;
 
-		s->next = syms;
-		syms = s;
+		s->next = tab->syms;
+		tab->syms = s;
 	}
 
 	return 0;
 }
 
-char *
-sym_find_by_val(int memory, int v)
+static char *
+_sym_find_by_val(struct symtab_s *tab, int memory, int v)
 {
 	struct sym_s *s;
 
-	for (s = syms; s; s = s->next) {
+	for (s = tab->syms; s; s = s->next) {
 		if (s->v == v && s->mtype == memory)
 			return s->name;
 	}
@@ -59,23 +70,17 @@ sym_find_by_val(int memory, int v)
 
 
 char *
-sym_find_last(int memory, int v, int *poffset)
+_sym_find_last(struct symtab_s *tab, int memory, int v, int *poffset)
 {
 	int i;
 	struct sym_s *s;
 
-	if (sorted_syms == 0)
+	if (tab->sorted_syms == 0)
 		return 0;
 
-	for (i = 0; i < sym_count; i++) {
+	for (i = 0; i < tab->sym_count; i++) {
 
-		s = sorted_syms[i];
-
-		if (s->prom && !prom_enabled_flag)
-			continue;
-
-		if (s->prom == 0 && prom_enabled_flag)
-			continue;
+		s = tab->sorted_syms[i];
 
 		if (s->mtype != memory)
 			continue;
@@ -85,11 +90,11 @@ sym_find_last(int memory, int v, int *poffset)
 			return s->name;
 		}
 
-		if (v < s->v || i == sym_count-1) {
-			while (sorted_syms[i-1]->mtype != memory)
+		if (v < s->v || i == tab->sym_count-1) {
+			while (tab->sorted_syms[i-1]->mtype != memory)
 				i--;
 
-			s = sorted_syms[i-1];
+			s = tab->sorted_syms[i-1];
 			*poffset = v - s->v;
 			return s->name;
 		}
@@ -99,14 +104,11 @@ sym_find_last(int memory, int v, int *poffset)
 }
 
 int
-sym_find(int memory, char *name, int *pval)
+_sym_find(struct symtab_s *tab, char *name, int *pval)
 {
 	struct sym_s *s;
 
-	if (memory != 1)
-		return 0;
-
-	for (s = syms; s; s = s->next) {
+	for (s = tab->syms; s; s = s->next) {
 		if (strcasecmp(name, s->name) == 0) {
 			*pval = s->v;
 			return 0;
@@ -116,51 +118,57 @@ sym_find(int memory, char *name, int *pval)
 	return -1;
 }
 
+/*
+ * read a cadr mcr symbol file
+ */
 int 
-sym_read_file(int prom_sym, char *filename)
+_sym_read_file(struct symtab_s *tab, const char *filename)
 {
+	int first = 1;
 	FILE *f;
 	char line[8*1024];
 
 	f = fopen(filename, "r");
-	if (f) {
-		int first = 1;
+	if (f == NULL)
+		return -1;
 
-		fgets(line, sizeof(line), f);
-		fgets(line, sizeof(line), f);
-		fgets(line, sizeof(line), f);
+	tab->name = strdup(filename);
 
-		while (fgets(line, sizeof(line), f) != NULL) {
-			char sym[64], symtype[64];
-			int loc, n;
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
 
-			if (first) {
-				strcpy(line, line+3);
-				first = 0;
-			}
+	while (fgets(line, sizeof(line), f) != NULL) {
+		char sym[64], symtype[64];
+		int loc, n;
 
-			if (0) printf("'%s'\n", line);
-
-			n = sscanf(line, "%s %s %o", sym, symtype, &loc);
-			if (n == 3) {
-				n = 0;
-				if (strcmp(symtype, "I-MEM") == 0) n = 1;
-				if (strcmp(symtype, "D-MEM") == 0) n = 2;
-				if (strcmp(symtype, "A-MEM") == 0) n = 4;
-				if (strcmp(symtype, "M-MEM") == 0) n = 5;
-				if (strcmp(symtype, "NUMBER") == 0) n = 6;
-
-				if (n == 0) printf("? %s", symtype);
-
-				sym_add(n, sym, loc, prom_sym);
-			}
+		if (first) {
+			strcpy(line, line+3);
+			first = 0;
 		}
 
-		fclose(f);
+		if (0) printf("'%s'\n", line);
+
+		n = sscanf(line, "%s %s %o", sym, symtype, &loc);
+		if (n == 3) {
+			n = 0;
+			if (strcmp(symtype, "I-MEM") == 0) n = 1;
+			if (strcmp(symtype, "D-MEM") == 0) n = 2;
+			if (strcmp(symtype, "A-MEM") == 0) n = 4;
+			if (strcmp(symtype, "M-MEM") == 0) n = 5;
+			if (strcmp(symtype, "NUMBER") == 0) n = 6;
+
+			if (n == 0) printf("? %s", symtype);
+
+			_sym_add(tab, n, sym, loc);
+		}
 	}
+
+	fclose(f);
 }
 
-int sym_loc_compare(const void *p1, const void *p2)
+static int
+_sym_loc_compare(const void *p1, const void *p2)
 {
 	struct sym_s *s1 = *(struct sym_s **)p1;
 	struct sym_s *s2 = *(struct sym_s **)p2;
@@ -174,31 +182,31 @@ int sym_loc_compare(const void *p1, const void *p2)
 	return 0;
 }
 
-int
-sym_sort(void)
+static int
+_sym_sort(struct symtab_s *tab)
 {
 	struct sym_s *s;
 	int i;
 
 	/* make vector of ptrs to syms */
-	sorted_syms = (struct sym_s **)malloc(sizeof(void *) * sym_count);
-	if (sorted_syms == 0)
+	tab->sorted_syms = (struct sym_s **)malloc(sizeof(void *) * tab->sym_count);
+	if (tab->sorted_syms == 0)
 		return -1;
 
 	/* fill in vector */
 	i = 0;
-	for (s = syms; s; s = s->next) {
-		sorted_syms[i++] = s;
+	for (s = tab->syms; s; s = s->next) {
+		tab->sorted_syms[i++] = s;
 	}
 
-	printf("sort %d symbols (originally %d)\n", i, sym_count);
+	printf("[%s] sort %d symbols (originally %d)\n", tab->name, i, tab->sym_count);
 
 	/* sort the vector */
-	qsort((void *)sorted_syms, sym_count, sizeof(void *), sym_loc_compare);
+	qsort((void *)tab->sorted_syms, tab->sym_count, sizeof(void *), _sym_loc_compare);
 
 #if 0
-	for (i = 0; i < sym_count; i++) {
-		printf("%s %o\n", sorted_syms[i]->name, sorted_syms[i]->v);
+	for (i = 0; i < tab->sym_count; i++) {
+		printf("%s %o\n", tab->sorted_syms[i]->name, tab->sorted_syms[i]->v);
 	}
 #endif
 
@@ -208,9 +216,43 @@ sym_sort(void)
 int 
 read_sym_files(void)
 {
-	sym_read_file(1, "promh.sym.9");
-//	sym_read_file(0, "ucadr.sym.979");
-//	sym_read_file(0, "ucadr.sym.841");
-	sym_sort();
+	_sym_read_file(&sym_prom, config_get_promsym_filename());
+	_sym_sort(&sym_prom);
+
+	_sym_read_file(&sym_mcr, config_get_mcrsym_filename());
+	_sym_sort(&sym_mcr);
+
+	return 0;
 }
+
+
+/* ------------------------------------------------------------- */
+
+int
+sym_find(int mcr, char *name, int *pval)
+{
+	if (mcr)
+		return _sym_find(&sym_mcr, name, pval);
+
+	return _sym_find(&sym_prom, name, pval);
+}
+
+char *
+sym_find_by_val(int mcr, int v)
+{
+	if (mcr)
+		return _sym_find_by_val(&sym_mcr, 1/*I-MEM*/, v);
+
+	return _sym_find_by_val(&sym_prom, 1/*I-MEM*/, v);
+}
+
+char *
+sym_find_last(int mcr, int v, int *poffset)
+{
+	if (mcr)
+		return _sym_find_last(&sym_mcr, 1/*I-MEM*/, v, poffset);
+
+	return _sym_find_last(&sym_prom, 1/*I-MEM*/, v, poffset);
+}
+
 

@@ -85,9 +85,6 @@ int trace_disk_flag;
 int trace_int_flag;
 #define traceint if (trace_int_flag) printf
 
-extern char *sym_find_by_val(int, int);
-extern char *sym_find_last(int, int, int *);
-
 void
 set_interrupt_status_reg(int new)
 {
@@ -105,7 +102,7 @@ assert_unibus_interrupt(int vector)
 			(interrupt_status_reg & ~01774) |
 			0100000 | (vector & 01774));
 	} else {
-		traceint("assert: unibus interrupt (disabld)\n");
+		traceint("assert: unibus interrupt (disabled)\n");
 	}
 }
 
@@ -1060,8 +1057,8 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
 
 //	sym_find(1, "GET-AREA-ORIGINS", ptrace_pt);
 
-	sym_find(1, "READ-LABEL", ptrace_pt);
-	sym_find(1, "FUDGE-INITIAL-DISK-PARAMETERS", ptrace_pt);
+	sym_find(0, "READ-LABEL", ptrace_pt);
+	sym_find(0, "FUDGE-INITIAL-DISK-PARAMETERS", ptrace_pt);
 
 //	sym_find(1, "COLD-REINIT-PPD-0", ptrace_pt);
 
@@ -1217,7 +1214,7 @@ run(void)
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
 
-			if (sym = sym_find_last(1, u_pc, &offset)) {
+			if (sym = sym_find_last(!prom_enabled_flag, u_pc, &offset)) {
 				if (offset == 0)
 					printf("%s:\n", sym);
 				else
@@ -1236,11 +1233,11 @@ run(void)
 			printf("------\n");
 
 #if 1
-			if (sym = sym_find_by_val(1, p0_pc)) {
+			if (sym = sym_find_by_val(!prom_enabled_flag, p0_pc)) {
 				printf("%s:\n", sym);
 			}
 #else
-			if (sym = sym_find_last(1, p0_pc, &offset)) {
+			if (sym = sym_find_last(!prom_enabled_flag, p0_pc, &offset)) {
 				if (offset == 0)
 					printf("%s:\n", sym);
 				else
