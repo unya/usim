@@ -1,5 +1,5 @@
 CADR simulator
-9/1/04
+9/4/04
 Brad Parker
 brad@heeltoe.com
 
@@ -21,20 +21,21 @@ first powered on.
 What state is this in?
 ----------------------
 
-The emulation is about 75% done.  It gets pretty far into the prom
-code.  The disk emulation is a hack, but enough to get past the disk
-label code.  I think most of the ALU code is ok as is the branch and
-byte code.
+The emulation is about 80% done.  It gets through the prom code and
+loads the microcode band.  The disk emulation reads from a 'disk
+image' file which is constructed with 'diskmaker'.  It looks like most
+of the ALU code is ok as is the branch and byte code.
 
-The divide code is broken and needs to be fixed.  I put in a hack
-which shifts Q initially and now it seems ok, but I think something is
-wrong with my emulation of the h/w.
+The divide code is still broken and needs to be fixed.  I put in a
+hack which aborts the last step and now it seems ok, but I think
+something is wrong with my emulation of the h/w.
 
-The dispatch code is partially implemented.  I need page 18 of the
-CADR memo to complete it.  Or at least I think I do.
+The dispatch code is most implemented but not complete.  I need to 
+look at the hardware to find where the n, p & r bits go and make sure
+all of the push/pop semantics are correct.
 
-I added some basic disk emulation and a program to create a disk image
-with a microcode band.
+There are some hacks for noticing unibus access but no xbus/unibus
+mapping support.
 
 What needs to be done?
 ----------------------
