@@ -2,6 +2,9 @@
  * this is a total hack.
  * make a disk image for the CADR simulator.
  *
+ * Note: this is designed on run on little-endian; the NEED_SWAP might well
+ * be a crock.
+ *
  * $Id$
  */
 
@@ -72,7 +75,11 @@ struct {
 unsigned long
 str4(char *s)
 {
+#ifdef NEED_SWAP
+	return (s[0]<<24) | (s[1]<<16) | (s[2]<<8) | s[3];
+#else
 	return (s[3]<<24) | (s[2]<<16) | (s[1]<<8) | s[0];
+#endif
 }
 
 int
@@ -136,7 +143,9 @@ make_labl(int fd)
 
 /* pack text label - offset 020, 32 bytes */
 
+#ifdef NEED_SWAP
 	swapbytes(buffer);
+#endif
 
 	write(fd, buffer, 256*4);
 }
@@ -148,9 +157,6 @@ write_block(int fd, int block_no, unsigned char *buf)
 	int size;
 
 	offset = block_no * (256*4);
-
-//	if (block_no == 18) printf("write_block() block %d, offset %d\n",
-//				   block_no, offset);
 
 	ret = lseek(fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -185,17 +191,11 @@ make_mcr1(int fd)
 		if (ret <= 0)
 			break;
 
-#if 0
-		for (i = 0; i < 1024; i += 2) {
-			unsigned char t;
-			t = b[i];
-			b[i] = b[i+1];
-			b[i+1] = t;
-		}
+#ifndef NEED_SWAP
+		swapbytes((unsigned int *)b);
 #endif
-
 		/* MCR1 start XXX */
-		write_block(fd, 17+count, b);
+		write_block(fd, 021+count, b);
 
 		count++;
 
@@ -274,7 +274,9 @@ main(int argc, char *argv[])
 //	mcr_filename = strdup("ucadr.mcr.979");
 	mcr_filename = strdup("ucadr.mcr.841");
 	lod1_filename = strdup("partition.lod1.841");
+#ifdef BOOT_LOD2
 	lod2_filename = strdup("partition.lod2.841");
+#endif
 
 	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
 	if (fd < 0) {
@@ -285,7 +287,9 @@ main(int argc, char *argv[])
 	make_labl(fd);
 	make_mcr1(fd);
 	make_lod1(fd);
+#ifdef BOOT_LOD2
 	make_lod2(fd);
+#endif
 
 	exit(0);
 }

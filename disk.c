@@ -240,10 +240,12 @@ _disk_read(int block_no, unsigned int *buffer)
 		return -1;
 	}
 
+#if 0
 	/* byte order fixups? */
-	if (disk_byteswap || block_no == 0) {
+	if (disk_byteswap) {
 		_swaplongbytes((unsigned int *)buffer);
 	}
+#endif
 
 	return 0;
 }
@@ -267,10 +269,12 @@ _disk_write(int block_no, unsigned int *buffer)
 
 	size = 256*4;
 
+#if 0
 	/* byte order fixups? */
-	if (disk_byteswap || block_no == 0) {
+	if (disk_byteswap) {
 		_swaplongbytes((unsigned int *)buffer);
 	}
+#endif
 
 	ret = write(disk_fd, buffer, size);
 	if (ret != size) {
@@ -654,8 +658,10 @@ disk_init(char *filename)
 	}
 
 	_disk_read(0, label);
+
 	if (label[0] != 011420440514) {
-		printf("disk: invalid pack label - disk image ignored");
+		printf("disk: invalid pack label - disk image ignored\n");
+		printf("label %o\n", label[0]);
 		close(disk_fd);
 		disk_fd = 0;
 	}

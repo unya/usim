@@ -75,7 +75,6 @@ main(int argc, char *argv[])
 
 	read_sym_files();
 
-	disk_set_byteswap(1);
 	disk_init("disk.img");
 
 	iob_init();

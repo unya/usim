@@ -456,8 +456,6 @@ write_mem(int vaddr, unsigned int v)
 					traceio("unibus: "
 					       "disabling prom enable flag\n");
 					prom_enabled_flag = 0;
-// hack - we need to turn it all off
-disk_set_byteswap(0);
 				}
 				if (v & 2) {
 					traceio("unibus: normal speed\n");
@@ -1060,7 +1058,10 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
 
 //	sym_find(1, "COLD-REINIT-PPD-3", ptrace_pt);
 
-	sym_find(1, "GET-AREA-ORIGINS", ptrace_pt);
+//	sym_find(1, "GET-AREA-ORIGINS", ptrace_pt);
+
+	sym_find(1, "READ-LABEL", ptrace_pt);
+	sym_find(1, "FUDGE-INITIAL-DISK-PARAMETERS", ptrace_pt);
 
 //	sym_find(1, "COLD-REINIT-PPD-0", ptrace_pt);
 

@@ -208,9 +208,9 @@ sym_sort(void)
 int 
 read_sym_files(void)
 {
-//	sym_read_file(1, "promh.sym.9");
+	sym_read_file(1, "promh.sym.9");
 //	sym_read_file(0, "ucadr.sym.979");
-	sym_read_file(0, "ucadr.sym.841");
+//	sym_read_file(0, "ucadr.sym.841");
 	sym_sort();
 }
 
