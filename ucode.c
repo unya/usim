@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include "ucode.h"
 
+//#define STAT_PC_HISTORY
+#define STAT_ALU_USE
+
 extern ucw_t prom_ucode[512];
 ucw_t ucode[16*1024];
 
@@ -764,18 +767,11 @@ advance_lc(int *ppc)
 	if (lc & (1 << 31)) {
 		lc &= ~(1 << 31);
 		vma = old_lc >> 2;
-#if 0
-		if (read_mem(old_lc >> 2, &md)) {
-		}
-		tracef("advance_lc() read vma %011o -> %011o\n",
-		       old_lc >> 2, md);
-#else
 		if (read_mem(old_lc >> 2, &new_md)) {
 		}
 		new_md_delay = 2;
 		tracef("advance_lc() read vma %011o -> %011o\n",
 		       old_lc >> 2, new_md);
-#endif
 	} else {
 		/* force skipping 2 instruction (pf + set-md) */
 		if (ppc)
@@ -809,13 +805,6 @@ advance_lc(int *ppc)
 			/* set need-fetch */
 			lc |= (1 << 31);
 	}
-
-#if 0
-	if ((lc & 077777777) == 057335774) trace = 1;
-#endif
-#if 0
-	if ((lc & 07777777) == 02075277) trace = 1;
-#endif
 }
 
 void
@@ -1004,14 +993,9 @@ if (0) show_pdl_local();
 
 	case 021: /* VMA register, start main memory read */
 		vma = out_bus;
-#if 0
-		if (read_mem(vma, &md)) {
-		}
-#else
 		if (read_mem(vma, &new_md)) {
 		}
 		new_md_delay = 2;
-#endif
 		break;
 
 	case 022: /* VMA register, start main memory write */
@@ -1067,14 +1051,9 @@ if (0) show_pdl_local();
 
 	case 031:
 		md = out_bus;
-#if 0
-		if (read_mem(vma, &md)) {
-		}
-#else
 		if (read_mem(vma, &new_md)) {
 		}
 		new_md_delay = 2;
-#endif
 		break;
 
 	case 032:
@@ -1095,7 +1074,7 @@ if (0) show_pdl_local();
 	write_m_mem(dest & 037, out_bus);
 }
 
-#define MAX_PC_HISTORY 256/*16*/
+#define MAX_PC_HISTORY 8
 struct {
 	unsigned int rpc;
 	unsigned int rvma;
@@ -1288,7 +1267,7 @@ dump_state(void)
 	       macro_pc_incrs);
 	printf("\n");
 
-#if 1
+#if STAT_PC_HISTORY
 	show_pc_history();
 #endif
 
@@ -1380,7 +1359,7 @@ dump_state(void)
 
 	printf("\n");
 
-#if 1
+#ifdef STAT_ALU_USE
 	printf("ALU op-code usage:\n");
 	for (i = 0; i < 16; i++) {
 		printf("%2i %2o %08u %08u\n",
@@ -1450,7 +1429,7 @@ tracelabel_set_mcr(char *arg)
 }
 
 int
-set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
+set_breakpoints(int *ptrace_pt_prom, int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 {
 	max_cycles = 0;
 
@@ -1461,9 +1440,9 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 #endif
 
 	if (breakpoint_name_prom) {
-		if (sym_find(0, breakpoint_name_prom, ptrace_pt)) {
+		if (sym_find(0, breakpoint_name_prom, ptrace_pt_prom)) {
 			if (isdigit(breakpoint_name_prom[0])) {
-				sscanf(breakpoint_name_prom, "%o", ptrace_pt);
+				sscanf(breakpoint_name_prom, "%o", ptrace_pt_prom);
 			} else {
 				fprintf(stderr,
 					"can't find prom breakpoint '%s'\n",
@@ -1472,7 +1451,7 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 			}
 		}
 		printf("breakpoint [prom]: %s %o\n",
-		       breakpoint_name_prom, *ptrace_pt);
+		       breakpoint_name_prom, *ptrace_pt_prom);
 
 		*ptrace_pt_count = 1;
 	}
@@ -1555,7 +1534,7 @@ show_label_closest_padded(unsigned int upc)
 int
 run(void)
 {
-	int trace_pt, trace_pt_count, trace_label_pt;
+	int trace_pt_prom, trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
 
 	/* 2Mwords */
@@ -1569,7 +1548,7 @@ run(void)
 	trace_pt_count = 0;
 	trace_label_pt = 0;
 
-	set_breakpoints(&trace_pt, &trace_pt_count, &trace_label_pt);
+	set_breakpoints(&trace_pt_prom, &trace_pt, &trace_pt_count, &trace_label_pt);
 
 	printf("run:\n");
 
@@ -1588,7 +1567,7 @@ run(void)
 
 		int widthm1, pos;
 		int mr_sr_bits;
-		unsigned int left_mask, right_mask, mask;
+		unsigned int left_mask, right_mask, mask, old_q;
 		int left_mask_index, right_mask_index;
 
 		int disp_const, disp_addr;
@@ -1666,15 +1645,8 @@ run(void)
 
 		/* ----------- trace ------------- */
 
-#if 1
+#ifdef STAT_PC_HISTORY
 		record_pc_history(p0_pc, vma, md);
-#endif
-
-#if 0
- if (p0_pc == 02220 && pdl_ptr > 01700) {
-	 trace = 1;
-	 trace_lod_labels_flag = 1;
- }
 #endif
 
 		/* see if we hit a label trace point */
@@ -1683,16 +1655,26 @@ run(void)
 		}
 
 		/* see if we hit a trace point */
-		if (trace_pt && p0_pc == trace_pt && trace == 0) {
+		if (trace_pt_prom && p0_pc == trace_pt_prom && trace == 0 && prom_enabled_flag == 1) {
 
-			if (prom_enabled_flag == 0) {
-				
-				if (trace_pt_count) {
-					if (--trace_pt_count == 0)
-						trace = 1;
-				} else {
+			if (trace_pt_count) {
+				if (--trace_pt_count == 0)
 					trace = 1;
-				}
+			} else {
+				trace = 1;
+			}
+
+			if (trace)
+				printf("trace on\n");
+		}
+
+		if (trace_pt && p0_pc == trace_pt && trace == 0 && prom_enabled_flag == 0) {
+
+			if (trace_pt_count) {
+				if (--trace_pt_count == 0)
+					trace = 1;
+			} else {
+				trace = 1;
 			}
 
 			if (trace)
@@ -1912,7 +1894,7 @@ run(void)
 
 			/* (spec) ir7 is backward in memo? */
 		        if (ir8 == 0 && ir7 == 0) {
-#if 1
+#ifdef STAT_ALU_USE
 				alu_stat0[alu_op]++;
 #endif
 				/* logic */
@@ -1943,8 +1925,9 @@ run(void)
 					alu_out = m_src_value | a_src_value;
 					break;
 				case 010: /* [ANDCB] */
-//					alu_out = ~a_src_value & ~m_src_value;
-					alu_out = ~(a_src_value | m_src_value);
+					alu_out = ~a_src_value & ~m_src_value;
+//new - better?
+//					alu_out = ~(a_src_value | m_src_value);
 					break;
 				case 011: /* [EQV] */
 					alu_out = a_src_value == m_src_value;
@@ -1971,7 +1954,7 @@ run(void)
 			}
 
 			if (ir8 == 0 && ir7 == 1) {
-#if 1
+#ifdef STAT_ALU_USE
 				alu_stat1[alu_op]++;
 #endif
 				/* arithmetic */
@@ -2069,14 +2052,15 @@ run(void)
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 017: /* M+M */
-//					lv = m_src_value + m_src_value +
-//						(carry_in ? 1 : 0);
-//					alu_out = lv;
-//					alu_carry = (lv >> 32) ? 1 : 0;
-					alu_out = (m_src_value << 1) | 
+					lv = m_src_value + m_src_value +
 						(carry_in ? 1 : 0);
-					alu_carry = (m_src_value & 0x80000000)
-						? 1 : 0;
+					alu_out = lv;
+					alu_carry = (lv >> 32) ? 1 : 0;
+//new - better?
+//					alu_out = (m_src_value << 1) | 
+//						(carry_in ? 1 : 0);
+//					alu_carry = (m_src_value & 0x80000000)
+//						? 1 : 0;
 					break;
 				}
 			}
@@ -2100,12 +2084,6 @@ run(void)
 					break;
 				case 1: /* divide step */
 					tracef("divide step\n");
-#define DIVIDE_HACK
-#ifdef DIVIDE_HACK
-					if (out_bus == 1) {
-						goto alu_done;
-					}
-#endif
 					do_sub = q & 1;
 					tracef("do_sub %d\n", do_sub);
 
@@ -2126,15 +2104,10 @@ run(void)
 				case 5: /* remainder correction */
 					tracef("remainder correction\n");
 					do_sub = q & 1;
-					if (a_src_value & 0x80000000)
-						do_add = !do_add;
-tracef("do_sub %d\n", do_sub);
+
+					tracef("do_sub %d\n", do_sub);
 					if (do_sub) {
 						/* setm */
-#ifndef DIVIDE_HACK
-						alu_out = m_src_value;
-						alu_out = q;
-#endif
 						alu_carry = 0;
 					} else {
 						lv =
@@ -2145,32 +2118,18 @@ tracef("do_sub %d\n", do_sub);
 						alu_carry = (lv >> 32) ? 1 : 0;
 					}
 
-#ifndef DIVIDE_HACK
-					q >>= 1; 
-					alu_out >>= 1;
-#endif
 					break;
 				case 011:
 					/* initial divide step */
 					tracef("divide-first-step\n");
-#if 0
-q = 4;
-q = 8;
-a_src_value = 2;
-a_memory[011] = 2;
-
-q = 10/2;
-a_src_value = 3;
-a_memory[011] = 3;
-#endif
-tracef("divide: %o / %o \n", q, a_src_value);
+					tracef("divide: %o / %o \n", q, a_src_value);
 
 					lv = m_src_value -
 						a_src_value -
 						(carry_in ? 1 : 0);
 
 					alu_out = lv;
-tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
+					tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 
@@ -2183,6 +2142,7 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			take_jump = 0;
 
 			/* Q control */
+			old_q = q;
 			switch (u & 3) {
 			case 1:
 				tracef("q<<\n");
@@ -2214,7 +2174,7 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					(alu_out & 0x80000000);
 				break;
 			case 3: out_bus = (alu_out << 1) | 
-					((q & 0x80000000) ? 1 : 0);
+					((old_q & 0x80000000) ? 1 : 0);
 				break;
 			}
 
@@ -2387,9 +2347,10 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					lc1 = (lc >> 1) & 1;
 
 					pos = u & 017;
-//					pos |= (ir4 ^ lc1) << 4;
+
 					/* (spec) result needs to be inverted*/
 					pos |= ((ir4 ^ lc1) ? 0 : 1) << 4;
+
 					tracef("16b-mode, pos %o\n", pos);
 				}
 			}
@@ -2527,7 +2488,8 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					lc1 = (lc >> 1) & 1;
 
 					pos = u & 017;
-//					pos |= (ir4 ^ lc1) << 4;
+
+					/* (spec) result needs to be inverted*/
 					pos |= ((ir4 ^ lc1) ? 0 : 1) << 4;
 
 					tracef("16b-mode, pos %o\n", pos);

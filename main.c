@@ -157,6 +157,7 @@ main(int argc, char *argv[])
 	read_sym_files();
 
 	iob_init();
+	chaos_init();
 
 #if 0
 	show_prom();

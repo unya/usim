@@ -3,7 +3,7 @@
 # $Id$
 #
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c syms.c config.c sdl.c
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c sdl.c
 USIM_HDR = ucode.h config.h
 
 USIM_LIBS = -lSDL -lpthread
