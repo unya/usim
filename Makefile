@@ -6,10 +6,14 @@
 USIM_SRC = main.c decode.c ucode.c disk.c iob.c syms.c sdl.c
 USIM_LIBS = -lSDL -lpthread
 
+#CFLAGS = -O -pg -g -fprofile-arcs
+#CFLAGS = -O -g
+CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686
+
 all: usim readmcr diskmaker
 
 usim: $(USIM_SRC)
-	cc -o usim -g $(USIM_SRC) $(USIM_LIBS)
+	cc -o usim $(CFLAGS) $(USIM_SRC) $(USIM_LIBS)
 #	./usim >xx
 
 run:

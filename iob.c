@@ -4,6 +4,9 @@
  * $Id$
  */
 
+#include "ucode.h"
+
+
 int iob_key_scan;
 
 /*
@@ -185,36 +188,39 @@ int iob_kbd_csr;
 void
 iob_unibus_read(int offset, int *pv)
 {
+	/* default, for now */
+	*pv = 0;
+
 	switch (offset) {
 	case 0100:
-		printf("unibus: kbd low\n");
+		traceio("unibus: kbd low\n");
 		*pv = iob_key_scan & 0177777;
 		break;
 	case 0102:
-		printf("unibus: kbd high\n");
+		traceio("unibus: kbd high\n");
 		*pv = (iob_key_scan >> 16) & 0177777;
 		break;
 	case 0104:
-		printf("unibus: mouse y\n");
+		traceio("unibus: mouse y\n");
 		break;
 	case 0106:
-		printf("unibus: mouse x\n");
+		traceio("unibus: mouse x\n");
 		break;
 	case 0110:
-		printf("unibus: beep\n");
+		traceio("unibus: beep\n");
 		break;
 	case 0112:
-		printf("unibus: kbd csr\n");
+		traceio("unibus: kbd csr\n");
 		*pv = iob_kbd_csr;
 		break;
 	case 0120:
-		printf("unibus: usec clock\n");
+		traceio("unibus: usec clock\n");
 		break;
 	case 0122:
-		printf("unibus: usec clock\n");
+		traceio("unibus: usec clock\n");
 		break;
 	case 0140:
-		printf("unibus: chaos\n");
+		traceio("unibus: chaos\n");
 		break;
 	}
 }
@@ -224,31 +230,31 @@ iob_unibus_write(int offset, int v)
 {
 	switch (offset) {
 	case 0100:
-		printf("unibus: kbd low\n");
+		traceio("unibus: kbd low\n");
 		break;
 	case 0102:
-		printf("unibus: kbd high\n");
+		traceio("unibus: kbd high\n");
 		break;
 	case 0104:
-		printf("unibus: mouse y\n");
+		traceio("unibus: mouse y\n");
 		break;
 	case 0106:
-		printf("unibus: mouse x\n");
+		traceio("unibus: mouse x\n");
 		break;
 	case 0110:
-		printf("unibus: beep\n");
+		traceio("unibus: beep\n");
 		break;
 	case 0112:
-		printf("unibus: kbd csr\n");
+		traceio("unibus: kbd csr\n");
 		iob_kbd_csr = 
 			(iob_kbd_csr & ~017) | (v & 017);
 		break;
 	case 0120:
 	case 0122:
-		printf("unibus: usec clock\n");
+		traceio("unibus: usec clock\n");
 		break;
 	case 0140:
-		printf("unibus: chaos\n");
+		traceio("unibus: chaos\n");
 		break;
 	}
 }
@@ -309,3 +315,12 @@ iob_init(void)
 
 	return 0;
 }
+
+int
+tv_xbus_read(int offset, unsigned int *pv)
+{
+	tracef("tv register read, offset %o\n", offset);
+	*pv = 0;
+	return 0;
+}
+

@@ -143,6 +143,14 @@ int disk_ma;
 int disk_ecc;
 int disk_da;
 
+int disk_byteswap;
+
+int
+disk_set_byteswap(int on)
+{
+	disk_byteswap = on;
+}
+
 int
 disk_get_status(void)
 {
@@ -212,7 +220,7 @@ _disk_read(int block_no, unsigned int *buffer)
 
 	offset = block_no * (256*4);
 
-	if (1) printf("disk: file image block %d, offset %ld\n", block_no, offset);
+	tracedio("disk: file image block %d, offset %ld\n", block_no, offset);
 
 	ret = lseek(disk_fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -233,7 +241,43 @@ _disk_read(int block_no, unsigned int *buffer)
 	}
 
 	/* byte order fixups? */
-	_swaplongbytes((unsigned int *)buffer);
+	if (disk_byteswap || block_no == 0) {
+		_swaplongbytes((unsigned int *)buffer);
+	}
+
+	return 0;
+}
+
+int
+_disk_write(int block_no, unsigned int *buffer)
+{
+	off_t offset, ret;
+	int size;
+
+	offset = block_no * (256*4);
+
+	tracedio("disk: file image block %d, offset %ld\n", block_no, offset);
+
+	ret = lseek(disk_fd, offset, SEEK_SET);
+	if (ret != offset) {
+		printf("disk: image file seek error\n");
+		perror("lseek");
+		return -1;
+	}
+
+	size = 256*4;
+
+	/* byte order fixups? */
+	if (disk_byteswap || block_no == 0) {
+		_swaplongbytes((unsigned int *)buffer);
+	}
+
+	ret = write(disk_fd, buffer, size);
+	if (ret != size) {
+		printf("disk write error; ret %d, size %d\n", ret, size);
+		perror("write");
+		return -1;
+	}
 
 	return 0;
 }
@@ -250,36 +294,63 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 
 	if (disk_fd) {
 		_disk_read(block_no, buffer);
+#if 0
+		if (vma == 0122400)
+		for (i = 0; i < 32; i++) {
+			tracedio("vma %011o <- %011o\n", vma + i, buffer[i]);
+		}
+#endif
 		for (i = 0; i < 256; i++) {
-			write_mem(vma + i, buffer[i]);
+			write_phy_mem(vma + i, buffer[i]);
 		}
 		return 0;
 	}
 
 	/* hack to fake a disk label when no image is present */
 	if (unit == 0 && cyl == 0 && head == 0 && block == 0) {
-		write_mem(vma + 0, 011420440514); /* label LABL */
-		write_mem(vma + 1, 000000000001); /* version = 1 */
-		write_mem(vma + 2, 000000001000); /* # cyls */
-		write_mem(vma + 3, 000000000004); /* # heads */
-		write_mem(vma + 4, 000000000100); /* # blocks */
-		write_mem(vma + 5, 000000000400); /* heads*blocks */
-		write_mem(vma + 6, 000000001234); /* name of micr part */
-		write_mem(vma + 0200, 1); /* # of partitions */
-		write_mem(vma + 0201, 1); /* words / partition */
+		write_phy_mem(vma + 0, 011420440514); /* label LABL */
+		write_phy_mem(vma + 1, 000000000001); /* version = 1 */
+		write_phy_mem(vma + 2, 000000001000); /* # cyls */
+		write_phy_mem(vma + 3, 000000000004); /* # heads */
+		write_phy_mem(vma + 4, 000000000100); /* # blocks */
+		write_phy_mem(vma + 5, 000000000400); /* heads*blocks */
+		write_phy_mem(vma + 6, 000000001234); /* name of micr part */
+		write_phy_mem(vma + 0200, 1); /* # of partitions */
+		write_phy_mem(vma + 0201, 1); /* words / partition */
 
-		write_mem(vma + 0202, 01234); /* start of partition info */
-		write_mem(vma + 0203, 01000); /* micr address */
-		write_mem(vma + 0204, 010);   /* # blocks */
+		write_phy_mem(vma + 0202, 01234); /* start of partition info */
+		write_phy_mem(vma + 0203, 01000); /* micr address */
+		write_phy_mem(vma + 0204, 010);   /* # blocks */
 		/* pack text label - offset 020, 32 bytes */
 		return 0;
 	}
 }
 
+int
+disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
+{
+	int block_no, i;
+	unsigned int buffer[256];
+
+	block_no =
+		(cyl * blocks_per_track * heads) +
+		(head * blocks_per_track) + block;
+
+	if (disk_fd) {
+		for (i = 0; i < 256; i++) {
+			read_phy_mem(vma + i, &buffer[i]);
+		}
+		_disk_write(block_no, buffer);
+		return 0;
+	}
+
+	return 0;
+}
+
 void
 disk_throw_interrupt(void)
 {
-	printf("disk: throw interrupt\n");
+	tracedio("disk: throw interrupt\n");
 	disk_status |= 1<<3;
 	assert_xbus_interrupt();
 }
@@ -287,7 +358,7 @@ disk_throw_interrupt(void)
 void
 disk_show_cur_addr(void)
 {
-	printf("disk: unit %d, CHB %o/%o/%o\n",
+	tracedio("disk: unit %d, CHB %o/%o/%o\n",
 	       cur_unit, cur_cyl, cur_head, cur_block);
 }
 
@@ -314,10 +385,10 @@ void
 disk_incr_block(void)
 {
 	cur_block++;
-	if (cur_block > blocks_per_track) {
+	if (cur_block >= blocks_per_track) {
 		cur_block = 0;
 		cur_head++;
-		if (cur_head > heads) {
+		if (cur_head >= heads) {
 			cur_head = 0;
 			cur_cyl++;
 		}
@@ -346,7 +417,7 @@ disk_start_read(void)
 			return;
 		}
 
-		printf("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
+		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
 		vma = ccw & ~0377;
 		disk_ma = vma;
@@ -358,7 +429,7 @@ disk_start_read(void)
 		disk_incr_block();
 			
 		if ((ccw & 1) == 0) {
-			printf("disk: last ccw\n");
+			tracedio("disk: last ccw\n");
 			break;
 		}
 
@@ -382,36 +453,82 @@ disk_start_read_compare(void)
 void
 disk_start_write(void)
 {
+#if 0
 	disk_decode_addr();
 	disk_show_cur_addr();
+#else
+	unsigned int ccw;
+	unsigned int vma;
+	int i;
+
+	disk_decode_addr();
+
+	/* process ccw's */
+	for (i = 0; i < 65535; i++) {
+		int f;
+
+		f = read_phy_mem(disk_clp, &ccw);
+		if (f) {
+			printf("disk: mem[clp=%o] yielded fault (no page)\n",
+			       disk_clp);
+
+			/* huh.  what to do now? */
+			return;
+		}
+
+		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
+
+		vma = ccw & ~0377;
+		disk_ma = vma;
+
+		disk_show_cur_addr();
+
+		disk_write_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
+
+		disk_incr_block();
+			
+		if ((ccw & 1) == 0) {
+			tracedio("disk: last ccw\n");
+			break;
+		}
+
+		disk_clp++;
+	}
+
+	disk_undecode_addr();
+
+	if (disk_cmd & 04000) {
+		disk_throw_interrupt();
+	}
+#endif
 }
 
 int
 disk_start(void)
 {
-	printf("disk: start, cmd (%o) ", disk_cmd);
+	tracedio("disk: start, cmd (%o) ", disk_cmd);
 
 	switch (disk_cmd & 01777) {
 	case 0:
-		printf("read\n");
+		tracedio("read\n");
 		disk_start_read();
 		break;
 	case 010:
-		printf("read compare\n");
+		tracedio("read compare\n");
 		disk_start_read_compare();
 		break;
 	case 011:
-		printf("write\n");
+		tracedio("write\n");
 		disk_start_write();
 		break;
 	case 01005:
-		printf("recalibrate\n");
+		tracedio("recalibrate\n");
 		break;
 	case 0405:
-		printf("fault clear\n");
+		tracedio("fault clear\n");
 		break;
 	default:
-		printf("unknown\n");
+		tracedio("unknown\n");
 	}
 }
 
@@ -422,14 +539,14 @@ disk_xbus_write(int offset, unsigned int v)
 
 	switch (offset) {
 	case 0370:
-		printf/*tracef*/("disk: load status %o\n", v);
+		tracedio/*tracef*/("disk: load status %o\n", v);
 		break;
 	case 0374:
 		disk_set_cmd(v);
-		printf/*tracef*/("disk: load cmd %o\n", v);
+		tracedio/*tracef*/("disk: load cmd %o\n", v);
 		break;
 	case 0375:
-		printf("disk: load clp %o (phys page %o)\n", v, v << 8);
+		tracedio("disk: load clp %o (phys page %o)\n", v, v << 8);
 		disk_set_clp(v);
 		break;
 	case 0376:
@@ -440,7 +557,7 @@ disk_xbus_write(int offset, unsigned int v)
 		disk_start();
 		break;
 	default:
-		printf("disk: unknown reg write %o\n", offset);
+		tracedio("disk: unknown reg write %o\n", offset);
 		break;
 	}
 
@@ -484,7 +601,14 @@ disk_xbus_read(int offset, unsigned int *pv)
 		*pv = 0;
 		break;
 	default:
-		printf("disk: unknown reg read %o\n", offset);
+		tracedio("disk: unknown reg read %o\n", offset);
+		if (offset != 0)
+		{
+			extern int trace_mcr_labels_flag;
+			extern int u_pc;
+			trace_mcr_labels_flag = 1;
+			printf("u_pc %011o\n", u_pc);
+		}
 		break;
 	}
 
@@ -514,7 +638,7 @@ disk_init(char *filename)
 	heads = label[3];
 	blocks_per_track = label[4];
 
-	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
+	tracedio("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
 
 	return 0;
 }

@@ -39,12 +39,12 @@ struct page_s *phy_pages[16*1024];
 int l1_map[2048];
 int l2_map[1024];
 
-int u_pc;
-int cycles;
-int trace_cycles;
-int max_cycles;
-int max_trace_cycles;
+unsigned long cycles;
+unsigned long trace_cycles;
+unsigned long max_cycles;
+unsigned long max_trace_cycles;
 
+int u_pc;
 int page_fault_flag;
 int interrupt_pending_flag;
 int interrupt_status_reg;
@@ -78,9 +78,12 @@ int interrupt_control;
 unsigned int dispatch_constant;
 
 int trace;
-#define tracef	if (trace) printf
 int trace_mcr_labels_flag;
 int trace_prom_flag;
+int trace_io_flag;
+int trace_disk_flag;
+int trace_int_flag;
+#define traceint if (trace_int_flag) printf
 
 extern char *sym_find_by_val(int, int);
 extern char *sym_find_last(int, int, int *);
@@ -97,12 +100,12 @@ assert_unibus_interrupt(int vector)
 {
 	/* unibus interrupts enabeld? */
 	if (interrupt_status_reg & 02000) {
-		printf("assert: unibus interrupt (enabled)\n");
+		traceint("assert: unibus interrupt (enabled)\n");
 		set_interrupt_status_reg(
 			(interrupt_status_reg & ~01774) |
 			0100000 | (vector & 01774));
 	} else {
-		printf("assert: unibus interrupt (disabld)\n");
+		traceint("assert: unibus interrupt (disabld)\n");
 	}
 }
 
@@ -110,7 +113,7 @@ void
 deassert_unibus_interrupt(int vector)
 {
 	if (interrupt_status_reg & 0100000) {
-		printf("deassert: unibus interrupt\n");
+		traceint("deassert: unibus interrupt\n");
 		set_interrupt_status_reg(
 			interrupt_status_reg & ~(01774 | 0100000));
 	}
@@ -119,7 +122,7 @@ deassert_unibus_interrupt(int vector)
 void
 assert_xbus_interrupt(void)
 {
-	printf("assert: xbus interrupt\n");
+	traceint("assert: xbus interrupt\n");
 	set_interrupt_status_reg(interrupt_status_reg | 040000);
 }
 
@@ -132,12 +135,20 @@ deassert_xbus_interrupt(void)
 	}
 }
 
+unsigned int last_virt = 0xffffff00, last_l1, last_l2;
+
+inline void
+invalidate_vtop_cache(void)
+{
+	last_virt = 0xffffff00;
+}
+
 /*
  * map virtual address to physical address,
  * possibly returning l1 mapping
  * possibly returning offset into page
  */
-unsigned int
+inline unsigned int
 map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 {
 	int l1_index, l2_index, l1;
@@ -145,13 +156,24 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 
 	/* 24 bit address */
 	virt &= 077777777;
+
+#if 0
+	/* cache */
+	if ((virt & 0xffffff00) == last_virt) {
+		if (pl1_map)
+			*pl1_map = last_l1;
+		if (poffset)
+			*poffset = virt & 0377;
+		return last_l2;
+	}
+#endif
                  
 	if ((virt & 077700000) == 077000000) {
 		/*  077000000, size = 210560(8) */
-		printf("frame buffer %o\n", virt);
+		traceio("frame buffer %o\n", virt);
 
 		if (virt >= 077051757 && virt <= 077051763) {
-			printf("disk run light\n");
+			traceio("disk run light\n");
 		}
 
 		if (poffset)
@@ -160,8 +182,9 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		return (1 << 22) | (1 << 23) | 036000;
 	}
 
+/* this should be move below - I'm not sure it has to happen anymore */
 	if ((virt & 077777400) == 077377400) {
-		printf("forcing xbus mapping for disk\n");
+		if (0) traceio("forcing xbus mapping for disk\n");
 		if (poffset)
 			*poffset = virt & 0377;
 		return (1 << 22) | (1 << 23) | 036777;
@@ -186,6 +209,12 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	if (poffset)
 		*poffset = virt & 0377;
 
+if (virt == 01440336) printf("v %o, l1_map %o, l2_map %o\n", virt, l1, l2);
+
+	last_virt = virt & 0xffffff00;
+	last_l1 = l1;
+	last_l2 = l2;
+
 	return l2;
 }
 
@@ -198,11 +227,13 @@ add_new_page_no(int pn)
 {
 	struct page_s *page;
 
+	if (0) printf("new_page %o\n", pn);
+
 	if ((page = phy_pages[pn]) == 0) {
 
 		page = (struct page_s *)malloc(sizeof(struct page_s));
 		if (page) {
-			memset(page, 0, sizeof(struct page_s));
+//			memset(page, 0, sizeof(struct page_s));
 			phy_pages[pn] = page;
 
 			tracef("add_new_page_no(pn=%o)\n", pn);
@@ -230,6 +261,24 @@ read_phy_mem(int paddr, unsigned int *pv)
 	return 0;
 }
 
+int
+write_phy_mem(int paddr, unsigned int v)
+{
+	int pn = paddr >> 8;
+	int offset = paddr & 0377;
+	struct page_s *page;
+
+if (paddr >= 01440000) printf("write_phy_mem(paddr=%o, v=%o)\n", paddr, v);
+
+	if ((page = phy_pages[pn]) == 0) {
+		/* page does not exist */
+		return -1;
+	}
+
+	page->w[offset] = v;
+	return 0;
+}
+
 /*
  * read virtual memory
  * returns -1 on fault
@@ -241,23 +290,29 @@ read_mem(int vaddr, unsigned int *pv)
 	unsigned int map;
 	int pn, offset;
 	struct page_s *page;
-
+int l1;
 	access_fault_bit = 0;
+page_fault_flag = 0;
 
-	map = map_vtop(vaddr, (int *)0, &offset);
+//	map = map_vtop(vaddr, (int *)0, &offset);
+map = map_vtop(vaddr, &l1, &offset);
 
 	tracef("read_mem(vaddr=%o)\n", vaddr);
 
 	/* 14 bit page # */
 	pn = map & 037777;
 
-	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
-	       vaddr, pn, offset, map, 1 << 23);
+//	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
+//	       vaddr, pn, offset, map, 1 << 23);
+	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, l1 %o, l2 %o\n",
+	       vaddr, pn, offset, l1, map);
 
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
 		access_fault_bit = 1;
+page_fault_flag = 1;
 		opc = pn;
+		*pv = 0;
 		tracef("read_mem(vaddr=%o) access fault\n", vaddr);
 		return -1;
 	}
@@ -276,9 +331,9 @@ read_mem(int vaddr, unsigned int *pv)
 		return -1;
 	}
 
-	/* simulate no memory abovr 2mb */
+	/* simulate no memory above 2mb */
 //	if (pn > 8192 && pn < 9162)
-	if (pn == 8192)
+	if (pn >= 8192/16/*8*/ && pn <= 035777)
 	{
 		*pv = 0xffffffff;
 		return 0;
@@ -298,12 +353,12 @@ read_mem(int vaddr, unsigned int *pv)
 
 		switch (offset) {
 		case 040:
-			printf("unibus: read interrupt status\n");
+			traceio("unibus: read interrupt status\n");
 			*pv = 0;
 			return 0;
 
 		case 044:
-			printf("unibus: read error status\n");
+			traceio("unibus: read error status\n");
 			*pv = 0;
 			return 0;
 		}
@@ -315,7 +370,11 @@ read_mem(int vaddr, unsigned int *pv)
 
 		/* 75776000 */
 		//printf("disk; paddr=%o\n", paddr);
-		return disk_xbus_read(offset, pv);
+		if (offset >= 0370)
+			return disk_xbus_read(offset, pv);
+
+		if (offset == 0360)
+			return tv_xbus_read(offset, pv);
 	}
 
 	tracef("read_mem(vaddr=%o) -> %o\n", vaddr, page->w[offset]);
@@ -334,7 +393,9 @@ write_mem(int vaddr, unsigned int v)
 	int pn, offset;
 	struct page_s *page;
 
+//if (vaddr >= 01440000) printf("write_mem(paddr=%o, v=%o)\n", vaddr, v);
 	write_fault_bit = 0;
+page_fault_flag = 0;
 
 	map = map_vtop(vaddr, (int *)0, &offset);
 
@@ -349,13 +410,14 @@ write_mem(int vaddr, unsigned int v)
 	if ((map & (1 << 22)) == 0) {
 		/* no write perm */
 		write_fault_bit = 1;
+page_fault_flag = 1;
 		opc = pn;
 		return -1;
 	}
 
 	if (pn == 036000) {
 		offset <<= 1;
-		printf("video_write %o %o\n", offset, v);
+		traceio("video_write %o %o\n", offset, v);
 		video_write(offset, v);
 		return 0;
 	}
@@ -370,7 +432,7 @@ write_mem(int vaddr, unsigned int v)
 
 	if (pn == 037764) {
 		offset <<= 1;
-		printf("unibus: iob v %o, offset %o\n",
+		traceio("unibus: iob v %o, offset %o\n",
 		       vaddr, offset);
 		iob_unibus_write(offset, v);
 		return 0;
@@ -385,18 +447,20 @@ write_mem(int vaddr, unsigned int v)
 		offset <<= 1;
 
 		if (offset <= 036) {
-			printf("unibus: spy v %o, offset %o\n",
+			traceio("unibus: spy v %o, offset %o\n",
 			       vaddr, offset);
 
 			switch (offset) {
 			case 012:
 				if ((v & 044) == 044) {
-					printf("unibus: "
+					traceio("unibus: "
 					       "disabling prom enable flag\n");
 					prom_enabled_flag = 0;
+// hack - we need to turn it all off
+disk_set_byteswap(0);
 				}
 				if (v & 2) {
-					printf("unibus: normal speed\n");
+					traceio("unibus: normal speed\n");
 				}
 
 				break;
@@ -407,30 +471,30 @@ write_mem(int vaddr, unsigned int v)
 
 		switch (offset) {
 		case 040:
-			printf("unibus: write interrupt status %o\n", v);
+			traceio("unibus: write interrupt status %o\n", v);
 			set_interrupt_status_reg(
 				(interrupt_status_reg & ~0036001) |
 				(v & 0036001));
 			return 0;
 
 		case 042:
-			printf("unibus: write interrupt stim %o\n", v);
+			traceio("unibus: write interrupt stim %o\n", v);
 			set_interrupt_status_reg(
 				(interrupt_status_reg & ~0101774) |
 				(v & 0101774));
 			return 0;
 
 		case 044:
-			printf("unibus: clear bus error %o\n", v);
+			traceio("unibus: clear bus error %o\n", v);
 			return 0;
 
 		default:
 			if (offset >= 0140 && offset <= 0176) {
-				printf("unibus: mapping reg \n");
+				traceio("unibus: mapping reg \n");
 				return 0;
 			}
 
-			printf("unibus: write? v %o, offset %o\n",
+			traceio("unibus: write? v %o, offset %o\n",
 			       vaddr, offset);
 		}
 
@@ -445,27 +509,27 @@ write_mem(int vaddr, unsigned int v)
 	return 0;
 }
 
-void
+inline void
 write_ucode(int addr, ucw_t w)
 {
 	tracef("u-code write; %Lo @ %o\n", w, addr);
 	ucode[addr] = w;
 }
 
-void
+inline void
 write_a_mem(int loc, unsigned int v)
 {
 	tracef("a_memory[%o] <- %o\n", loc, v);
 	a_memory[loc] = v;
 }
 
-unsigned int
+inline unsigned int
 read_a_mem(int loc)
 {
 	return a_memory[loc];
 }
 
-unsigned int
+inline unsigned int
 read_m_mem(int loc)
 {
 	if (loc > 32) {
@@ -475,7 +539,7 @@ read_m_mem(int loc)
 	return m_memory[loc];
 }
 
-void
+inline void
 write_m_mem(int loc, unsigned int v)
 {
 	m_memory[loc] = v;
@@ -507,6 +571,7 @@ write_pdl_mem(int which, unsigned int v)
 	}
 }
 
+#if 0
 unsigned int
 rotate_left(unsigned int v, int rot)
 {
@@ -521,8 +586,29 @@ rotate_left(unsigned int v, int rot)
 
 	return v;
 }
+#else
+inline unsigned int
+rotate_left(unsigned int value, int bitstorotate)
+{
+	unsigned int tmp;
+	int mask;
 
-void
+	/* determine which bits will be impacted by the rotate */
+	if (bitstorotate == 0)
+		mask = 0;
+	else
+		mask = (int)0x80000000 >> bitstorotate;
+		
+	/* save off the affected bits */
+	tmp = (value & mask) >> (32 - bitstorotate);
+		
+	/* perform the actual rotate */
+	/* add the rotated bits back in (in the proper location) */
+	return (value << bitstorotate) | tmp;
+}
+#endif
+
+inline void
 push_spc(int pc)
 {
 	tracef("writing spc[%o] <- %o\n", spc_stack_ptr, pc);
@@ -531,7 +617,7 @@ push_spc(int pc)
 	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
 }
 
-int
+inline int
 pop_spc(void)
 {
 	spc_stack_ptr = (spc_stack_ptr - 1) & 037;
@@ -546,13 +632,13 @@ pop_spc(void)
  * advance the LC register,
  * following the rules; will read next vma if needed
  */
-void
+inline void
 advance_lc(int *ppc)
 {
 	int old_lc = lc & 077777777;
 	unsigned int v;
 
-	printf("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
+	tracef("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
 	       lc_byte_mode_flag, lc,
 	       ((lc >> 30) & 1) ? 1 : 0);
 
@@ -569,10 +655,14 @@ advance_lc(int *ppc)
 		lc &= ~(1 << 30);
 		if (read_mem(old_lc >> 2, &md)) {
 		}
+		tracef("advance_lc() read vma %011o -> %011o\n",
+		       old_lc >> 2, md);
 	} else {
 		/* force skipping 2 instruction (pf + set-md) */
 		if (ppc)
 			*ppc |= 2;
+
+		tracef("advance_lc() no read; md = %011o\n", md);
 	}
 
 	{
@@ -590,9 +680,12 @@ advance_lc(int *ppc)
 
 		lc1 = (lc & 2) ? 1 : 0;
 
-		last_byte_in_word = (~lc0b & ~lc1) ? 1 : 0;
+//		last_byte_in_word = ((~lc0b & ~lc1) & 1) ? 1 : 0;
+		last_byte_in_word = (~lc0b & ~lc1) & 1;
 
-		printf("lc0b %d, lc1 %d, last_byte_in_word %d\n",
+//		printf("lc0b %d, lc1 %d, last_byte_in_word %d\n",
+//		       lc0b, lc1, last_byte_in_word);
+		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n",
 		       lc0b, lc1, last_byte_in_word);
 
 		if (last_byte_in_word)
@@ -620,6 +713,8 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 
 		/* set need fetch */
 		lc |= (1 << 30);
+
+printf("lc <- %o\n", lc);
 		break;
 	case 2: /* interrrupt control <29-26> */
 		tracef("writing IC <- %o\n", out_bus);
@@ -631,16 +726,16 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		bus_reset_flag = interrupt_control & (1 << 28);
 
 		if (sequence_break_flag) {
-			printf("ic: sequence break request\n");
+			traceint("ic: sequence break request\n");
 		}
 		if (interrupt_enable_flag) {
-			printf("ic: interrupt enable\n");
+			traceint("ic: interrupt enable\n");
 		}
 		if (bus_reset_flag) {
-			printf("ic: bus reset\n");
+			traceint("ic: bus reset\n");
 		}
 		if (lc_byte_mode_flag) {
-			printf("ic: lc byte mode\n");
+			traceint("ic: lc byte mode\n");
 		}
 
 		/* preserve flags */
@@ -717,6 +812,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			l1_index = (md >> 13) & 03777;
 			l1_data = (vma >> 27) & 037;
 			l1_map[l1_index] = l1_data;
+			invalidate_vtop_cache();
 
 			tracef("l1_map[%o] <- %o\n", l1_index, l1_data);
 		}
@@ -730,8 +826,14 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			l2_index = (l1_data << 5) | ((md >> 8) & 037);
 			l2_data = vma;
 			l2_map[l2_index] = l2_data;
+			invalidate_vtop_cache();
 
-			printf/*tracef*/("l2_map[%o] <- %o\n", l2_index, l2_data);
+#if 0
+			if (l2_index == 0) 
+				printf("l2_map[%o] <- %o\n",
+				       l2_index, l2_data);
+#endif
+			tracef("l2_map[%o] <- %o\n", l2_index, l2_data);
 
 			add_new_page_no(l2_data & 037777);
 		}
@@ -777,13 +879,21 @@ dump_state(void)
 	printf("u-code pc %o, lc %o\n", u_pc, lc);
 	printf("vma %o, md %o, q %o, opc %o, disp-const %o\n",
 	       vma, md, q, opc, dispatch_constant);
-	printf("oa-lo %o, oa-hi %o\n", oa_reg_lo, oa_reg_hi);
+	printf("oa-lo %011o, oa-hi %011o, ", oa_reg_lo, oa_reg_hi);
 	printf("pdl-ptr %o, spc-ptr %o\n", pdl_ptr, spc_stack_ptr);
+	printf("\n");
 
-	for (i = 0; i < 32; i++) {
-		printf("%cspc[%02o] %o\n",
-		       (i == spc_stack_ptr) ? '*' : ' ',
-		       i, spc_stack[i]);
+	for (i = 0; i < 32; i += 4) {
+		printf(" spc[%02o] %c%011o %c%011o %c%011o %c%011o\n",
+		       i,
+		       (i+0 == spc_stack_ptr) ? '*' : ' ',
+		       spc_stack[i+0],
+		       (i+1 == spc_stack_ptr) ? '*' : ' ',
+		       spc_stack[i+1],
+		       (i+2 == spc_stack_ptr) ? '*' : ' ',
+		       spc_stack[i+2],
+		       (i+3 == spc_stack_ptr) ? '*' : ' ',
+		       spc_stack[i+3]);
 	}
 	printf("\n");
 
@@ -793,63 +903,106 @@ dump_state(void)
 	}
 	printf("\n");
 
+#if 0
 	for (i = 0; i < 32; i += 4) {
 		printf("l1[%02o] %011o %011o %011o %011o\n",
 		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
 	}
+	printf("...\n");
+	for (i = 2048-32; i < 2048; i += 4) {
+		printf("l1[%02o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+	}
 	printf("\n");
+#else
+	for (i = 0; i < 2048; i += 4) {
+		int skipped;
+		printf("l1[%02o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
 
+		skipped = 0;
+		while (l1_map[i+0] == l1_map[i+0+4] &&
+		       l1_map[i+1] == l1_map[i+1+4] &&
+		       l1_map[i+2] == l1_map[i+2+4] &&
+		       l1_map[i+3] == l1_map[i+3+4] &&
+			i < 2048)
+		{
+			if (skipped++ == 0)
+				printf("...\n");
+			i += 4;
+		}
+	}
+	printf("\n");
+#endif
+
+#if 0
 	for (i = 0; i < 32; i += 4) {
 		printf("l2[%02o] %011o %011o %011o %011o\n",
 		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
 	}
+	printf("...\n");
+	for (i = 1024-32; i < 1024; i += 4) {
+		printf("l2[%02o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
+	}
 	printf("\n");
-}
+#else
+	for (i = 0; i < 1024; i += 4) {
+		int skipped;
+		printf("l2[%02o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
 
-int
-run(void)
-{
-	int old_pc;
-	int no_incr_pc = 0;
-	int fetch_next = 0;
-	int trace_pt, trace_pt_count;
-	char *sym, *last_sym = 0;
-
-	u_pc = 0;
-	prom_enabled_flag = 1;
-	run_ucode_flag = 1;
-	trace_mcr_labels_flag = 1;
-
-//	trace_prom_flag = 1;
-//	stop_after_prom_flag = 1;
-
-	trace_pt = 0;
-	trace_pt_count = 0;
-
-//	trace = 1;
-//	max_cycles = 300000;
-//	max_cycles = 350000;
-	max_cycles = 100000*10;
-//	max_trace_cycles = 100;
-
-//	sym_find(1, "INIMAP5", &trace_pt);
-//	sym_find(1, "CLEAR-I-MEMORY", &trace_pt);
-
-//	sym_find(1, "MEM-SIZE-LOOP", &trace_pt);
-//	sym_find(1, "COLD-SWAP-IN", &trace_pt);
-
-//	sym_find(1, "COLD-READ-LABEL", &trace_pt);
-//	max_trace_cycles = 1000;
-
-#if 1
-	sym_find(1, "BEG03", &trace_pt);
-//	trace_pt_count = 3;
-	max_trace_cycles = 1000;
+		skipped = 0;
+		while (l2_map[i+0] == l2_map[i+0+4] &&
+		       l2_map[i+1] == l2_map[i+1+4] &&
+		       l2_map[i+2] == l2_map[i+2+4] &&
+		       l2_map[i+3] == l2_map[i+3+4] &&
+			i < 1024)
+		{
+			if (skipped++ == 0)
+				printf("...\n");
+			i += 4;
+		}
+	}
+	printf("\n");
 #endif
 
-	printf("run:\n");
+	for (i = 0; i < /*1024*/01000; i += 4) {
+		printf("A[%04o] %011o %011o %011o %011o\n",
+		       i, a_memory[i], a_memory[i+1],
+		       a_memory[i+2], a_memory[i+3]);
+	}
+	printf("\n");
 
-#if 1
+#if 0
+	for (i = 0; i < 16*1024; i++) {
+		if (phy_pages[i] == 0) printf("z %o\n", i);
+	}
+#endif
+
+	{
+		int s, e;
+		s = -1;
+		for (i = 0; i < 16*1024; i++) {
+			if (phy_pages[i] != 0 && s == -1)
+				s = i;
+
+			if ((phy_pages[i] == 0 || i == 16*1024-1) && s != -1) {
+				e = i-1;
+				printf("%o-%o\n", s, e);
+				s = -1;
+			}
+		}
+	}
+}
+
+void
+patch_prom_code(void)
+{
+//#define PATCH_PROM_LOOPS_1
+//#define PATCH_PROM_LOOPS_2
+
+#ifdef PATCH_PROM_LOOPS_1
 	/* short out some really long loops */
 	prom_ucode[0244] = 0;
 	prom_ucode[0251] = 0;
@@ -862,9 +1015,87 @@ run(void)
 	prom_ucode[0510] = 0;
 #endif
 
-#if 1
+#ifdef PATCH_PROM_LOOPS_2
 	prom_ucode[0452] = 04000001000310030; /* m-c <- m-zero */
 #endif
+}
+
+int
+set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
+{
+
+//	trace = 1;
+//	max_cycles = 300000;
+//	max_cycles = 350000;
+//	max_cycles = 100000*20;
+//	max_cycles = 1000*1000*30;
+	max_cycles = 1000*1000*50;
+//	max_cycles = 1000*1000*100;
+//	max_trace_cycles = 100;
+
+//	sym_find(1, "INIMAP5", ptrace_pt);
+//	sym_find(1, "CLEAR-I-MEMORY", ptrace_pt);
+
+//	sym_find(1, "MEM-SIZE-LOOP", ptrace_pt);
+//	sym_find(1, "COLD-SWAP-IN", ptrace_pt);
+
+//	sym_find(1, "COLD-READ-LABEL", ptrace_pt);
+//	max_trace_cycles = 1000;
+
+//	sym_find(1, "RESET-MACHINE", ptrace_label_pt);
+//	sym_find(1, "BEG0000", ptrace_label_pt);
+
+//	sym_find(1, "BEG06", ptrace_pt);
+//	(*ptrace_pt)++;
+//printf("trace_pt %o\n", *ptrace_pt);
+
+//	sym_find(1, "BEGCM4", ptrace_pt);
+
+#if 0
+	sym_find(1, "BEG03", ptrace_pt);
+//	trace_pt_count = 3;
+//	max_trace_cycles = 1000;
+#endif
+
+//	sym_find(1, "COLD-REINIT-PPD-3", ptrace_pt);
+
+	sym_find(1, "GET-AREA-ORIGINS", ptrace_pt);
+
+//	sym_find(1, "COLD-REINIT-PPD-0", ptrace_pt);
+
+//	trace_mcr_labels_flag = 1;
+//	trace_prom_flag = 1;
+//	stop_after_prom_flag = 1;
+
+	trace_disk_flag = 1;
+	trace_io_flag = 1;
+	trace_int_flag = 1;
+}
+
+int
+run(void)
+{
+	int old_pc;
+	int no_incr_pc = 0;
+	int fetch_next = 0;
+	int trace_pt, trace_pt_count, trace_label_pt;
+	char *sym, *last_sym = 0;
+
+	u_pc = 0;
+	prom_enabled_flag = 1;
+	run_ucode_flag = 1;
+
+	trace_pt = 0;
+	trace_pt_count = 0;
+	trace_label_pt = 0;
+
+	set_breakpoints(&trace_pt, &trace_pt_count, &trace_label_pt);
+
+	printf("run:\n");
+
+	patch_prom_code();
+
+	timing_start();
 
 	while (run_ucode_flag) {
 		int a_src, m_src, new_pc, dest, alu_op;
@@ -889,11 +1120,17 @@ run(void)
 
 		int n_plus1, enable_ish;
 		int i_long, popj;
+int was_dispatch;
 
 #if 0
 		/* test unibus prom enable flag */
 		if (u_pc == 0421) u_pc = 0477;
 #endif
+
+		/* */
+		if (trace_label_pt && u_pc == trace_label_pt) {
+			trace_mcr_labels_flag = 1;
+		}
 
 		/* see if we hit a trace point */
 		if (trace_pt && u_pc == trace_pt && trace == 0) {
@@ -903,8 +1140,9 @@ run(void)
 				if (trace_pt_count) {
 					if (--trace_pt_count == 0)
 						trace = 1;
-				} else
+				} else {
 					trace = 1;
+				}
 			}
 
 			if (trace)
@@ -960,7 +1198,8 @@ run(void)
 		}
 
 		/* enforce max cycles */
-		if (max_cycles && cycles++ > max_cycles) {
+		cycles++;
+		if (max_cycles && cycles > max_cycles) {
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
 
@@ -1006,7 +1245,8 @@ run(void)
 				int offset;
 				if (sym = sym_find_last(1, pc, &offset)) {
 					if (offset == 0 && sym != last_sym) {
-						printf("%s:\n", sym);
+						printf("%s: (lc=%011o)\n",
+						       sym, lc);
 						last_sym = sym;
 					}
 				}
@@ -1104,6 +1344,7 @@ run(void)
 		 * decode instruction
 		 */
 
+was_dispatch = 0;
 		switch ((u >> 43) & 03) {
 		case 0: /* alu */
 
@@ -1436,6 +1677,13 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			invert_sense = (u >> 6) & 1;
 			take_jump = 0;
 
+			/* halt-cons? */
+			if (((u >> 10) & 3) == 1) {
+				printf("halted\n");
+				run_ucode_flag = 0;
+				break;
+			}
+
 		process_jump:
 			if (!n_bit) {
 				fetch_next = 1;
@@ -1460,13 +1708,15 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					take_jump = page_fault_flag;
 					break;
 				case 5:
-printf("jump i|pf\n");
+//printf("jump i|pf\n");
+tracef("jump i|pf\n");
 					take_jump = page_fault_flag |
 						(interrupt_enable_flag ?
 						 interrupt_pending_flag :0);
 					break;
 				case 6:
-printf("jump i|pf|sb\n");
+//printf("jump i|pf|sb\n");
+tracef("jump i|pf|sb\n");
 					take_jump = page_fault_flag |
 						(interrupt_enable_flag ?
 						 interrupt_pending_flag:0) |
@@ -1491,11 +1741,20 @@ printf("jump i|pf|sb\n");
 			if (p_bit && take_jump) {
 				if (fetch_next)
 					push_spc(u_pc+2);
-				else
+				else {
+/* this is a total hack; further pointing out how badly I need to make a read pc pipeline */
+if (pc != u_pc && !was_dispatch) {
+printf("PUSHING %o; pc %o, u_pc %o, fn %d\n",
+u_pc+1, pc, u_pc, fetch_next);
+					push_spc(u_pc);
+} else
 					push_spc(u_pc+1);
+}
 			}
 
-			if (p_bit && r_bit) {
+			
+			/* P & R & jump-inst -> write ucode */
+			if (p_bit && r_bit && ((u >> 43) & 03) == 1) {
 				w = ((ucw_t)(a_src_value & 0177777) << 32) |
 					(unsigned int)m_src_value;
 				write_ucode(new_pc, w);
@@ -1557,7 +1816,7 @@ printf("jump i|pf|sb\n");
 					pos |= ((ir4 ^ (lc1 ^ lc0)) << 4) |
 						((ir3 ^ lc0) << 3);
 
-					printf("byte-mode, pos %o\n", pos);
+					tracef("byte-mode, pos %o\n", pos);
 				} else {
 					/* 16 bit mode */
 					char ir4, lc1;
@@ -1567,7 +1826,7 @@ printf("jump i|pf|sb\n");
 
 					pos = u & 017;
 					pos |= (ir4 ^ lc1) << 4;
-					printf("16b-mode, pos %o\n", pos);
+					tracef("16b-mode, pos %o\n", pos);
 				}
 			}
 
@@ -1579,8 +1838,10 @@ printf("jump i|pf|sb\n");
 				goto dispatch_done;
 			}
 
-			tracef("disp-addr %o, map %o, len %o, pos %o\n",
-			       disp_addr, map, len, pos);
+//			tracef("disp-addr %o, map %o, len %o, pos %o\n",
+//			       disp_addr, map, len, pos);
+
+			tracef("m-src %o, ", m_src_value);
 
 			/* rotate m-source */
 			m_src_value = rotate_left(m_src_value, pos);
@@ -1593,6 +1854,9 @@ printf("jump i|pf|sb\n");
 
 			/* put ldb into dispatch-addr */
 			disp_addr |= m_src_value & mask;
+
+			tracef("rotated %o, mask %o, result %o\n",
+			       m_src_value, mask, m_src_value & mask);
 
 			/* tweek dispatch-addr with l2 map bits */
 			if (map) {
@@ -1650,6 +1914,7 @@ printf("jump i|pf|sb\n");
 			invert_sense = 0;
 			take_jump = 1;
 			u = 1<<5;
+was_dispatch = 1;
 
 			/* enable instruction sequence hardware */
 			if (enable_ish) {
@@ -1715,6 +1980,8 @@ printf("jump i|pf|sb\n");
 			case 2: /* selective desposit */
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);
+				tracef("sel-dep; a %o, m %o, mask %o -> %o\n", 
+				       a_src_value, m_src_value, mask, out_bus);
 				break;
 			case 3: /* dpb */
 				tracef("dpb; m %o, pos %o\n", 
@@ -1763,6 +2030,8 @@ printf("jump i|pf|sb\n");
 		else
 			u_pc++;
 	}
+
+	timing_stop();
 
 	dump_state();
 }

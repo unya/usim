@@ -10,7 +10,10 @@
 #include <unistd.h>
 #include <string.h>
 
-char *filename;
+char *img_filename;
+char *mcr_filename;
+char *lod1_filename;
+char *lod2_filename;
 unsigned int buffer[256];
 
 int cyls, heads, blocks_per_track;
@@ -86,7 +89,6 @@ make_labl(int fd)
 	heads = 19;
 	blocks_per_track = 17;
 
-//	buffer[0] = 011420440514; /* label LABL */
 	buffer[0] = str4("LABL");	/* label LABL */
 	buffer[1] = 1;			/* version = 1 */
 	buffer[2] = cyls;		/* # cyls */
@@ -95,27 +97,10 @@ make_labl(int fd)
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
 	buffer[6] = str4("MCR1");	/* name of micr part */
 	buffer[7] = str4("LOD1");	/* name of load part */
+#ifdef BOOT_LOD2
+	buffer[7] = str4("LOD2");	/* name of load part */
+#endif
 
-#if 0
-	buffer[0200] = 3; /* # of partitions */
-	buffer[0201] = 4; /* words / partition */
-
-	buffer[0202] = 'MCR1'; /* start of partition info */
-	buffer[0203] = 17; /* micr address */
-	buffer[0204] = 148;   /* # blocks */
-	buffer[0205] = 0;
-
-	buffer[0206] = 'PAGE'; /* start of partition info */
-buffer[0206] = 010521640520;
-	buffer[0207] = 01000;
-	buffer[0210] = 10;
-	buffer[0211] = 0;
-
-	buffer[0212] = 'LOD1'; /* start of partition info */
-	buffer[0213] = 0;
-	buffer[0214] = 0;
-	buffer[0215] = 0;
-#else
 	{
 		int i, count;
 		int p = 0200;
@@ -148,7 +133,6 @@ buffer[0206] = 010521640520;
 
 		}
 	}
-#endif
 
 /* pack text label - offset 020, 32 bytes */
 
@@ -193,7 +177,7 @@ make_mcr1(int fd)
 
 	printf("making MCR1...\n");
 
-	fd1 = open("ucadr.mcr.979", O_RDONLY);
+	fd1 = open(mcr_filename, O_RDONLY);
 
 	count = 0;
 	while (1) {
@@ -221,22 +205,87 @@ make_mcr1(int fd)
 	}
 
 	printf("%d blocks\n", count);
+	return 0;
+}
+
+int
+make_lod1(int fd)
+{
+	int ret, count, i, fd1;
+	unsigned char b[256*4];
+
+	printf("making LOD1...\n");
+
+	fd1 = open(lod1_filename, O_RDONLY);
+
+	count = 0;
+	while (1) {
+		ret = read(fd1, b, 256*4);
+		if (ret <= 0)
+			break;
+
+		/* LOD1 start XXX */
+		write_block(fd, 021210+count, b);
+
+		count++;
+
+		if (ret < 256*4)
+			break;
+	}
+
+	printf("%d blocks\n", count);
+	return 0;
+}
+
+int
+make_lod2(int fd)
+{
+	int ret, count, i, fd1;
+	unsigned char b[256*4];
+
+	printf("making LOD2...\n");
+
+	fd1 = open(lod2_filename, O_RDONLY);
+
+	count = 0;
+	while (1) {
+		ret = read(fd1, b, 256*4);
+		if (ret <= 0)
+			break;
+
+		/* LOD1 start XXX */
+		write_block(fd, 041674+count, b);
+
+		count++;
+
+		if (ret < 256*4)
+			break;
+	}
+
+	printf("%d blocks\n", count);
+	return 0;
 }
 
 main(int argc, char *argv[])
 {
 	int fd;
 
-	filename = strdup("disk.img");
+	img_filename = strdup("disk.img");
+//	mcr_filename = strdup("ucadr.mcr.979");
+	mcr_filename = strdup("ucadr.mcr.841");
+	lod1_filename = strdup("partition.lod1.841");
+	lod2_filename = strdup("partition.lod2.841");
 
-	fd = open(filename, O_RDWR | O_CREAT, 0666);
+	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
 	if (fd < 0) {
-		perror(filename);
+		perror(img_filename);
 		exit(1);
 	}
 
 	make_labl(fd);
 	make_mcr1(fd);
+	make_lod1(fd);
+	make_lod2(fd);
 
 	exit(0);
 }
