@@ -19,4 +19,6 @@ diskmaker: diskmaker.c
 
 clean:
 	rm -f *.o usim readmcr diskmaker disk.img xx
+	rm -f *~
+
 
