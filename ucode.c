@@ -25,6 +25,7 @@ int pdl_ptr;
 int pdl_index;
 
 int lc;
+int lc_mode_flag;
 
 int spc_stack[32];
 int spc_stack_ptr;
@@ -46,11 +47,13 @@ int max_trace_cycles;
 
 int page_fault_flag;
 int interrupt_pending_flag;
-int sequence_break_flag;
-
 int interrupt_status_reg;
 
+int sequence_break_flag;
 int interrupt_enable_flag;
+int lc_byte_mode_flag;
+int bus_reset_flag;
+
 int prom_enabled_flag;
 int run_ucode_flag;
 int stop_after_prom_flag;
@@ -89,13 +92,6 @@ set_interrupt_status_reg(int new)
 	interrupt_pending_flag = (interrupt_status_reg & 0140000) ? 1 : 0;
 }
 
-/*
- * vectors:
- 270 chaos int
- 400 ether xmit done
- 404 ether rcv done
- 410 ether collision
-*/
 void
 post_unibus_interrupt(int vector)
 {
@@ -127,25 +123,34 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	int l1_index, l2_index, l1;
 	unsigned int l2;
 
-	/* 22 bit address */
-/* humm.. maybe this should be 24 bits... */
-	virt &= 017777777;
+	/* 24 bit address */
+	virt &= 077777777;
                  
-	if ((virt & 017400000) == 017400000) {
+	if ((virt & 077700000) == 077000000) {
 		/*  077000000, size = 210560(8) */
-		printf("frame buffer\n");
+		printf("frame buffer %o\n", virt);
+
+		if (virt >= 077051757 && virt <= 077051763) {
+			printf("disk run light\n");
+		}
+
+		if (poffset)
+			*poffset = virt & 0377;
+
+		return (1 << 22) | (1 << 23) | 036000;
 	}
 
-	if ((virt & 017777400) == 017377400) {
+	if ((virt & 077777400) == 077377400) {
 		printf("forcing xbus mapping for disk\n");
 		if (poffset)
 			*poffset = virt & 0377;
 		return (1 << 22) | (1 << 23) | 036777;
 	}
 
-	if (virt >= 017051757 && virt <= 017051763) {
-		printf("disk run light\n");
-	}
+/*
+764000-7641777 i/o board
+764140 chaos
+*/
 
 	/* 11 bit l1 index */
 	l1_index = (virt >> 13) & 03777;
@@ -229,6 +234,12 @@ read_mem(int vaddr, unsigned int *pv)
 		return -1;
 	}
 
+	if (pn == 036000) {
+		offset <<= 1;
+		video_read(offset, pv);
+		return 0;
+	}
+
 	if ((page = phy_pages[pn]) == 0) {
 		/* page fault */
 		page_fault_flag = 1;
@@ -242,6 +253,12 @@ read_mem(int vaddr, unsigned int *pv)
 	if (pn == 8192)
 	{
 		*pv = 0xffffffff;
+		return 0;
+	}
+
+	if (pn == 037764) {
+		offset <<= 1;
+		iob_unibus_read(offset, pv);
 		return 0;
 	}
 
@@ -264,6 +281,7 @@ read_mem(int vaddr, unsigned int *pv)
 		}
 	}
 
+	/* disk controller on xbus */
 	if (pn == 036777) {
 		int paddr = pn << 10;
 
@@ -271,7 +289,6 @@ read_mem(int vaddr, unsigned int *pv)
 		//printf("disk; paddr=%o\n", paddr);
 
 		tracef("disk register read, offset %o\n", offset);
-//printf("a_memory[065] %o\n", a_memory[065]);
 
 		switch (offset) {
 		case 0370:
@@ -329,34 +346,27 @@ write_mem(int vaddr, unsigned int v)
 		return -1;
 	}
 
+	if (pn == 036000) {
+		offset <<= 1;
+		printf("video_write %o %o\n", offset, v);
+		video_write(offset, v);
+		return 0;
+	}
+
 	if ((page = phy_pages[pn]) == 0) {
 		/* page fault */
 		page_fault_flag = 1;
 		opc = pn;
+		tracef("write_mem(vaddr=%o) page fault\n", vaddr);
 		return -1;
 	}
 
 	if (pn == 037764) {
 		offset <<= 1;
-
-		switch (offset) {
-		case 0100:
-			printf("unibus: kbd low\n");
-			break;
-		case 0110:
-			printf("unibus: beep\n");
-			break;
-		case 0112:
-			printf("unibus: kbd csr\n");
-			break;
-		case 0120:
-		case 0122:
-			printf("unibus: usec clock\n");
-			break;
-		case 0140:
-			printf("unibus: chaos\n");
-			break;
-		}
+		printf("unibus: iob v %o, offset %o\n",
+		       vaddr, offset);
+		iob_unibus_write(offset, v);
+		return 0;
 	}
 
 	if (pn == 037766) {
@@ -393,7 +403,7 @@ write_mem(int vaddr, unsigned int v)
 			printf("unibus: write interrupt status %o\n", v);
 			set_interrupt_status_reg(
 				(interrupt_status_reg & ~0036001) |
-				(v & 0036001))
+				(v & 0036001));
 			return 0;
 
 		case 042:
@@ -419,7 +429,7 @@ write_mem(int vaddr, unsigned int v)
 
 	}
 
-	/* disk controller */
+	/* disk controller on xbus */
 	if (pn == 036777) {
 
 		tracef("disk register write, offset %o <- %o\n", offset, v);
@@ -528,18 +538,66 @@ void
 push_spc(int pc)
 {
 	tracef("writing spc[%o] <- %o\n", spc_stack_ptr, pc);
-	spc_stack[spc_stack_ptr++] = pc;
-	if (spc_stack_ptr == 32)
-		spc_stack_ptr = 0;
+	spc_stack[spc_stack_ptr] = pc;
+
+	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
 }
 
 int
 pop_spc(void)
 {
-	if (spc_stack_ptr == 0)
-		spc_stack_ptr = 32;
-	tracef("reading spc[%o] -> %o\n", spc_stack_ptr-1, spc_stack[spc_stack_ptr-1]);
-	return spc_stack[--spc_stack_ptr];
+	spc_stack_ptr = (spc_stack_ptr - 1) & 037;
+
+	tracef("reading spc[%o] -> %o\n",
+	       spc_stack_ptr, spc_stack[spc_stack_ptr]);
+
+	return spc_stack[spc_stack_ptr];
+}
+
+void
+advance_lc(int *ppc)
+{
+	int old_lc = lc & 077777777;
+	unsigned int v;
+
+	printf("advance_lc()\n");
+
+	if (lc_byte_mode_flag) {
+		/* byte mode */
+		lc++;
+	} else {
+		/* 16 bit mode */
+		lc += 2;
+	}
+
+	/* need-fetch? */
+	if (lc & (1 << 30)) {
+		lc &= ~(1 << 30);
+		if (read_mem(old_lc >> 2, &md)) {
+		}
+	} else {
+		/* force skipping 2 instruction (pf + set-md) */
+		if (ppc)
+			*ppc |= 2;
+	}
+
+	{
+		char lc0b, lc1, last_byte_in_word;
+
+		lc0b =
+			/* byte-mode */
+			(lc_byte_mode_flag ? 1 : 0) &
+			/* lc0 */
+			((lc & 1) ? 1 : 0);
+
+		lc1 = (lc & 2) ? 1 : 0;
+
+		last_byte_in_word = lc0b & lc1;
+
+		if (last_byte_in_word)
+			/* set need-fetch */
+			lc |= (1 << 30);
+	}
 }
 
 /*
@@ -557,24 +615,37 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		/* case 0: none */
 	case 1: /* LC (location counter) */
 		tracef("writing LC <- %o\n", out_bus);
-		lc = out_bus;
+		lc = (lc & ~077777777) | (out_bus & 077777777);
+
+		/* set need fetch */
+		lc |= (1 << 30);
 		break;
 	case 2: /* interrrupt control <29-26> */
 		tracef("writing IC <- %o\n", out_bus);
 		interrupt_control = out_bus;
-		if (interrupt_control & (1 << 26)) {
+
+		interrupt_enable_flag = interrupt_control & (1 << 27);
+		sequence_break_flag = interrupt_control & (1 << 26);
+		lc_byte_mode_flag = interrupt_control & (1 << 29);
+		bus_reset_flag = interrupt_control & (1 << 28);
+
+		if (sequence_break_flag) {
 			printf("ic: sequence break request\n");
-			sequence_break_flag = 0;
 		}
-		if (interrupt_control & (1 << 27)) {
+		if (interrupt_enable_flag) {
 			printf("ic: interrupt enable\n");
 		}
-		if (interrupt_control & (1 << 28)) {
+		if (bus_reset_flag) {
 			printf("ic: bus reset\n");
 		}
-		if (interrupt_control & (1 << 29)) {
+		if (lc_byte_mode_flag) {
 			printf("ic: lc byte mode\n");
 		}
+
+		/* preserve flags */
+		lc = (lc & ~(017 << 26)) |
+			(interrupt_control & (017 << 26));
+
 		break;
 	case 010: /* PDL (addressed by Pointer) */
 		tracef("writing pdl[%o] <- %o\n",
@@ -719,7 +790,7 @@ run(void)
 //	trace = 1;
 //	max_cycles = 300000;
 //	max_cycles = 350000;
-	max_cycles = 600000;
+	max_cycles = 100000*4;
 //	max_trace_cycles = 100;
 
 //	sym_find(1, "INIMAP5", &trace_pt);
@@ -778,7 +849,7 @@ run(void)
 		ucw_t u, w;
 
 		int n_plus1, enable_ish;
-		int i_long;
+		int i_long, popj;
 
 #if 0
 		/* test unibus prom enable flag */
@@ -862,6 +933,7 @@ run(void)
 		}
 
 		i_long = (u >> 45) & 1;
+		popj = (u >> 42) & 1;
 
 		if (trace) {
 			int offset;
@@ -965,7 +1037,7 @@ run(void)
 			case 014:
 				m_src_value = (spc_stack_ptr << 24) |
 					(spc_stack[spc_stack_ptr] & 0777777);
-				spc_stack_ptr--;
+				spc_stack_ptr = (spc_stack_ptr - 1) & 037;
 				break;
 
 			case 024:
@@ -1327,21 +1399,7 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				fetch_next = 1;
 			}
 
-#if 0
-			if (p_bit) {
-				if (fetch_next)
-					push_spc(u_pc+2);
-				else
-					push_spc(u_pc+1);
-			}
-
-			if (p_bit && r_bit) {
-				w = ((ucw_t)(a_src_value & 0177777) << 32) |
-					(unsigned int)m_src_value;
-				write_ucode(new_pc, w);
-			}
-#endif
-
+			/* jump condition */
 			if (u & (1<<5)) {
 				switch (u & 017) {
 				case 0: break;
@@ -1362,12 +1420,14 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				case 5:
 printf("jump i|pf\n");
 					take_jump = page_fault_flag |
-						interrupt_pending_flag;
+						(interrupt_enable_flag ?
+						 interrupt_pending_flag :0);
 					break;
 				case 6:
 printf("jump i|pf|sb\n");
 					take_jump = page_fault_flag |
-						interrupt_pending_flag |
+						(interrupt_enable_flag ?
+						 interrupt_pending_flag:0) |
 						sequence_break_flag;
 					break;
 				case 7:
@@ -1386,7 +1446,6 @@ printf("jump i|pf|sb\n");
 			if (invert_sense)
 				take_jump = !take_jump;
 
-#if 1
 			if (p_bit && take_jump) {
 				if (fetch_next)
 					push_spc(u_pc+2);
@@ -1399,10 +1458,17 @@ printf("jump i|pf|sb\n");
 					(unsigned int)m_src_value;
 				write_ucode(new_pc, w);
 			}
-#endif
 
 			if (r_bit && take_jump) {
 				new_pc = pop_spc();
+
+				/* spc<14> */
+				if ((new_pc >> 14) & 1) {
+					advance_lc(&new_pc);
+				}
+
+				new_pc &= 037777;
+
 				no_incr_pc = 1;
 			}
 
@@ -1416,6 +1482,7 @@ printf("jump i|pf|sb\n");
 				old_pc = u_pc;
 				u_pc = new_pc;
 				no_incr_pc = 1;
+				popj = 0;
 			} else {
 /* this is bogus; we should only set fetch_next if take_jump and we should
    use !n_bit above, instead of fetch_next */
@@ -1433,7 +1500,33 @@ printf("jump i|pf|sb\n");
 			len = (u >> 5) & 07;
 			pos = u & 037;
 
-			/* */
+			/* misc function 3 */
+			if (((u >> 10) & 3) == 3) {
+				if (lc_byte_mode_flag) {
+					/* byte mode */
+					char ir4, ir3, lc1, lc0;
+
+					ir4 = (u >> 4) & 1;
+					ir4 = (u >> 3) & 1;
+					lc1 = (lc >> 1) & 1;
+					lc0 = (lc >> 0) & 1;
+
+					pos = u & 007;
+					pos |= ((ir4 ^ (lc1 ^ lc0)) << 4) |
+						((ir3 ^ lc0) << 3);
+				} else {
+					/* 16 bit mode */
+					char ir4, lc1;
+
+					ir4 = (u >> 4) & 1;
+					lc1 = (lc >> 1) & 1;
+
+					pos = u & 017;
+					pos |= (ir4 ^ lc1) << 4;
+				}
+			}
+
+			/* misc function 2 */
 			if (((u >> 10) & 3) == 2) {
 				tracef("dispatch_memory[%o] <- %o\n",
 				       disp_addr, a_src_value);
@@ -1441,11 +1534,11 @@ printf("jump i|pf|sb\n");
 				goto dispatch_done;
 			}
 
-			tracef("addr %o, map %o, len %o, rot %o\n",
-			       disp_addr, map, len, rot);
+			tracef("addr %o, map %o, len %o, pos %o\n",
+			       disp_addr, map, len, pos);
 
 			/* rotate m-source */
-			m_src_value = rotate_left(m_src_value, rot);
+			m_src_value = rotate_left(m_src_value, pos);
 
 			/* generate mask */
 			left_mask_index = (len - 1) & 037;
@@ -1478,16 +1571,21 @@ printf("jump i|pf|sb\n");
 
 			dispatch_constant = disp_cont;
 
-			/* xxx - I need page 18! */
+			/* 14 bits */
 			new_pc = disp_addr & 037777;
 
-			r_bit = (disp_addr >> 15) & 1;
-			p_bit = (disp_addr >> 16) & 1;
-			n_bit = (disp_addr >> 17) & 1;
+			n_bit = (disp_addr >> 14) & 1;
+			p_bit = (disp_addr >> 15) & 1;
+			r_bit = (disp_addr >> 16) & 1;
 
 			invert_sense = 0;
 			take_jump = 1;
 			u = 1<<5;
+
+			/* enable instruction sequence hardware */
+			if (enable_ish) {
+				advance_lc((int *)0);
+			}
 
 			goto process_jump;
 
@@ -1575,9 +1673,17 @@ printf("jump i|pf|sb\n");
 		 * in the hardware and feed pc's into that...
 		 */
 
-		if ((u >> 42) & 1) {
+		if (popj) {
 			tracef("popj; ");
 			u_pc = pop_spc();
+
+			/* spc<14> */
+			if ((u_pc >> 14) & 1) {
+				advance_lc(&u_pc);
+			}
+
+			u_pc &= 037777;
+
 			no_incr_pc = 1;
 			fetch_next = 1;
 		}

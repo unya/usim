@@ -1,27 +1,27 @@
 CADR simulator
-9/4/04
+9/6/04
 Brad Parker
 brad@heeltoe.com
 
 What is this?
 -------------
 
-This is a simple hack designed to simulate (emulate?) the CADR
+This is a simple hack designed to emulate the CADR microprocessor
 hardware.  A CADR is a second generation MIT lisp machine.  A good
 description can be found in "A.I. Memo 528" from the MIT AI Labs
 entitled, "CADR".
 
-The CADR was a 32 bit microcoded machine designed to run the lisp
-language.
+The CADR was a 32 bit microcoded microprocessor designed to run the
+lisp language.
 
-This program attempts to run the microcode found in the machine
+This program attempts to interpret the microcode found in the machine
 starting with the "prom" microcode which runs when the machine is
 first powered on.
 
 What state is this in?
 ----------------------
 
-The emulation is about 80% done.  It gets through the prom code and
+The emulation is about 85% done.  It gets through the prom code and
 loads the microcode band.  The disk emulation reads from a 'disk
 image' file which is constructed with 'diskmaker'.  It looks like most
 of the ALU code is ok as is the branch and byte code.
@@ -30,9 +30,7 @@ The divide code is still broken and needs to be fixed.  I put in a
 hack which aborts the last step and now it seems ok, but I think
 something is wrong with my emulation of the h/w.
 
-The dispatch code is most implemented but not complete.  I need to 
-look at the hardware to find where the n, p & r bits go and make sure
-all of the push/pop semantics are correct.
+The dispatch code is implemented but not tested.
 
 There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.
@@ -43,7 +41,7 @@ What needs to be done?
 ----------------------
 
 - fix the divide code
-- finish the dispatch emulation
+- test the dispatch emulation
 
 And most important, find a valid load band.  Without this the emulation
 is uninteresting.  Once we have a load band

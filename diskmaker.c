@@ -86,14 +86,15 @@ make_labl(int fd)
 	heads = 19;
 	blocks_per_track = 17;
 
-	buffer[0] = 011420440514; /* label LABL */
-	buffer[1] = 1; /* version = 1 */
-	buffer[2] = cyls; /* # cyls */
-	buffer[3] = heads; /* # heads */
-	buffer[4] = blocks_per_track; /* # blocks */
+//	buffer[0] = 011420440514; /* label LABL */
+	buffer[0] = str4("LABL");	/* label LABL */
+	buffer[1] = 1;			/* version = 1 */
+	buffer[2] = cyls;		/* # cyls */
+	buffer[3] = heads;		/* # heads */
+	buffer[4] = blocks_per_track;	/* # blocks */
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
-	buffer[6] = str4("MCR1"); /* name of micr part */
-	buffer[7] = str4("LOD1"); /* name of micr part */
+	buffer[6] = str4("MCR1");	/* name of micr part */
+	buffer[7] = str4("LOD1");	/* name of load part */
 
 #if 0
 	buffer[0200] = 3; /* # of partitions */
