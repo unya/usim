@@ -160,6 +160,7 @@ _disk_read(int block_no, unsigned int *buffer)
 
 	ret = lseek(disk_fd, offset, SEEK_SET);
 	if (ret != offset) {
+		printf("disk: image file seek error\n");
 		perror("lseek");
 		return -1;
 	}
@@ -235,6 +236,7 @@ disk_start(void)
 
 	switch (disk_cmd & 07777) {
 	case 0:
+	case 04000:
 		printf("read\n");
 		disk_read_block(unit, cyl, head, block);
 		break;

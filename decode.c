@@ -37,7 +37,7 @@ read_prom_files(void)
 	}
 
 	for (i = 0; i < 512; i++) {
-		prom_ucode[512-i] =
+		prom_ucode[511-i] =
 			((unsigned long long)prom[0][i] << (8*5)) |
 			((unsigned long long)prom[1][i] << (8*4)) |
 			((unsigned long long)prom[2][i] << (8*3)) |

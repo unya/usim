@@ -69,24 +69,26 @@ make_labl(int fd)
 	buffer[4] = blocks_per_track; /* # blocks */
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
 	buffer[6] = 'MCR1'; /* name of micr part */
+	buffer[7] = 'LOD1'; /* name of micr part */
 
 	buffer[0200] = 3; /* # of partitions */
 	buffer[0201] = 4; /* words / partition */
 
 	buffer[0202] = 'MCR1'; /* start of partition info */
-	buffer[0203] = 18; /* micr address */
+	buffer[0203] = 17/*18*/; /* micr address */
 	buffer[0204] = 148;   /* # blocks */
 	buffer[0205] = 0;
 
 	buffer[0206] = 'PAGE'; /* start of partition info */
-	buffer[0207] = 0;
-	buffer[0210] = 0;
+buffer[0206] = 010521640520;
+	buffer[0207] = 01000;
+	buffer[0210] = 10;
 	buffer[0211] = 0;
 
-	buffer[0206] = 'LOD1'; /* start of partition info */
-	buffer[0207] = 0;
-	buffer[0210] = 0;
-	buffer[0211] = 0;
+	buffer[0212] = 'LOD1'; /* start of partition info */
+	buffer[0213] = 0;
+	buffer[0214] = 0;
+	buffer[0215] = 0;
 
 /* pack text label - offset 020, 32 bytes */
 
@@ -103,8 +105,8 @@ write_block(int fd, int block_no, unsigned char *buf)
 
 	offset = block_no * (256*4);
 
-	if (block_no == 18) printf("write_block() block %d, offset %d\n",
-				   block_no, offset);
+//	if (block_no == 18) printf("write_block() block %d, offset %d\n",
+//				   block_no, offset);
 
 	ret = lseek(fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -148,7 +150,7 @@ make_mcr1(int fd)
 		}
 #endif
 
-		write_block(fd, 18+count, b);
+		write_block(fd, 17/*18*/+count, b);
 
 		count++;
 
@@ -160,7 +162,7 @@ make_mcr1(int fd)
 	printf("%d blocks\n", count);
 }
 
-main()
+main(int argc, char *argv[])
 {
 	int fd;
 

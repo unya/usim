@@ -3,12 +3,12 @@
 # $Id$
 #
 
-SRC = main.c decode.c ucode.c disk.c
+USIM_SRC = main.c decode.c ucode.c disk.c syms.c
 
 all: usim readmcr diskmaker
 
-usim: $(SRC)
-	cc -o usim -g $(SRC)
+usim: $(USIM_SRC)
+	cc -o usim -g $(USIM_SRC)
 	./usim >xx
 
 readmcr: readmcr.c
