@@ -6,7 +6,7 @@
 Some notes on the CADR "principles of operation"
 <pre>
 Brad Parker
-10/12/04
+10/17/04
 brad@heeltoe.com
 </pre>
 
@@ -51,15 +51,60 @@ write.
 <pre>
 		;NOTE THAT THE LC HARDWARE IGNORES THE LOW BIT
 		;AND READS IT BACK AS ZERO IN HALFWORD MODE
+</pre>
 <p>
 <li>It seems a page fault should be generated on a write access if the
 read access bit is not set, even if the write access bit is set.
-</pre>
+<p>
+<li>If the "length of byte" field in a dispatch is zero, the mask is zero and no
+bits contribute to the dispatch offset.
+<p>
+<li>The microcode uses the fact that the MD is valid (for one
+additional cycle) with the result of a previous memory-read even when
+a new memory read has been started. (so the memory read pipe must be modeled)
 <p>
 <li>The dispatch instruction is affected by the instruction pipeline.  Below some of the
 cases are enumerated for clarity.
-
 </ul>
+
+First, let me quote from "lmdocs: popj.2", a document which I found illuminating.
+<p>
+<pre>
+POPJ-AFTER-NEXT in combination with JUMP and DISPATCH			[CONTRL]
+
+Dispatch	R	P	N	PC	SPC	NOP
+		0	0	0	jump	pop	no
+		0	0	1	jump	pop	yes
+		0	1	0	jump	push	no
+		0	1	1	jump	push	yes
+		1	0	0	popj	pop	no
+		1	0	1	popj	pop	yes
+		1	1	0	popj	pop	no
+		1	1	1	popj	pop	yes
+
+Jump		R	P	N	PC	SPC	NOP
+(cond		0	0	0	jump	pop	no
+ satisfied)	0	0	1	jump	pop	yes
+		0	1	0	jump	push	no
+		0	1	1	jump	push	yes
+		1	0	0	popj	pop	no
+		1	0	1	popj	pop	yes
+		1	1	0	iwrite
+		1	1	1	iwrite
+
+Jump with condition not satisfied is similar to ALU and BYTE instructions.
+
+Possible mods to increase usefulness:
+A dispatch-call or jump-call in combination with popj-after-next
+should neither popj nor pushj but just jump.  If it's xct-next
+the right thing happens.  If the next instruction is inhibited, well
+that's OK.  However, if the next instruction is not inhibited,
+and it's a CALL, normally (without the previous call) would be
+like tail recursive, but here will end up with two return addresses
+on pdl, however, the top one is the address of the place called
+in the first instruction and the one under that is the original
+return so that's right too.
+</pre>
 
 <hr>
 

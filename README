@@ -1,5 +1,5 @@
 CADR simulator
-10/12/04
+10/18/04
 Brad Parker
 brad@heeltoe.com
 
@@ -22,19 +22,9 @@ What state is this in?
 ----------------------
 
 The emulation is about 90% done.  It gets through the prom code, loads
-the microcode band, copies the band to swap and begins executing.  It
-gets some half way into LISP-TOP-LEVEL before it traps and halts.
+the microcode band, copies the band to swap and executes the load band.
 
-It does print a message to the cold load stream and it comes out on the
-console (woo hoo! output!).  The message "ERROR: Disk SI:DISK-RUN"
-
-(turns out my controller emulation was incrementing the end address once
-too many)
-
-Then ">>TRAP NIL, was of the wrong type.a number.SI:DISK-INIT" because
-I didn't give my disk pack a name.
-
-See the file "poo.html" for a list of issues/questions/errata.
+and it boots a load band!
 
 If you want to see the label trace try:
 
@@ -43,35 +33,28 @@ If you want to see the label trace try:
 The disk emulation reads from a 'disk image' file which is constructed
 with 'diskmaker'.
 
-It looks like most of the ALU code is ok as is the branch and byte code.
-
 I believe the divide code is still broken and needs to be fixed.  I
 put in a hack which aborts the last step and now it seems ok, but I
 think something is wrong with my emulation of the h/w.
 
-The dispatch code is implemented and somewhat tested.  It appears to
-be correct but I suspect there is a subtle issue. (but at least it
-works right for the "popj/call" hacks in the microcode)
+The think the dispatch code is now correct.
 
 There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.
 
 Basic interrupt wiring is in place.
 
-Some framebuffer ("tv") and keyboard/mouse emulation is in place.
+Some frame buffer ("tv") and keyboard/mouse emulation is in place.  It
+emulates an old style "Knight" keyboard.
 
 What needs to be done?
 ----------------------
 
-- figure out why the 2nd page fault is failing
 - fix the divide code
-- verify the dispatch emulation
-- debug "tv" emulation
-- finish mouse & keyboard emulation
-
-And then we can boot the CADR into the lisp environment.
+- cleanup keyboard emulation
+- add mouse emulation
+- add chaosnet emulation
 
 Long term I want to do some recompiling of the microcode into C and
 assembler, both statically and on-the-fly.  This is the interesting
 part :-)
-

@@ -64,6 +64,9 @@ unsigned int vma;
 unsigned int q;
 unsigned int opc;
 
+unsigned int new_md;
+int new_md_delay;
+
 int write_fault_bit;
 int access_fault_bit;
 
@@ -82,7 +85,9 @@ int trace;
 int trace_mcr_labels_flag;
 int trace_lod_labels_flag;
 int trace_prom_flag;
+int trace_mcr_flag;
 int trace_io_flag;
+int trace_vm_flag;
 int trace_disk_flag;
 int trace_int_flag;
 
@@ -93,6 +98,7 @@ int phys_ram_pages;
 unsigned int alu_stat0[16], alu_stat1[16];
 
 void show_label_closest(unsigned int upc);
+void show_label_closest_padded(unsigned int upc);
 char *find_function_name(int the_lc);
 
 void
@@ -129,7 +135,7 @@ deassert_unibus_interrupt(int vector)
 void
 assert_xbus_interrupt(void)
 {
-	traceint("assert: xbus interrupt\n");
+	traceint("assert: xbus interrupt (%o)\n", interrupt_status_reg);
 	set_interrupt_status_reg(interrupt_status_reg | 040000);
 }
 
@@ -137,7 +143,7 @@ void
 deassert_xbus_interrupt(void)
 {
 	if (interrupt_status_reg & 040000) {
-		printf("deassert: xbus interrupt\n");
+		traceint("deassert: xbus interrupt\n");
 		set_interrupt_status_reg(interrupt_status_reg & ~040000);
 	}
 }
@@ -174,17 +180,8 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		return last_l2;
 	}
 #endif
-                 
-#if 0
-	if ((virt & 077777760) == 077377760) {
-		if (1) traceio("tv: frame buffer reg %o\n", virt);
-		if (poffset)
-			*poffset = virt & 0377;
 
-		return (1 << 22) | (1 << 23) | 037760;
-	}
-#endif
-
+	/* frame buffer */
 	if ((virt & 077700000) == 077000000) {
 		/*  077000000, size = 210560(8) */
 
@@ -200,11 +197,12 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		return (1 << 22) | (1 << 23) | 036000;
 	}
 
-if ((virt & 077700000) == 077200000) {
-	if (poffset)
-		*poffset = virt & 0377;
-	return (1 << 22) | (1 << 23) | 036000;
-}
+	/* color */
+	if ((virt & 077700000) == 077200000) {
+		if (poffset)
+			*poffset = virt & 0377;
+		return (1 << 22) | (1 << 23) | 036000;
+	}
 
 /* this should be move below - I'm not sure it has to happen anymore */
 	if ((virt & 077777400) == 077377400) {
@@ -216,7 +214,7 @@ if ((virt & 077700000) == 077200000) {
 
 /*
 764000-7641777 i/o board
-764140 chaos
+764140 chaos (77772060)
 */
 
 	/* 11 bit l1 index */
@@ -263,6 +261,7 @@ add_new_page_no(int pn)
 
 		page = (struct page_s *)malloc(sizeof(struct page_s));
 		if (page) {
+#define ZERO_NEW_PAGES
 #ifdef ZERO_NEW_PAGES
 			memset(page, 0, sizeof(struct page_s));
 #endif
@@ -342,23 +341,33 @@ read_mem(int vaddr, unsigned int *pv)
 	unsigned int map;
 	int pn, offset;
 	struct page_s *page;
-//int l1;
+
 	access_fault_bit = 0;
-write_fault_bit = 0;
+	write_fault_bit = 0;
 	page_fault_flag = 0;
 
-	map = map_vtop(vaddr, (int *)0, &offset);
-//map = map_vtop(vaddr, &l1, &offset);
 
+#if 1
 	tracef("read_mem(vaddr=%o)\n", vaddr);
+	map = map_vtop(vaddr, (int *)0, &offset);
+#else
+	{
+		/* additional debugging, but slower */
+		int l1;
+		map = map_vtop(vaddr, (int *)&l1, &offset);
+		tracef("read_mem(vaddr=%o) l1_index %o, l1 %o, l2_index %o, l2 %o\n",
+		       vaddr,
+		       (vaddr >> 13) & 03777,
+		       (l1 << 5) | ((vaddr >> 8) & 037),
+		       map);
+	}
+#endif
 
 	/* 14 bit page # */
 	pn = map & 037777;
 
 	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
 	       vaddr, pn, offset, map, 1 << 23);
-//	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, l1 %o, l2 %o\n",
-//	       vaddr, pn, offset, l1, map);
 
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
@@ -380,27 +389,12 @@ write_fault_bit = 0;
 	if (pn == 036000) {
 /* thwart the color probe */
 if ((vaddr & 077700000) == 077200000) {
-	printf("read from %o\n", vaddr);
+	if (0) printf("read from %o\n", vaddr);
 	*pv = 0x0;
 	return 0;
 }
-//		offset = vaddr & 077777;
 		offset = vaddr & 077777;
 		video_read(offset, pv);
-		return 0;
-	}
-
-	if (pn == 037760) {
-		printf("tv: reg read %o, offset %o\n",
-		       vaddr, offset);
-		switch (offset) {
-		case 0374:
-			*pv = 0xffffffff;
-			break;
-		default:
-			*pv = 0;
-			break;
-		}
 		return 0;
 	}
 
@@ -412,8 +406,7 @@ if ((vaddr & 077700000) == 077200000) {
 
 	if (pn == 037766) {
 		/* unibus */
-		int paddr = pn << 10;
-
+		//int paddr = pn << 10;
 		//tracef("paddr %o\n", paddr);
 
 		switch (offset) {
@@ -429,12 +422,14 @@ if ((vaddr & 077700000) == 077200000) {
 		}
 	}
 
-	/* disk controller on xbus */
+	/* disk & tv controller on xbus */
 	if (pn == 036777) {
 		int paddr = pn << 10;
 
-		/* 75776000 */
-		//printf("disk; paddr=%o\n", paddr);
+		/*
+		 * 77377774 disk
+		 * 77377760 tv
+		 */
 		if (offset >= 0370)
 			return disk_xbus_read(offset, pv);
 
@@ -467,7 +462,7 @@ write_mem(int vaddr, unsigned int v)
 	struct page_s *page;
 
 	write_fault_bit = 0;
-access_fault_bit = 0;
+	access_fault_bit = 0;
 	page_fault_flag = 0;
 
 	map = map_vtop(vaddr, (int *)0, &offset);
@@ -480,7 +475,6 @@ access_fault_bit = 0;
 	tracef("write_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
 	       vaddr, pn, offset, map, 1 << 22);
 
-#if 1
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
 		access_fault_bit = 1;
@@ -489,7 +483,6 @@ access_fault_bit = 0;
 		tracef("write_mem(vaddr=%o) access fault\n", vaddr);
 		return -1;
 	}
-#endif
 
 	if ((map & (1 << 22)) == 0) {
 		/* no write perm */
@@ -501,11 +494,11 @@ access_fault_bit = 0;
 	}
 
 	if (pn == 036000) {
+/* thwart the color probe */
 if ((vaddr & 077700000) == 077200000) {
-	printf("write to %o\n", vaddr);
+	if (0) printf("write to %o\n", vaddr);
 	return 0;
 }
-//		offset = vaddr & 077777;
 		offset = vaddr & 077777;
 		if (0) traceio("video_write %o %o (%011o)\n", offset, v, vaddr);
 		video_write(offset, v);
@@ -529,8 +522,6 @@ if ((vaddr & 077700000) == 077200000) {
 	if (pn == 037766) {
 		/* unibus */
 		int paddr = pn << 12;
-
-		//tracef("paddr %o, offset %o\n", paddr, offset);
 
 		offset <<= 1;
 
@@ -588,13 +579,18 @@ if ((vaddr & 077700000) == 077200000) {
 
 	/* disk controller on xbus */
 	if (pn == 036777) {
-		return disk_xbus_write(offset, v);
+		if (offset >= 0370)
+			return disk_xbus_write(offset, v);
+
+		if (offset == 0360)
+			return tv_xbus_write(offset, v);
 	}
 
 #if 1
+	/* catch questionable accesses */
 	if (pn >= 036000) {
-		printf("??: reg write %o, offset %o, v %o; u_pc %o\n",
-		       vaddr, offset, v, u_pc);
+		printf("??: reg write vaddr %o, pn %o, offset %o, v %o; u_pc %o\n",
+		       vaddr, pn, offset, v, u_pc);
 	}
 #endif
 
@@ -615,6 +611,14 @@ write_ucode(int addr, ucw_t w)
 {
 	tracef("u-code write; %Lo @ %o\n", w, addr);
 	ucode[addr] = w;
+}
+
+void
+note_location(char *s, unsigned int v)
+{
+	printf("%s; u_pc %o, v %o\n", s, u_pc, v);
+	show_label_closest(u_pc);
+	printf("\n");
 }
 
 inline void
@@ -757,13 +761,21 @@ advance_lc(int *ppc)
 	macro_pc_incrs++;
 
 	/* need-fetch? */
-	if (lc & (1 << 30)) {
-		lc &= ~(1 << 30);
+	if (lc & (1 << 31)) {
+		lc &= ~(1 << 31);
 		vma = old_lc >> 2;
+#if 0
 		if (read_mem(old_lc >> 2, &md)) {
 		}
 		tracef("advance_lc() read vma %011o -> %011o\n",
 		       old_lc >> 2, md);
+#else
+		if (read_mem(old_lc >> 2, &new_md)) {
+		}
+		new_md_delay = 2;
+		tracef("advance_lc() read vma %011o -> %011o\n",
+		       old_lc >> 2, new_md);
+#endif
 	} else {
 		/* force skipping 2 instruction (pf + set-md) */
 		if (ppc)
@@ -790,15 +802,20 @@ advance_lc(int *ppc)
 //		last_byte_in_word = ((~lc0b & ~lc1) & 1) ? 1 : 0;
 		last_byte_in_word = (~lc0b & ~lc1) & 1;
 
-//		printf("lc0b %d, lc1 %d, last_byte_in_word %d\n",
-//		       lc0b, lc1, last_byte_in_word);
 		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n",
 		       lc0b, lc1, last_byte_in_word);
 
 		if (last_byte_in_word)
 			/* set need-fetch */
-			lc |= (1 << 30);
+			lc |= (1 << 31);
 	}
+
+#if 0
+	if ((lc & 077777777) == 057335774) trace = 1;
+#endif
+#if 0
+	if ((lc & 07777777) == 02075277) trace = 1;
+#endif
 }
 
 void
@@ -811,7 +828,7 @@ show_pdl_local(void)
 	min = pdl_ptr > 4 ? pdl_ptr - 4 : 0;
 	max = pdl_ptr < 1024-4 ? pdl_ptr + 4 : 1024;
 
-if (pdl_index > 0 && pdl_index < pdl_ptr) min = pdl_index;
+	if (pdl_index > 0 && pdl_index < pdl_ptr) min = pdl_index;
 
 	/* PDL */
 	for (i = min; i < max; i += 4) {
@@ -847,9 +864,10 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		}
 
 		/* set need fetch */
-		lc |= (1 << 30);
+		lc |= (1 << 31);
 
-#if 1
+/* isn't this pretty? :-) XXX add main option to trace on macro function name */
+#if 0
 { char *s;
 
  s = find_function_name(lc);
@@ -867,6 +885,9 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 // if (lc == 011030114652) trace=1;
 
  if (s) {
+//if (strcmp(s, "RECEIVE-ANY-FUNCTION") == 0) 
+//trace = 1;
+
 //if (strcmp(s, "DISK-RUN") == 0) 
 //trace = 1;
 //	 trace_disk_flag = 1;
@@ -911,10 +932,10 @@ trace_disk_flag = 1;
 		tracef("writing IC <- %o\n", out_bus);
 		interrupt_control = out_bus;
 
-		interrupt_enable_flag = interrupt_control & (1 << 27);
-		sequence_break_flag = interrupt_control & (1 << 26);
 		lc_byte_mode_flag = interrupt_control & (1 << 29);
 		bus_reset_flag = interrupt_control & (1 << 28);
+		interrupt_enable_flag = interrupt_control & (1 << 27);
+		sequence_break_flag = interrupt_control & (1 << 26);
 
 		if (sequence_break_flag) {
 			traceint("ic: sequence break request\n");
@@ -983,22 +1004,14 @@ if (0) show_pdl_local();
 
 	case 021: /* VMA register, start main memory read */
 		vma = out_bus;
+#if 0
 		if (read_mem(vma, &md)) {
 		}
-#if 0
-		if (vma == 032301340050 && page_fault_flag == 0) {
-			unsigned int d;
-			read_mem(032301340044, &d);
-			read_mem(032301340045, &d);
-			read_mem(032301340046, &d);
-			read_mem(032301340047, &d);
-			read_mem(032301340050, &d);
-			read_mem(032301340051, &d);
-			read_mem(032301340052, &d);
-			read_mem(032301340053, &d);
+#else
+		if (read_mem(vma, &new_md)) {
 		}
+		new_md_delay = 2;
 #endif
-
 		break;
 
 	case 022: /* VMA register, start main memory write */
@@ -1011,7 +1024,7 @@ if (0) show_pdl_local();
 		/* vma-write-map */
 		vma = out_bus;
 
-		tracef("vma-write-map md=%o, vma=%o (addr %o)\n",
+		tracevm("vma-write-map md=%o, vma=%o (addr %o)\n",
 		       md, vma, md >> 13);
 
 	write_map:
@@ -1022,7 +1035,7 @@ if (0) show_pdl_local();
 			l1_map[l1_index] = l1_data;
 			invalidate_vtop_cache();
 
-			tracef("l1_map[%o] <- %o\n", l1_index, l1_data);
+			tracevm("l1_map[%o] <- %o\n", l1_index, l1_data);
 		}
 
 		if ((vma >> 25) & 1) {
@@ -1041,7 +1054,7 @@ if (0) show_pdl_local();
 				printf("l2_map[%o] <- %o\n",
 				       l2_index, l2_data);
 #endif
-			tracef("l2_map[%o] <- %o\n", l2_index, l2_data);
+			tracevm("l2_map[%o] <- %o\n", l2_index, l2_data);
 
 			add_new_page_no(l2_data & 037777);
 		}
@@ -1054,8 +1067,14 @@ if (0) show_pdl_local();
 
 	case 031:
 		md = out_bus;
+#if 0
 		if (read_mem(vma, &md)) {
 		}
+#else
+		if (read_mem(vma, &new_md)) {
+		}
+		new_md_delay = 2;
+#endif
 		break;
 
 	case 032:
@@ -1074,6 +1093,77 @@ if (0) show_pdl_local();
 	}
 
 	write_m_mem(dest & 037, out_bus);
+}
+
+#define MAX_PC_HISTORY 256/*16*/
+struct {
+	unsigned int rpc;
+	unsigned int rvma;
+	unsigned int rmd;
+	int rpf;
+	int rpdl_ptr;
+	unsigned int rpdl;
+} pc_history[MAX_PC_HISTORY];
+int pc_history_ptr, pc_history_max, pc_history_stores;
+
+void
+record_pc_history(unsigned int pc, unsigned int vma, unsigned int md)
+{
+	int index;
+
+	pc_history_stores++;
+
+	if (pc_history_max < MAX_PC_HISTORY) {
+		index = pc_history_max;
+		pc_history_max++;
+	} else {
+		index = pc_history_ptr;
+		pc_history_ptr++;
+		if (pc_history_ptr == MAX_PC_HISTORY)
+			pc_history_ptr = 0;
+	}
+
+	pc_history[index].rpc = pc;
+	pc_history[index].rvma = vma;
+	pc_history[index].rmd = md;
+	pc_history[index].rpf = page_fault_flag;
+	pc_history[index].rpdl_ptr = pdl_ptr;
+	pc_history[index].rpdl = pdl_memory[pdl_ptr];
+}
+
+void
+show_pc_history(void)
+{
+	int i;
+	unsigned int pc;
+
+	printf("pc history:\n");
+	if (0) printf("pc_history_ptr %d, pc_history_max %d, pc_history_stores %d\n",
+		      pc_history_ptr, pc_history_max, pc_history_stores);
+
+	for (i = 0; i < MAX_PC_HISTORY; i++) {
+		pc = pc_history[pc_history_ptr].rpc;
+		if (pc == 0)
+			break;
+		printf("%2d %011o ", i, pc);
+		show_label_closest_padded(pc);
+
+		printf("\tvma %011o md %011o pf%d pdl %o %011o",
+		       pc_history[pc_history_ptr].rvma,
+		       pc_history[pc_history_ptr].rmd,
+		       pc_history[pc_history_ptr].rpf,
+		       pc_history[pc_history_ptr].rpdl_ptr,
+		       pc_history[pc_history_ptr].rpdl);
+		       
+		printf("\n");
+
+		pc_history_ptr++;
+		if (pc_history_ptr == MAX_PC_HISTORY)
+			pc_history_ptr = 0;
+		
+	}
+
+	printf("\n");
 }
 
 void
@@ -1198,6 +1288,10 @@ dump_state(void)
 	       macro_pc_incrs);
 	printf("\n");
 
+#if 1
+	show_pc_history();
+#endif
+
 	for (i = 0; i < 32; i += 4) {
 		printf(" spc[%02o] %c%011o %c%011o %c%011o %c%011o\n",
 		       i,
@@ -1293,6 +1387,8 @@ dump_state(void)
 		       i, i, alu_stat0[i], alu_stat1[i]);
 	}
 #endif
+
+	printf("trace: %s\n", trace ? "on" : "off");
 }
 
 void
@@ -1358,9 +1454,11 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 {
 	max_cycles = 0;
 
-//	trace_disk_flag = 1;
+#if 0
+	trace_disk_flag = 1;
 	trace_io_flag = 1;
 	trace_int_flag = 1;
+#endif
 
 	if (breakpoint_name_prom) {
 		if (sym_find(0, breakpoint_name_prom, ptrace_pt)) {
@@ -1421,17 +1519,28 @@ show_label_closest(unsigned int upc)
 	}
 }
 
+void
+show_label_closest_padded(unsigned int upc)
+{
+	int offset;
+	char *sym;
+
+	if (sym = sym_find_last(!prom_enabled_flag, upc, &offset)) {
+		if (offset == 0)
+			printf("%-16s  ", sym);
+		else
+			printf("%-16s+%o", sym, offset);
+	}
+}
+
 int
 run(void)
 {
 	int trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
 
-//	phys_ram_pages = 8192;
-	phys_ram_pages = 8192/8;
-//	phys_ram_pages = 8192/2;
+	/* 2Mwords */
 	phys_ram_pages = 8192;
-	phys_ram_pages = 8192/4;
 
 	u_pc = 0;
 	prom_enabled_flag = 1;
@@ -1446,6 +1555,8 @@ run(void)
 	printf("run:\n");
 
 	patch_prom_code();
+
+	write_phy_mem(0, 0);
 
 	timing_start();
 
@@ -1483,7 +1594,13 @@ run(void)
 		}
 
 	next:
+		iob_poll(cycles);
+
 		disk_poll();
+
+		if ((cycles & 0xffff) == 0) {
+			display_poll();
+		}
 
 #define FETCH()	(prom_enabled_flag ? prom_ucode[u_pc] : ucode[u_pc])
 
@@ -1495,6 +1612,12 @@ run(void)
 		p1 = FETCH();
 		p1_pc = u_pc;
 		u_pc++;
+
+		if (new_md_delay) {
+			new_md_delay--;
+			if (new_md_delay == 0)
+				md = new_md;
+		}
 
 		/* effectively stall pipe for one cycle */
 		if (no_exec_next) {
@@ -1523,6 +1646,10 @@ run(void)
 		}
 
 		/* ----------- trace ------------- */
+
+#if 1
+		record_pc_history(p0_pc, vma, md);
+#endif
 
 #if 0
  if (p0_pc == 02220 && pdl_ptr > 01700) {
@@ -1561,6 +1688,10 @@ run(void)
 			if (prom_enabled_flag == 1) trace = 1;
 		}
 
+		if (trace_mcr_flag) {
+			if (prom_enabled_flag == 0) trace = 1;
+		}
+
 		/* ----------- end trace ------------- */
 
 		/* enforce max trace count */
@@ -1585,10 +1716,6 @@ run(void)
 			}
 
 			break;
-		}
-
-		if ((cycles & 0xffff) == 0) {
-			display_poll();
 		}
 
 		i_long = (u >> 45) & 1;
@@ -1773,7 +1900,7 @@ if (0) show_pdl_local();
 				/* logic */
 				alu_carry = 0;
 				switch (alu_op) {
-				case 0: /* [AND] */
+				case 0: /* [SETZ] */
 					alu_out = 0;
 					break;
 				case 1: /* [AND] */
@@ -1798,7 +1925,8 @@ if (0) show_pdl_local();
 					alu_out = m_src_value | a_src_value;
 					break;
 				case 010: /* [ANDCB] */
-					alu_out = ~a_src_value & ~m_src_value;
+//					alu_out = ~a_src_value & ~m_src_value;
+					alu_out = ~(a_src_value | m_src_value);
 					break;
 				case 011: /* [EQV] */
 					alu_out = a_src_value == m_src_value;
@@ -1923,10 +2051,13 @@ if (0) show_pdl_local();
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 017: /* M+M */
-					lv = m_src_value + m_src_value +
+//					lv = m_src_value + m_src_value +
+//						(carry_in ? 1 : 0);
+//					alu_out = lv;
+//					alu_carry = (lv >> 32) ? 1 : 0;
+					alu_out = (m_src_value << 1) | 
 						(carry_in ? 1 : 0);
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
+					alu_carry = (m_src_value & 0x80000000) ? 1 : 0;
 					break;
 				}
 			}
@@ -1950,11 +2081,15 @@ if (0) show_pdl_local();
 					break;
 				case 1: /* divide step */
 					tracef("divide step\n");
-if (out_bus == 1) {
-goto alu_done;
-}
+#define DIVIDE_HACK
+#ifdef DIVIDE_HACK
+					if (out_bus == 1) {
+						goto alu_done;
+					}
+#endif
 					do_sub = q & 1;
-tracef("do_sub %d\n", do_sub);
+					tracef("do_sub %d\n", do_sub);
+
 					if (do_sub) {
 						lv =
 							m_src_value -
@@ -1977,8 +2112,10 @@ tracef("do_sub %d\n", do_sub);
 tracef("do_sub %d\n", do_sub);
 					if (do_sub) {
 						/* setm */
-//						alu_out = m_src_value;
-//						alu_out = q;
+#ifndef DIVIDE_HACK
+						alu_out = m_src_value;
+						alu_out = q;
+#endif
 						alu_carry = 0;
 					} else {
 						lv =
@@ -1989,9 +2126,10 @@ tracef("do_sub %d\n", do_sub);
 						alu_carry = (lv >> 32) ? 1 : 0;
 					}
 
-//					q >>= 1; 
-//					alu_out >>= 1;
-
+#ifndef DIVIDE_HACK
+					q >>= 1; 
+					alu_out >>= 1;
+#endif
 					break;
 				case 011:
 					/* initial divide step */
@@ -2094,15 +2232,18 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				switch (u & 017) {
 				case 0:
 					if (op_code != 2)
-						printf("jump-condition == 0! u_pc=%o\n", p0_pc);
+						printf("jump-condition == 0! u_pc=%o\n",
+						       p0_pc);
 					break;
 				case 1:
 					take_jump = m_src_value < a_src_value;
 					break;
 				case 2:
 					take_jump = m_src_value <= a_src_value;
-//					tracef("%o <= %o; take_jump %o\n",
-//					       m_src_value, a_src_value, take_jump);
+#if 0
+					tracef("%o <= %o; take_jump %o\n",
+					       m_src_value, a_src_value, take_jump);
+#endif
 					break;
 				case 3:
 					take_jump = m_src_value == a_src_value;
@@ -2180,15 +2321,12 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 				u_pc = new_pc;
 
+#if 0
+				/* I don't think this ever happens */
 				if (popj && r_bit == 0 && p_bit == 0) {
-printf("jump popped! pc %o, prom %d\n", p0_pc, prom_enabled_flag);
-{
-	int offset;
-	sym = sym_find_last(!prom_enabled_flag, u_pc, &offset);
-	printf("%s+%o:\n", sym, offset);
-}
 					pop_spc();
 				}
+#endif
 
 				/* inhibit possible popj */
 				popj = 0;
@@ -2256,6 +2394,10 @@ printf("jump popped! pc %o, prom %d\n", p0_pc, prom_enabled_flag);
 			mask = ~0;
 			mask >>= 31 - left_mask_index;
 
+			/* len == 0 */
+			if (len == 0)
+				mask = 0;
+
 			/* put ldb into dispatch-addr */
 			disp_addr |= m_src_value & mask;
 
@@ -2285,10 +2427,11 @@ printf("jump popped! pc %o, prom %d\n", p0_pc, prom_enabled_flag);
 				}
 			}
 
+			disp_addr &= 03777;
+
 			tracef("dispatch[%o] -> %o ",
 			       disp_addr, dispatch_memory[disp_addr]);
 
-disp_addr &= 03777;
 			disp_addr = dispatch_memory[disp_addr];
 
 			dispatch_constant = disp_const;
@@ -2319,20 +2462,11 @@ disp_addr &= 03777;
 			}
 
 			if (p_bit && r_bit) {
-//				if (n_bit)
-//					printf("NPR! u_pc %o\n", p0_pc);
 				if (n_bit)
 					no_exec_next = 1;
 				goto dispatch_done;
 			}
 
-//if (popj && r_bit == 0 && p_bit == 0) {
-//	popj = 0;
-//	printf("dispatch popped!\n");
-//	pop_spc();
-//}
-
-//if (p_bit) u_pc = new_pc;
 			goto process_jump;
 
 		dispatch_done:
@@ -2372,7 +2506,6 @@ disp_addr &= 03777;
 
 					ir4 = (u >> 4) & 1;
 					lc1 = (lc >> 1) & 1;
-//printf("ir4 %d, lc1 %d\n", ir4, lc1);
 
 					pos = u & 017;
 //					pos |= (ir4 ^ lc1) << 4;
@@ -2459,7 +2592,6 @@ disp_addr &= 03777;
 			}
 
 			u_pc &= 037777;
-//			no_exec_next = 1;
 		}
 	}
 

@@ -1,5 +1,13 @@
+/*
+ * feeble program to pull information out of CADR load band 
+ * 10/2004
+ * brad@heeltoe.com
+ * $Id$
+ */
+
 #include <stdio.h>
 #include <fcntl.h>
+#include <string.h>
 
 /*
 0  TRAP
@@ -179,6 +187,13 @@ show(int a, int cr)
 }
 
 unsigned int
+showlabel(char *l, int a, int cr)
+{
+	printf("%s: ", l);
+	return _show(lodfd, a, cr);
+}
+
+unsigned int
 swap_show(int a, int cr)
 {
 	return _show(swapfd, a, cr);
@@ -206,685 +221,274 @@ showstr(int a, int cr)
 	if (cr) printf("\n");
 }
 
-char *op_names[16] = {
-	"CALL",
-	"CALL0",
-	"MOVE",
-	"CAR",
-	"CDR",
-	"CADR",
-	"CDDR",
-	"CDAR",
-	"CAAR",
-	"ND1",
-	"ND2",
-	"ND3",
-	"BRANCH",
-	"MISC",
-	"16 UNUSED",
-	"17 UNUSED"
-};
+int
+show_fef_func_name(unsigned int fefptr)
+{
+	unsigned int n, v;
+	int tag;
 
-char *reg_names[] = {
-	"FEF",
-	"FEF+100",
-	"FEF+200", 
-	"FEF+300",
-	"CONSTANTS PAGE", 
-	"LOCAL BLOCK",
-	"ARG POINTER",
-	"PDL"
-};
+	n = get(fefptr+2);
 
-char *dest_names[] = {
-	"IGNORE",
-	"TO STACK",
-	"TO NEXT",
-	"TO LAST",
-	"TO RETURN",
-	"TO NEXT QUOTE=1",
-	"TO LAST QUOTE=1",
-	"TO NEXT LIST",
-	"D-MICRO, POPJ",
-	"illegal",
-	"illegal",
-	"illegal",
-	"illegal",
-	"illegal",
-	"illegal",
-	"illegal"
-};
+	printf(" "); v = get(n);
 
-char *branch_names[] = {
-	"BRALW",
-	"branch-on-nil",
-	"branch-on-not-nil",
-	"branch-nil,pop-if-not",
-	"branch-not-nil,pop-if",
-	"branch-on-atom",
-	"branch-on-non-atom",
-	"illegal"
-};
+	tag = (v >> 24) & 077;
+	if (0) printf("tag %o\n", tag);
 
-char *nd1_names[] = {
-	"ILLOP",
-	"QIADD",
-	"QISUB",
-	"QIMUL",
-	"QIDIV",
-	"QIAND",
-	"QIXOR",
-	"QIIOR"
-};
+	if (tag == 3) {
+		v = get(v);
+		tag = (v >> 24) & 077;
+	}
 
-char *nd2_names[] = {
-	"QIEQL",
-	"QIGRP",
-	"QILSP",
-	"QIEQ",
-	"QISCDR",
-	"QISCDDR",
-	"QISP1",
-	"QISM1"
-};
+	if (tag == 4) {
+		printf(" "); showstr(v, 0);
+	}
+}
 
-char *nd3_names[] = {
-	"QIBND",
-	"QIBNDN",
-	"QIBNDP",
-	"QISETN",
-	"QISETZ",
-	"QIPSHE",
-	"QIMVM",
-	"QIPOP"
-};
+#include "macro.c"
 
-#if 0
-struct {
-	char *name;
-	int value;
-} misc_inst[] = {
-{ "(CAR . M-CAR)", 242 },
-{ "(CDR . M-CDR)", 243 },
-{ "(CAAR . M-CAAR)", 244 },
-{ "(CADR . M-CADR)", 245 },
-{ "(CDAR . M-CDAR)", 246 },
-{ "(CDDR . M-CDDR)", 247 },
-{ "CAAAR", 250 },
-{ "CAADR", 251 },
-{ "CADAR", 252 },
-{ "CADDR", 253 },
-{ "CDAAR", 254 },
-{ "CDADR", 255 },
-{ "CDDAR", 256 },
-{ "CDDDR", 257 },
-{ "CAAAAR", 260 },
-{ "CAAADR", 261 },
-{ "CAADAR", 262 },
-{ "CAADDR", 263 },
-{ "CADAAR", 264 },
-{ "CADADR", 265", },
-{ "CADDAR", 266 },
-{ "CADDDR", 267 },
-{ "CDAAAR", 270 },
-{ "CDAADR", 271 },
-{ "CDADAR", 272 },
-{ "CDADDR", 273 },
-{ "CDDAAR", 274 },
-{ "CDDADR", 275 },
-{ "CDDDAR", 276 },
-{ "CDDDDR", 277 },
-{ "%LOAD-FROM-HIGHER-CONTEXT", 300
-{ "%LOCATE-IN-HIGHER-CONTEXT", 301
-{ "%STORE-IN-HIGHER-CONTEXT 302
-{ "%DATA-TYPE 303 },
-{ "%POINTER 304 },
-;305-307 FREE
-{ "%MAKE-POINTER 310
-{ "%SPREAD 311
-{ "%P-STORE-CONTENTS 312
-{ "%LOGLDB 313
-{ "%LOGDPB 314
-{ "LDB 315
-{ "DPB 316
-{ "%P-STORE-TAG-AND-POINTER 317
-{ "GET 320
-{ "GETL 321
-{ "ASSQ 322
-{ "LAST 323
-{ "LENGTH 324
-{ "1+ 325
-{ "1- 326
-{ "RPLACA 327
-{ "RPLACD 330
-{ "ZEROP 331
-{ "SET 332
-{ "FIXP 333 },
-{ "FLOATP 334 },
-{ "EQUAL 335
-{ "STORE 336
-{ "XSTORE 337
-{ "FALSE 340
-{ "TRUE 341
-{ "NOT 342 },
-{ "(NULL . NOT)", 342 },
-{ "ATOM 343
-{ "ODDP 344
-{ "EVENP 345
-{ "%HALT 346
-{ "GET-PNAME 347
-{ "LSH 350
-{ "ROT 351
-{ "*BOOLE 352
-{ "NUMBERP 353 },
-{ "PLUSP 354
-{ "MINUSP 355
-{ "\ 356
-{ "MINUS 357
-{ "PRINT-NAME-CELL-LOCATION 360
-{ "VALUE-CELL-LOCATION 361
-{ "FUNCTION-CELL-LOCATION 362
-{ "PROPERTY-CELL-LOCATION 363
-{ "NCONS 364 },
-{ "NCONS-IN-AREA 365
-{ "CONS 366
-{ "CONS-IN-AREA 367
-{ "XCONS 370
-{ "XCONS-IN-AREA 371
-{ "%SPREAD-N 372
-{ "SYMEVAL 373
-{ "POP-M-FROM-UNDER-N 374
-{ "%OLD-MAKE-LIST 375
-{ "%CALL-MULT-VALUE 376
-{ "%CALL0-MULT-VALUE 377
-{ "%RETURN-2 400
-{ "%RETURN-3 401
-{ "%RETURN-N 402
-{ "RETURN-NEXT-VALUE 403
-{ "RETURN-LIST 404
-{ "UNBIND-TO-INDEX-UNDER-N 405
-{ "BIND 406
-{ "%MAKE-LEXICAL-CLOSURE 407
-{ "MEMQ 410
-{ "(INTERNAL-< . M-<) 411
-{ "(INTERNAL-> . M->) 412
-{ "(= . M-=) 413
-{ "CHAR-EQUAL 414 (CH1 CH2) T)
-{ "%STRING-SEARCH-CHAR 415 (CHAR STRING START END) T)
-{ "%STRING-EQUAL 416 (STRING1 INDEX1 STRING2 INDEX2 COUNT) T)
-{ "NTH 417 (N LIST) T)
-{ "NTHCDR 420 (N LIST) T)
-{ "(*PLUS . M-+) 421 (NUM1 NUM2) T)
-{ "(*DIF . M--) 422 (NUM1 NUM2) T)
-{ "(*TIMES . M-*) 423 (NUM1 NUM2) T)
-{ "(*QUO . M-//) 424 (NUM1 NUM2) T)
-{ "(*LOGAND . M-LOGAND) 425 (NUM1 NUM2) T)
-{ "(*LOGXOR . M-LOGXOR) 426 (NUM1 NUM2) T)
-{ "(*LOGIOR . M-LOGIOR) 427 (NUM1 NUM2) T)
-{ "ARRAY-LEADER 430 (ARRAY INDEX) T)
-{ "STORE-ARRAY-LEADER 431 (X ARRAY INDEX) T)
-{ "GET-LIST-POINTER-INTO-ARRAY 432 (ARRAY) T)
-{ "ARRAY-PUSH 433 (ARRAY X) T)
-{ "APPLY 434 (FN ARGS) T)
-{ "%MAKE-LIST 435 (INITIAL-VALUE AREA LENGTH) T)
-{ "LIST 436 (&REST ELEMENTS) T T)
-{ "LIST* 437 (FIRST &REST ELEMENTS) T T)   ;{ "(&REST ELEMENTS LAST){ "
-{ "LIST-IN-AREA 440 (AREA &REST ELEMENTS) T T)
-{ "LIST*-IN-AREA 441 (AREA FIRST &REST ELEMENTS) T T)   ;{ "(AREA &REST ELEMENTS LAST){ "
-{ "%P-FLAG-BIT 442 (POINTER) T)
-{ "%P-CDR-CODE 443 (POINTER) T)
-{ "%P-DATA-TYPE 444 (POINTER) T)
-{ "%P-POINTER 445 (POINTER) T)
-{ "%PAGE-TRACE 446 (TABLE) T)
-{ "%P-STORE-FLAG-BIT 447 (POINTER FLAG-BIT) T)
-{ "%P-STORE-CDR-CODE 450 (POINTER CDR-CODE) T)
-{ "%P-STORE-DATA-TYPE 451 (POINTER DATA-TYPE) T)
-{ "%P-STORE-POINTER 452 (POINTER POINTER) T)
-;453-455 FREE
-{ "%CATCH-OPEN 456 },
-{ "%CATCH-OPEN-MV 457 },
-;461, 462 FREE
-{ "%FEXPR-CALL 462 },
-{ "%FEXPR-CALL-MV 463 },
-{ "%LEXPR-CALL 464 },
-{ "%LEXPR-CALL-MV 465 },
-{ "*CATCH 466 (TAG &REST FORMS) T T)
-{ "%BLT 467 (FROM-ADDRESS TO-ADDRESS COUNT INCREMENT) T)
-{ "*THROW 470 (TAG VALUE) T)
-{ "%XBUS-WRITE-SYNC 471 (IO-ADDR WORD DELAY SYNC-LOC SYNC-MASK SYNC-VAL) T)
-{ "%P-LDB 472 (PPSS POINTER) T)
-{ "%P-DPB 473 (VALUE PPSS POINTER) T)
-{ "MASK-FIELD 474 (PPSS FIXNUM) T)
-{ "%P-MASK-FIELD 475  (PPSS POINTER) T)
-{ "DEPOSIT-FIELD 476 (VALUE PPSS FIXNUM) T)
-{ "%P-DEPOSIT-FIELD 477 (VALUE PPSS POINTER) T)
-{ "COPY-ARRAY-CONTENTS 500 (FROM TO) T)
-{ "COPY-ARRAY-CONTENTS-AND-LEADER 501 (FROM TO) T)
-{ "%FUNCTION-INSIDE-SELF 502 () T)
-{ "ARRAY-HAS-LEADER-P 503 (ARRAY) T)
-{ "COPY-ARRAY-PORTION 504 (FROM-ARRAY FROM-START FROM-END TO-ARRAY TO-START TO-END) T)
-{ "FIND-POSITION-IN-LIST 505 (X LIST) T)
-;{ "FIND-POSITION-IN-LIST-EQUAL 506 )
-{ "G-L-P 507 (ARRAY) T)
-{ "FIND-POSITION-IN-VECTOR 510 (X LIST) NIL)
-;{ "FIND-POSITION-IN-VECTOR-EQUAL 511 )
-{ "AR-1 512 (ARRAY SUB) T)
-{ "AR-2 513 (ARRAY SUB1 SUB2) T)
-{ "AR-3 514 (ARRAY SUB1 SUB2 SUB3) T)
-{ "AS-1 515 (VALUE ARRAY SUB) T)
-{ "AS-2 516 (VALUE ARRAY SUB1 SUB2) T)
-{ "AS-3 517 (VALUE ARRAY SUB1 SUB2 SUB3) T)
-{ "%INSTANCE-REF 520 (INSTANCE INDEX) T)
-{ "%INSTANCE-LOC 521 (INSTANCE INDEX) T)
-{ "%INSTANCE-SET 522 (VAL INSTANCE INDEX) T)
-{ "%BINDING-INSTANCES 523 (LIST-OF-SYMBOLS) T)
-{ "%INTERNAL-VALUE-CELL 524 (SYMBOL) T)
-{ "%USING-BINDING-INSTANCES 525 (BINDING-INSTANCES) T)
-{ "%GC-CONS-WORK 526 (NQS) T)
-{ "%P-CONTENTS-OFFSET 527 (POINTER OFFSET) T)
-{ "%DISK-RESTORE 530 (PARTITION-HIGH-16-BITS LOW-16-BITS) T)
-{ "%DISK-SAVE 531 (MAIN-MEMORY-SIZE PARTITION-HIGH-16-BITS LOW-16-BITS) T)
-{ "%ARGS-INFO 532 (FUNCTION) T)
-{ "%OPEN-CALL-BLOCK 533 (FUNCTION ADI-PAIRS DESTINATION) NIL)
-{ "%PUSH 534 (X) NIL)
-{ "%ACTIVATE-OPEN-CALL-BLOCK 535 () NIL)
-{ "%ASSURE-PDL-ROOM 536 (ROOM) NIL)
-{ "STACK-GROUP-RETURN 537 },
-;{ "%STACK-GROUP-RETURN-MULTI 540 )
-;Perhaps the next one should be flushed.
-{ "%MAKE-STACK-LIST 541 (N) NIL)
-{ "STACK-GROUP-RESUME 542 (SG X) T)
-{ "%CALL-MULT-VALUE-LIST 543 },
-{ "%CALL0-MULT-VALUE-LIST 544 },
-{ "%GC-SCAV-RESET 545 (REGION) T)
-{ "%P-STORE-CONTENTS-OFFSET 546 (X POINTER OFFSET) T)
-{ "%GC-FREE-REGION 547 (REGION) T)
-{ "%GC-FLIP 550 (REGION) T)
-{ "ARRAY-LENGTH 551 (ARRAY) T)
-{ "ARRAY-ACTIVE-LENGTH 552 (ARRAY) T)
-{ "%COMPUTE-PAGE-HASH 553 (ADDR) T)
-{ "GET-LOCATIVE-POINTER-INTO-ARRAY 554 (ARRAY-REF) T)
-{ "%UNIBUS-READ 555 (UNIBUS-ADDR) T)
-{ "%UNIBUS-WRITE 556 (UNIBUS-ADDR WORD) T)
-{ "%GC-SCAVENGE 557 (WORK-UNITS) T)
-{ "%CHAOS-WAKEUP 560 () T)
-{ "%AREA-NUMBER 561 },
-{ "*MAX 562 (NUM1 NUM2) T)
-{ "*MIN 563 (NUM1 NUM2) T)
-{ "CLOSURE 565 (SYMBOL-LIST FUNCTION) T)
-;{ "DOWNWARD-CLOSURE 566 (SYMBOL-LIST FUNCTION) T)
-{ "LISTP 567 },
-{ "NLISTP 570 },
-{ "SYMBOLP 571 },
-{ "NSYMBOLP 572 },
-{ "ARRAYP 573 },
-{ "FBOUNDP 574 
-{ "STRINGP 575 },
-{ "BOUNDP 576 (SYMBOL) T)
-{ "INTERNAL-\\ 577
-{ "FSYMEVAL 600
-{ "AP-1 601
-{ "AP-2 602
-{ "AP-3 603
-{ "AP-LEADER 604
-{ "%P-LDB-OFFSET 605
-{ "%P-DPB-OFFSET 606
-{ "%P-MASK-FIELD-OFFSET 607
-{ "%P-DEPOSIT-FIELD-OFFSET 610
-{ "%MULTIPLY-FRACTIONS 611
-{ "%DIVIDE-DOUBLE 612
-{ "%REMAINDER-DOUBLE 613
-{ "HAULONG 614
-{ "%ALLOCATE-AND-INITIALIZE 615
-{ "%ALLOCATE-AND-INITIALIZE-ARRAY 616
-{ "%MAKE-POINTER-OFFSET 617
-{ "^ 620
-{ "%CHANGE-PAGE-STATUS 621
-{ "%CREATE-PHYSICAL-PAGE 622
-{ "%DELETE-PHYSICAL-PAGE 623
-{ "%24-BIT-PLUS 624
-{ "%24-BIT-DIFFERENCE 625
-{ "%24-BIT-TIMES 626
-{ "ABS 627
-{ "%POINTER-DIFFERENCE 630
-{ "%P-CONTENTS-AS-LOCATIVE 631
-{ "%P-CONTENTS-AS-LOCATIVE-OFFSET 632
-{ "(EQ . M-EQ) 633
-{ "%STORE-CONDITIONAL 634
-{ "%STACK-FRAME-POINTER 635
-{ "*UNWIND-STACK 636
-{ "%XBUS-READ 637
-{ "%XBUS-WRITE 640
-{ "PACKAGE-CELL-LOCATION 641
-{ "MOVE-PDL-TOP 642
-{ "SHRINK-PDL-SAVE-TOP 643
-{ "SPECIAL-PDL-INDEX 644
-{ "UNBIND-TO-INDEX 645
-{ "UNBIND-TO-INDEX-MOVE 646
-{ "FIX 647
-{ "FLOAT 650
-{ "SMALL-FLOAT 651
-{ "%FLOAT-DOUBLE 652
-{ "BIGNUM-TO-ARRAY 653
-{ "ARRAY-TO-BIGNUM 654
-{ "%UNWIND-PROTECT-CONTINUE 655
-{ "%WRITE-INTERNAL-PROCESSOR-MEMORIES 656
-{ "%PAGE-STATUS 657
-{ "%REGION-NUMBER 660
-{ "%FIND-STRUCTURE-HEADER 661
-{ "%STRUCTURE-BOXED-SIZE 662
-{ "%STRUCTURE-TOTAL-SIZE 663
-{ "%MAKE-REGION 664
-{ "BITBLT 665
-{ "%DISK-OP 666
-{ "%PHYSICAL-ADDRESS 667
-{ "POP-OPEN-CALL 670
-{ "%BEEP 671
-{ "%FIND-STRUCTURE-LEADER 672
-{ "BPT 673
-{ "%FINDCORE 674 () T)
-{ "%PAGE-IN 675
-{ "ASH 676
-{ "%MAKE-EXPLICIT-STACK-LIST 677
-{ "%DRAW-CHAR 700
-{ "%DRAW-RECTANGLE 701
-{ "%DRAW-LINE 702
-{ "%DRAW-TRIANGLE 703
-{ "%COLOR-TRANSFORM 704
+int
+find_and_dump_fef(unsigned int pc)
+{
+	unsigned int addr, v, n, o;
+	int i, j, tag, icount, max;
+	unsigned short ib[512];
 
-{ "%RECORD-EVENT 705
-{ "%AOS-TRIANGLE 706
-{ "%SET-MOUSE-SCREEN 707 
-{ "%OPEN-MOUSE-CURSOR 710
-{ "%ether-wakeup 711
-{ "%checksum-pup 712
-{ "%decode-pup 713
-#endif
+	printf("\n");
+
+	addr = pc >> 2;
+	if (1) printf("pc %o, addr %o\n", pc, addr);
+
+	/* find fef */
+	for (i = 0; i < 512; i--) {
+		n = get(addr);
+		tag = (n >> 24) & 077;
+		if (tag == 7) break;
+		addr--;
+	}
+
+	if (tag != 7) {
+		printf("couldn't not find FEF\n");
+		return -1;
+	}
+
+	n = get(addr);
+	o = n & 0777;
+	printf("code offset %o\n", o);
+
+	max = get(addr+1) & 07777;
+
+	icount = (max - o/2) * 2;
+
+	j = 0;
+	for (i = 0; i < max; i++) {
+		unsigned int loc, inst;
+		loc = addr+i;
+		inst = get(loc);
+
+		ib[j++] = inst;
+		ib[j++] = inst >> 16;
+
+		if (i < o/2)
+		{
+			show(loc, 1);
+		}
+
+		switch (i) {
+		case 1:
+			break;
+		case 2:
+			printf(" "); v = show(inst, 0);
+
+			tag = (v >> 24) & 077;
+			if (0) printf("tag %o\n", tag);
+
+			if (tag == 3) {
+				printf("\n");
+				printf(" "); v = show(v, 0);
+				tag = (v >> 24) & 077;
+			}
+			if (tag == 4) {
+				printf(" "); showstr(v, 1);
+			}
+			break;
+		}
+	}
+
+	for (i = o; i < o+icount; i++) {
+		unsigned int loc;
+		loc = addr+i/2;
+		disass(addr, loc, (i%2) ? 0 : 1, ib[i]);
+	}
+}
 
 
 void
-disass(unsigned int loc, int even, unsigned int inst)
+usage(void)
 {
-	int op, dest, reg, delta;
-	int to;
-	unsigned int nlc;
-
-	op = (inst >> 011) & 017;
-	dest = (inst >> 015) & 07;
-	reg = (inst >> 6) & 07;
-	delta = (inst >> 0) & 077;
-	printf("%011o%c %06o %s ", loc, even ? 'e':'o', inst, op_names[op]);
-
-	switch (op) {
-	case 0: /* call */
-		printf("reg %s, ", reg_names[reg]);
-		printf("dest %s, ", dest_names[dest]);
-		printf("delta %o ", delta);
-
-//		nlc = (loc*2 + (even?0:1)) + delta;
-//		printf("+%o; %o%c ",
-//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
-
-		break;
-	case 2: /* move */
-	case 3:
-	case 4:
-	case 5:
-		printf("reg %s, ", reg_names[reg]);
-		printf("dest %s, ", dest_names[dest]);
-		printf("delta %o ", delta);
-		break;
-	case 011:
-		printf("%s ", nd1_names[dest]);
-		break;
-	case 012:
-		printf("%s ", nd2_names[dest]);
-		break;
-	case 013:
-		printf("%s ", nd3_names[dest]);
-		break;
-	case 014: /* branch */
-		printf("type %s, ", branch_names[dest]);
-		to = (inst & 03777) << 1;
-		to |= (inst & 0x8000) ? 1 : 0;
-
-		if (inst & 0400) {
-			to = inst & 01777;
-			to |= 03000;
-			to |= ~01777;
-		}
-
-		nlc = (loc*2 + (even?0:1)) + to;
-
-		if (to > 0) {
-			printf("+%o; %o%c ",
-			       to, nlc/2, (nlc & 1) ? 'o' : 'e');
-		} else {
-			printf("-%o; %o%c ",
-			       -to, nlc/2, (nlc & 1) ? 'o' : 'e');
-		}
-		break;
-	}
-
-	printf("\n");
+	fprintf(stderr, "usage:\n");
+	fprintf(stderr, "-l <load-band filename>\n");
+	fprintf(stderr, "-i <disk-image filename>\n");
+	fprintf(stderr, "\n");	
+	fprintf(stderr, "-c	dump system communication area\n");
+	fprintf(stderr, "-s	dump scratch-pad area\n");
+	fprintf(stderr, "-f	find and disassemble initial FEF\n");
+	fprintf(stderr, "-g	dump initial stack group\n");
+	fprintf(stderr, "-p <pc> find and disassemble FEF for given pc\n");
+	fprintf(stderr, "-a <addr> find and disassemble FEF for given address\n");
+	exit(1);
 }
+
+extern char *optarg;
+extern int optind;
+
+char *loadband_filename;
+char *disk_filename;
+int show_comm;
+int show_scratch;
+int show_initial_fef;
+int show_fef;
+int show_initial_sg;
+int show_memory;
 
 main(int argc, char *argv[])
 {
 	unsigned int com;
-	int i, n;
+	int i, n, c;
+	unsigned int pc, addr;
 
-	if (argc < 2) {
-		exit(1);
+	while ((c = getopt(argc, argv, "l:i:csfgp:a:m:")) != -1) {
+		switch (c) {
+		case 'l':
+			loadband_filename = strdup(optarg);
+			break;
+		case 'i':
+			disk_filename = strdup(optarg);
+			break;
+		case 'c':
+			show_comm++;
+			break;
+		case 's':
+			show_scratch++;
+			break;
+		case 'f':
+			show_initial_fef++;
+			break;
+		case 'g':
+			show_initial_sg++;
+			break;
+		case 'p':
+			sscanf(optarg, "%o", &pc);
+			show_fef++;
+			break;
+		case 'a':
+			sscanf(optarg, "%o", &addr);
+			pc = addr*4;
+			show_fef++;
+			break;
+		case 'm':
+			sscanf(optarg, "%o", &addr);
+			show_memory++;
+			break;
+		}
 	}
 
-	/* raw load band file */
-	lodfd = open(argv[1], O_RDONLY);
-	if (lodfd < 0) {
-		perror(argv[1]);
-		exit(1);
+	if (0) printf("optind %d, argc %d\n", optind, argc);
+	if (optind < argc || argc == 1) {
+		usage();
 	}
 
-	/* optional full disk image (to check swap) */
-	if (argc > 2) {
-		swapfd = open(argv[2], O_RDONLY);
-		if (swapfd < 0) {
-			perror(argv[2]);
+	if (loadband_filename) {
+		/* raw load band file */
+		lodfd = open(loadband_filename, O_RDONLY);
+		if (lodfd < 0) {
+			perror(loadband_filename);
 			exit(1);
 		}
 	}
 
+	if (disk_filename) {
+		/* optional full disk image (to check swap) */
+		swapfd = open(disk_filename, O_RDONLY);
+		if (swapfd < 0) {
+			perror(disk_filename);
+			exit(1);
+		}
+	}
+
+	if (swapfd == 0 && lodfd == 0) {
+		fprintf(stderr, "need either -l or -f (or both)\n");
+		exit(2);
+	}
+
 	/* %SYS-COM-AREA-ORIGIN-PNTR */
-	com = show(0400, 1);
+	com = showlabel("%SYS-COM-AREA-ORIGIN-PNTR", 0400, 1);
 
-#if 0
-	for (i = 0; cv[i].name; i++) {
-		printf("%s ", cv[i].name);
-		cv[i].a = com+i;
-		cv[i].v = show(cv[i].a, 0);
-		printf("; ");
-		show(cv[i].v, 1);
-	}
-	printf("\n");
-#endif
-
-#if 0
-	printf("scratch-pad\n");
-	for (i = 0; sv[i].name; i++) {
-		printf("%s ", sv[i].name);
-		sv[i].a = 01000+i;
-		sv[i].v = show(sv[i].a, 0);
-		printf("; ");
-		show(sv[i].v, 1);
-	}
-
-	{
-		unsigned int v, pc, n, o;
-		int i, j;
-		unsigned short ib[256];
-
-		v = show(sv[0].a, 0);
-		pc = show(v, 1);
-
-		n = show(pc, 1);
-		o = n & 0377;
-		printf("offset %o\n", o);
-
-		j = 0;
-		for (i = 0; i < 64; i++) {
-			unsigned int loc, inst;
-			unsigned int a;
-			loc = pc+i;
-			inst = get(loc);
-
-			ib[j++] = inst;
-			ib[j++] = inst >> 16;
-
-			if (i < o/2)
-			{
-				show(loc, 1);
-			}
-
-			if (i == 2) {
-				printf(" "); v = show(inst, 0);
-				printf(" "); showstr(v, 1);
-			}
+	if (show_comm) {
+		for (i = 0; cv[i].name; i++) {
+			printf("%s ", cv[i].name);
+			cv[i].a = com+i;
+			cv[i].v = show(cv[i].a, 0);
+			printf("; ");
+			show(cv[i].v, 1);
 		}
-
-		for (i = o; i < o+10; i++) {
-			unsigned int loc;
-			loc = pc+i/2;
-			disass(loc, (i%2) ? 0 : 1, ib[i]);
-		}
-	}
-
-	{
-		unsigned int v, pc, n, o;
-		int i, j;
-		unsigned short ib[512];
-
 		printf("\n");
-
-		pc = show(01722706, 1);
-		pc = show(pc, 1);
-
-		n = show(pc, 1);
-		o = n & 0777;
-		printf("offset %o\n", o);
-
-		j = 0;
-		for (i = 0; i < 256; i++) {
-			unsigned int loc, inst;
-			loc = pc+i;
-			inst = get(loc);
-
-			ib[j++] = inst;
-			ib[j++] = inst >> 16;
-
-			if (i < o/2)
-			{
-				show(loc, 1);
-			}
-
-			if (i == 2) {
-				printf(" "); v = show(inst, 0);
-				printf(" "); showstr(v, 1);
-			}
-		}
-
-		for (i = o; i < o+20; i++) {
-			unsigned int loc;
-			loc = pc+i/2;
-			disass(loc, (i%2) ? 0 : 1, ib[i]);
-		}
 	}
 
-#endif
-
-#if 1
-	{
-		unsigned int v, pc, n, o;
-		int i, j;
-		unsigned short ib[512];
-
+	if (show_scratch) {
+		printf("scratch-pad\n");
+		for (i = 0; sv[i].name; i++) {
+			printf("%s ", sv[i].name);
+			sv[i].a = 01000+i;
+			sv[i].v = show(sv[i].a, 0);
+			printf("; ");
+			show(sv[i].v, 1);
+		}
 		printf("\n");
-
-		sscanf(argv[3], "%o", &pc);
-		pc >>= 2;
-///		pc = 011010066774 >> 2;
-//		pc = 011047720640 >> 2;
-
-		for (i = 0; i < 512; i--) {
-			int tag;
-			n = show(pc, 1);
-			tag = (n >> 24) & 077;
-			if (tag == 7) break;
-			pc--;
-		}
-
-		n = show(pc, 1);
-		o = n & 0777;
-		printf("offset %o\n", o);
-
-		j = 0;
-		for (i = 0; i < 256; i++) {
-			unsigned int loc, inst;
-			loc = pc+i;
-			inst = get(loc);
-
-			ib[j++] = inst;
-			ib[j++] = inst >> 16;
-
-			if (i < o/2)
-			{
-				show(loc, 1);
-			}
-
-			if (i == 2) {
-				int tag;
-
-				printf(" "); v = show(inst, 0);
-
-				tag = (v >> 24) & 077;
-				if (0) printf("tag %o\n", tag);
-
-				if (tag == 3) {
-					printf("\n");
-					printf(" "); v = show(v, 0);
-					tag = (v >> 24) & 077;
-				}
-				if (tag == 4) {
-					printf(" "); showstr(v, 1);
-				}
-			}
-		}
-
-		for (i = o; i < o+128; i++) {
-			unsigned int loc;
-			loc = pc+i/2;
-			disass(loc, (i%2) ? 0 : 1, ib[i]);
-		}
 	}
-#endif
 
-#if 0
-	{
+	if (show_initial_fef) {
+		unsigned int v;
+
+		sv[0].a = 01000+0;
+		sv[0].v = showlabel(sv[0].name, sv[0].a, 1);
+
+		v = show(sv[0].v, 1);
+		find_and_dump_fef(v << 2);
+	}
+
+	if (show_fef) {
+		find_and_dump_fef(pc);
+	}
+
+	if (show_initial_sg) {
 		int i;
 		unsigned int a;
 
-		printf("sg\n");
-		a = sv[3].v & 0x00ffffff;
-		printf("a %o\n", a);
+		sv[3].a = 01000+3;
+		sv[3].v = showlabel(sv[3].name, sv[3].a, 1);
 
+		a = sv[3].v & 0x00ffffff;
+
+		printf("\ninitial sg:\n");
 		for (i = 10; i >= 0; i--) {
 			char b[16];
 			sprintf(b, "%d", -i);
 			show(a-i, 1);
 		}
 	}
-#endif
+
+	if (show_memory) {
+		printf("memory @ %o:\n", addr);
+		for (i = 0; i < 10; i++) {
+			show(addr+i, 1);
+		}
+	}
 
 #if 0
+	//xxx need to add code to look at disk label
+	//xxx and set partition offsets based no that
+	//xxx (instead of the bogus hardcoded offsets in set_swap() and set_lod1()
+
 	if (swapfd)
 	{
 		int i;

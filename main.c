@@ -1,15 +1,22 @@
 /*
  * main.c
+ *
+ * CADR simulator
+ * main;
+ * 
  * $Id$
  */
+
 #include <stdio.h>
 #include <sys/time.h>
+#include <signal.h>
 
 #include "ucode.h"
 #include "config.h"
 
 int show_video_flag;
 extern unsigned long cycles;
+extern int run_ucode_flag;
 
 struct timeval tv1;
 
@@ -55,6 +62,26 @@ timing_stop()
 }
 
 void
+sigint_handler(int arg)
+{
+	run_ucode_flag = 0;
+}
+
+void
+signal_init(void)
+{
+	signal(SIGINT, sigint_handler);
+}
+
+void
+signal_shutdown(void)
+{
+    signal(SIGINT, SIG_DFL);
+    fflush(stdout);
+}
+
+
+void
 usage(void)
 {
 	printf("usage:\n");
@@ -69,7 +96,7 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.1\n");
+	printf("CADR emulator v0.2\n");
 
 	show_video_flag = 1;
 
@@ -105,6 +132,7 @@ main(int argc, char *argv[])
 			case 'i': trace_int_flag = 1; break;
 			case 'o': trace_io_flag = 1; break;
 			case 'p': trace_prom_flag = 1; break;
+			case 'c': trace_mcr_flag = 1; break;
 			case 'm': trace_mcr_labels_flag = 1; break;
 			case 'l': trace_lod_labels_flag = 1; break;
 			}
@@ -122,18 +150,24 @@ main(int argc, char *argv[])
 		display_poll();
 	}
 
+	disk_init( config_get_disk_filename() );
+
 	read_prom_files();
 
 	read_sym_files();
 
-	disk_init( config_get_disk_filename() );
-
 	iob_init();
 
-//	show_prom();
-//	disassemble_prom();
+#if 0
+	show_prom();
+	disassemble_prom();
+#endif
+
+	signal_init();
 
 	run();
+
+	signal_shutdown();
 
 	if (show_video_flag) {
 		while (1) {

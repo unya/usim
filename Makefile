@@ -12,7 +12,7 @@ USIM_LIBS = -lSDL -lpthread
 #CFLAGS = -g
 CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686
 
-all: usim readmcr diskmaker
+all: usim readmcr diskmaker lod
 
 usim: $(USIM_SRC) $(USIM_HDR)
 	cc -o usim $(CFLAGS) $(USIM_SRC) $(USIM_LIBS)
@@ -25,6 +25,9 @@ readmcr: readmcr.c
 	cc -o $@ $<
 
 diskmaker: diskmaker.c
+	cc -o $@ $<
+
+lod: lod.c macro.c
 	cc -o $@ $<
 
 clean:

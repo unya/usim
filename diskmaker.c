@@ -183,6 +183,9 @@ make_labl(int fd)
 	/* comment - offset 030, 32 bytes */
 	memset((char *)&buffer[030], '\200', 32);
 
+	strcpy((char *)&buffer[030], mcr_filename);
+	printf("comment: '%s'\n", mcr_filename);
+
 #ifdef NEED_SWAP
 	swapbytes(buffer);
 #endif
@@ -323,12 +326,19 @@ main(int argc, char *argv[])
 	use_lod2 = 0;
 
 	img_filename = strdup("disk.img");
-//	mcr_filename = strdup("ucadr.mcr.979");
 	mcr_filename = strdup("ucadr.mcr.841");
-	lod1_filename = strdup("partition.lod1.841");
-	lod2_filename = strdup("partition.lod2.841");
-mcr_filename = strdup("ucadr.mcr.979");
-lod1_filename = strdup("partition.lod2.841");
+	lod1_filename = strdup("partition-78.48.lod1");
+	lod2_filename = strdup("partition-sys210.lod2");
+
+#if 0
+	mcr_filename = strdup("ucadr.mcr.979");
+	lod1_filename = strdup("partition-sys210.lod2");
+#endif
+
+#if 0
+	mcr_filename = strdup("ucadr.mcr.896");
+	lod1_filename = strdup("partition-sys210.lod2");
+#endif
 
 	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
 	if (fd < 0) {

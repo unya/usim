@@ -13,9 +13,10 @@
 
 #include "logo.h"
 
+extern int run_ucode_flag;
+
 static SDL_Surface *screen;
 static int video_width = 768;
-//static int video_height = 512/*1024*/;
 static int video_height = 1024;
 
 typedef struct DisplayState {
@@ -32,6 +33,8 @@ static DisplayState *ds = &display_state;
 #define MOUSE_EVENT_LBUTTON 1
 #define MOUSE_EVENT_MBUTTON 2
 #define MOUSE_EVENT_RBUTTON 3
+
+static int old_run_state;
 
 static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 {
@@ -50,11 +53,13 @@ static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 		extra |= 3 << 10;
 
 	if (updown) {
+#if 0
 		printf("scancode %x, sym %x, mod %x, unicode %x\n",
 		       ev->keysym.scancode,
 		       ev->keysym.sym,
 		       ev->keysym.mod,
 		       ev->keysym.unicode);
+#endif
 		iob_sdl_key_event(ev->keysym.sym, extra);
 	}
 }
@@ -75,7 +80,7 @@ static void sdl_send_mouse_event(void)
 	if (state & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		buttons |= MOUSE_EVENT_MBUTTON;
 
-	iob_sdl_mouse_event(dx, dy, buttons);
+//	iob_sdl_mouse_event(dx, dy, buttons);
 }
 
 static void sdl_update(DisplayState *ds, int x, int y, int w, int h)
@@ -171,10 +176,11 @@ static void sdl_resize(DisplayState *ds, int w, int h)
 static void sdl_update_caption(void)
 {
     char buf[1024];
-    extern int run_ucode_flag;
 
     strcpy(buf, "CADR");
-    if (!run_ucode_flag) {
+    if (run_ucode_flag) {
+        strcat(buf, " [Running]");
+    } else {
         strcat(buf, " [Stopped]");
     }
 
@@ -341,5 +347,10 @@ void
 display_poll(void)
 {
 	sdl_refresh();
+
+	if (old_run_state != run_ucode_flag) {
+		old_run_state = run_ucode_flag;
+		sdl_update_caption();
+	}
 }
 

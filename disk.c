@@ -1,5 +1,6 @@
 /*
  * disk.c
+ *
  * simple CADR disk emulation
  * attempts to emulate the disk controller on a CADR
  *
@@ -692,6 +693,17 @@ disk_init(char *filename)
 	blocks_per_track = label[4];
 
 	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
+
+	/* hack to find mcr symbol file from disk pack label */
+	if (label[030] != 0 && label[030] != 0200200200200) {
+		char fn[1024], *s;
+		strcpy(fn, (char *)&label[030]);
+		printf("disk: pack label comment '%s'\n", fn);
+		s = strstr(fn, ".mcr.");
+		if (s)
+			memcpy(s, ".sym.", 5);
+		config_set_mcrsym_filename(fn);
+	}
 
 	return 0;
 }

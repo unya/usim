@@ -420,12 +420,60 @@ disassemble_prom(void)
 /* ----------------------------------------------------------------- */
 
 /* see diskmaker.c */
-static int partoff = 046324;
+//static int partoff = 046324;
 //static int partoff = 0114124;
+static int partoff;
 static int bnum = -1;
 static unsigned int buf[256];
 
 extern int disk_fd;
+
+static unsigned long
+str4(char *s)
+{
+	return (s[3]<<24) | (s[2]<<16) | (s[1]<<8) | s[0];
+}
+
+
+static int
+find_disk_partition_table(int fd)
+{
+	int ret;
+	int p, count, nw, i;
+	off_t offset;
+
+	printf("looking for partition\n");
+
+	offset = 0;
+	ret = lseek(fd, offset, SEEK_SET);
+	if (ret != offset) {
+		return -1;
+	}
+
+	ret = read(fd, buf, 256*4);
+	if (ret != 256*4) {
+		return -1;
+	}
+
+	/* this is so much prettier in lisp... */
+	p = 0200;
+	count = buf[p++];
+	nw = buf[p++];
+	if (0) printf("count %d, nw %d\n", count, nw);
+
+	for (i = 0; i < count; i++) {
+		if (0) printf("%d %08x %08x\n", i, buf[p], str4("LOD1"));
+		if (buf[p] == str4("LOD1")) {
+			partoff = buf[p+1];
+			if (0) printf("found lod1 %o\n", partoff);
+			break;
+		}
+		p += nw;
+	}
+
+	bnum = -1;
+}
+
 
 static unsigned int
 read_virt(int fd, int addr, unsigned int *pv)
@@ -518,6 +566,10 @@ find_function_name(int the_lc)
 	unsigned int v;
 
 	if (0) printf("find %o\n", loc);
+
+	if (partoff == 0) {
+		find_disk_partition_table(disk_fd);
+	}
 
 	/* search backward to find the function header */
 	for (i = 0; i < 512; i++) {

@@ -104,8 +104,11 @@ read_a_mem(int fd, int start, int size)
 	printf("a-memory; start %o, size %o\n", start, size);
 	for (i = 0; i < size; i++) {
 		v = read32(fd);
-		if ((i >= 0600 && i <= 0610) |
-		    (i < 010))
+		if (
+			(i >= 0347 && i <= 0400) |
+			(i >= 0600 && i <= 0610) |
+			(i < 010)
+			)
 		{
 			printf("%o <- %o\n", i, v);
 		}
