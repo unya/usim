@@ -11,6 +11,7 @@
  * $Id$
  */
 
+#include <stdio.h>
 #include "ucode.h"
 
 extern ucw_t prom_ucode[512];
@@ -83,7 +84,13 @@ int trace_prom_flag;
 int trace_io_flag;
 int trace_disk_flag;
 int trace_int_flag;
-#define traceint if (trace_int_flag) printf
+
+int macro_pc_incrs;
+
+int phys_ram_pages;
+
+void show_label_closest(unsigned int upc);
+char *show_function_header(int the_lc);
 
 void
 set_interrupt_status_reg(int new)
@@ -206,7 +213,7 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	if (poffset)
 		*poffset = virt & 0377;
 
-if (virt == 01440336) printf("v %o, l1_map %o, l2_map %o\n", virt, l1, l2);
+//if (virt == 01440336) printf("v %o, l1_map %o, l2_map %o\n", virt, l1, l2);
 
 	last_virt = virt & 0xffffff00;
 	last_l1 = l1;
@@ -217,7 +224,8 @@ if (virt == 01440336) printf("v %o, l1_map %o, l2_map %o\n", virt, l1, l2);
 
 /*
  * add a new physical memory page,
- * in response to l2 mapping
+ * generally in response to l2 mapping
+ * (but can also be due to phys access to ram)
  */
 int
 add_new_page_no(int pn)
@@ -230,7 +238,9 @@ add_new_page_no(int pn)
 
 		page = (struct page_s *)malloc(sizeof(struct page_s));
 		if (page) {
-//			memset(page, 0, sizeof(struct page_s));
+#ifdef ZERO_NEW_PAGES
+			memset(page, 0, sizeof(struct page_s));
+#endif
 			phy_pages[pn] = page;
 
 			tracef("add_new_page_no(pn=%o)\n", pn);
@@ -251,10 +261,21 @@ read_phy_mem(int paddr, unsigned int *pv)
 
 	if ((page = phy_pages[pn]) == 0) {
 		/* page does not exist */
-		return -1;
+		if (pn < phys_ram_pages) {
+			tracef("[read_phy_mem] "
+			       "adding phy ram page %o (address %o)\n",
+			       pn, paddr);
+			add_new_page_no(pn);
+			page = phy_pages[pn];
+		} else {
+			printf("[read_phy_mem] address %o does not exist\n",
+			       paddr);
+			return -1;
+		}
 	}
 
 	*pv = page->w[offset];
+
 	return 0;
 }
 
@@ -265,14 +286,23 @@ write_phy_mem(int paddr, unsigned int v)
 	int offset = paddr & 0377;
 	struct page_s *page;
 
-if (paddr >= 01440000) printf("write_phy_mem(paddr=%o, v=%o)\n", paddr, v);
-
 	if ((page = phy_pages[pn]) == 0) {
-		/* page does not exist */
-		return -1;
+		/* page does not exist - add it (probably result of disk write) */
+		if (pn < phys_ram_pages) {
+			tracef("[write_phy_mem] "
+			       "adding phy ram page %o (address %o)\n",
+			       pn, paddr);
+			add_new_page_no(pn);
+			page = phy_pages[pn];
+		} else {
+			printf("[write_phy_mem] address %o does not exist\n",
+			       paddr);
+			return -1;
+		}
 	}
 
 	page->w[offset] = v;
+
 	return 0;
 }
 
@@ -287,28 +317,37 @@ read_mem(int vaddr, unsigned int *pv)
 	unsigned int map;
 	int pn, offset;
 	struct page_s *page;
-int l1;
+//int l1;
 	access_fault_bit = 0;
-page_fault_flag = 0;
+	page_fault_flag = 0;
 
-//	map = map_vtop(vaddr, (int *)0, &offset);
-map = map_vtop(vaddr, &l1, &offset);
+	map = map_vtop(vaddr, (int *)0, &offset);
+//map = map_vtop(vaddr, &l1, &offset);
 
 	tracef("read_mem(vaddr=%o)\n", vaddr);
 
 	/* 14 bit page # */
 	pn = map & 037777;
 
-//	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
-//	       vaddr, pn, offset, map, 1 << 23);
-	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, l1 %o, l2 %o\n",
-	       vaddr, pn, offset, l1, map);
+	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
+	       vaddr, pn, offset, map, 1 << 23);
+//	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, l1 %o, l2 %o\n",
+//	       vaddr, pn, offset, l1, map);
 
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
 		access_fault_bit = 1;
 		page_fault_flag = 1;
 		opc = pn;
+#if 0
+if (vaddr == 032301340050) {
+	trace_mcr_labels_flag = 1;
+//	trace = 1;
+}
+printf("set opc %o, vaddr=%o, l1_index %o, l1 %o, l2 %o\n", opc, vaddr, (vaddr >> 13) & 03777, l1, map);
+show_label_closest(u_pc);
+printf("\n");
+#endif
 		*pv = 0;
 		tracef("read_mem(vaddr=%o) access fault\n", vaddr);
 		return -1;
@@ -328,9 +367,8 @@ map = map_vtop(vaddr, &l1, &offset);
 		return -1;
 	}
 
-	/* simulate no memory above 2mb */
-//	if (pn > 8192 && pn < 9162)
-	if (pn >= 8192/*/16/*8*/ && pn <= 035777)
+	/* simulate fixed number of ram pages (< 2mw?) */
+	if (pn >= phys_ram_pages && pn <= 035777)
 	{
 		*pv = 0xffffffff;
 		return 0;
@@ -485,7 +523,7 @@ write_mem(int vaddr, unsigned int v)
 
 		default:
 			if (offset >= 0140 && offset <= 0176) {
-				traceio("unibus: mapping reg \n");
+				traceio("unibus: mapping reg %o\n", offset);
 				return 0;
 			}
 
@@ -606,21 +644,24 @@ rotate_left(unsigned int value, int bitstorotate)
 inline void
 push_spc(int pc)
 {
+	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
+
 	tracef("writing spc[%o] <- %o\n", spc_stack_ptr, pc);
 	spc_stack[spc_stack_ptr] = pc;
-
-	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
 }
 
 inline int
 pop_spc(void)
 {
-	spc_stack_ptr = (spc_stack_ptr - 1) & 037;
+	unsigned int v;
 
 	tracef("reading spc[%o] -> %o\n",
 	       spc_stack_ptr, spc_stack[spc_stack_ptr]);
 
-	return spc_stack[spc_stack_ptr];
+	v = spc_stack[spc_stack_ptr];
+	spc_stack_ptr = (spc_stack_ptr - 1) & 037;
+
+	return v;
 }
 
 /*
@@ -645,9 +686,12 @@ advance_lc(int *ppc)
 		lc += 2;
 	}
 
+	macro_pc_incrs++;
+
 	/* need-fetch? */
 	if (lc & (1 << 30)) {
 		lc &= ~(1 << 30);
+vma = old_lc >> 2;
 		if (read_mem(old_lc >> 2, &md)) {
 		}
 		tracef("advance_lc() read vma %011o -> %011o\n",
@@ -709,7 +753,27 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		/* set need fetch */
 		lc |= (1 << 30);
 
-printf("lc <- %o\n", lc);
+show_label_closest(u_pc);
+printf(": lc <- %o (%o)", lc, lc>>2);
+ { char *s;
+s = show_function_header(lc);
+// if (strcmp(s, "INITIALIZATIONS") == 0)
+if (strcmp(s, "CLEAR-UNIBUS-MAP") == 0) trace = 1;
+if (strcmp(s, "INITIALIZATIONS") == 0) {
+dump_pdl_memory();
+ show_list(0);
+}
+ }
+printf("\n");
+
+//trace_mcr_labels_flag = 1;
+trace_disk_flag = 1;
+
+ if (lc == 011007402704) {
+	 trace = 1;
+//	 trace_mcr_labels_flag = 1;
+ }
+
 		break;
 	case 2: /* interrrupt control <29-26> */
 		tracef("writing IC <- %o\n", out_bus);
@@ -755,11 +819,12 @@ printf("lc <- %o\n", lc);
 		write_pdl_mem(USE_PDL_INDEX, out_bus);
 		break;
 	case 013: /* PDL index */
-		tracef("pdl index <- %o\n", out_bus);
+		tracef("pdl-index <- %o\n", out_bus);
 		pdl_index = out_bus & 01777;
 		break;
 	case 014: /* PDL pointer */
-		tracef("pdl ptr <- %o\n", out_bus);
+		tracef("pdl-ptr <- %o\n", out_bus);
+printf("pdl-ptr <- %o\n", out_bus);
 		pdl_ptr = out_bus & 01777;
 		break;
 
@@ -786,6 +851,20 @@ printf("lc <- %o\n", lc);
 		vma = out_bus;
 		if (read_mem(vma, &md)) {
 		}
+#if 1
+		if (vma == 032301340050 && page_fault_flag == 0) {
+			unsigned int d;
+			read_mem(032301340044, &d);
+			read_mem(032301340045, &d);
+			read_mem(032301340046, &d);
+			read_mem(032301340047, &d);
+			read_mem(032301340050, &d);
+			read_mem(032301340051, &d);
+			read_mem(032301340052, &d);
+			read_mem(032301340053, &d);
+		}
+#endif
+
 		break;
 
 	case 022: /* VMA register, start main memory write */
@@ -864,6 +943,35 @@ printf("lc <- %o\n", lc);
 }
 
 void
+dump_pdl_memory(void)
+{
+	int i;
+
+	printf("pdl-ptr %o, pdl-index %o\n", pdl_ptr, pdl_index);
+
+	/* PDL */
+	for (i = 0; i < 1024; i += 4) {
+		int skipped;
+		printf("PDL[%04o] %011o %011o %011o %011o\n",
+		       i, pdl_memory[i], pdl_memory[i+1],
+		       pdl_memory[i+2], pdl_memory[i+3]);
+
+		skipped = 0;
+		while (pdl_memory[i+0] == pdl_memory[i+0+4] &&
+		       pdl_memory[i+1] == pdl_memory[i+1+4] &&
+		       pdl_memory[i+2] == pdl_memory[i+2+4] &&
+		       pdl_memory[i+3] == pdl_memory[i+3+4] &&
+			i < 1024)
+		{
+			if (skipped++ == 0)
+				printf("...\n");
+			i += 4;
+		}
+	}
+	printf("\n");
+}
+
+void
 dump_state(void)
 {
 	int i;
@@ -871,11 +979,14 @@ dump_state(void)
 	printf("\n-------------------------------------------------\n");
 	printf("CADR machine state:\n\n");
 
-	printf("u-code pc %o, lc %o\n", u_pc, lc);
+	printf("u-code pc %o, lc %o (%o)\n", u_pc, lc, lc>>2);
 	printf("vma %o, md %o, q %o, opc %o, disp-const %o\n",
 	       vma, md, q, opc, dispatch_constant);
 	printf("oa-lo %011o, oa-hi %011o, ", oa_reg_lo, oa_reg_hi);
-	printf("pdl-ptr %o, spc-ptr %o\n", pdl_ptr, spc_stack_ptr);
+	printf("pdl-ptr %o, pdl-index %o, spc-ptr %o\n", pdl_ptr, pdl_index, spc_stack_ptr);
+	printf("\n");
+	printf("lc increments %d (macro instructions execcuted)\n",
+	       macro_pc_incrs);
 	printf("\n");
 
 	for (i = 0; i < 32; i += 4) {
@@ -962,6 +1073,9 @@ dump_state(void)
 	printf("\n");
 #endif
 
+	dump_pdl_memory();
+
+	/* A-memory */
 	for (i = 0; i < /*1024*/01000; i += 4) {
 		printf("A[%04o] %011o %011o %011o %011o\n",
 		       i, a_memory[i], a_memory[i+1],
@@ -986,6 +1100,22 @@ dump_state(void)
 				e = i-1;
 				printf("%o-%o\n", s, e);
 				s = -1;
+			}
+		}
+	}
+
+
+	printf("\n");
+	printf("A-memory by symbol:\n");
+	{
+		int i;
+		for (i = 0; i < 1024; i++) {
+			char *sym;
+
+			sym = sym_find_by_type_val(1, 4/*A-MEM*/, i);
+			if (sym) {
+				printf("%o %-40s %o\n",
+				       i, sym, a_memory[i]);
 			}
 		}
 	}
@@ -1015,60 +1145,106 @@ patch_prom_code(void)
 #endif
 }
 
+char *breakpoint_name_prom;
+char *breakpoint_name_mcr;
+int breakpoint_count;
+char *tracelabel_name_mcr;
+
 int
-set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *trace_label_pt)
+breakpoint_set_prom(char *arg)
 {
+	breakpoint_name_prom = arg;
+	return 0;
+}
 
-//	trace = 1;
-	max_cycles = 1000;
-//	max_cycles = 300000;
-//	max_cycles = 350000;
-//	max_cycles = 100000*20;
-//	max_cycles = 1000*1000*30;
-	max_cycles = 1000*1000*50;
-//	max_cycles = 1000*1000*100;
-//	max_trace_cycles = 100;
+int
+breakpoint_set_mcr(char *arg)
+{
+	breakpoint_name_mcr = arg;
+	return 0;
+}
 
-//	sym_find(1, "INIMAP5", ptrace_pt);
-//	sym_find(1, "CLEAR-I-MEMORY", ptrace_pt);
+int
+breakpoint_set_count(int count)
+{
+	printf("breakpoint: max count %d\n", count);
+	breakpoint_count = count;
+	return 0; 
+}
 
-//	sym_find(1, "MEM-SIZE-LOOP", ptrace_pt);
-//	sym_find(1, "COLD-SWAP-IN", ptrace_pt);
+int
+tracelabel_set_mcr(char *arg)
+{
+	tracelabel_name_mcr = arg;
+	return 0;
+}
 
-//	sym_find(1, "COLD-READ-LABEL", ptrace_pt);
-//	max_trace_cycles = 1000;
+int
+set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
+{
+	max_cycles = 0;
 
-//	sym_find(1, "RESET-MACHINE", ptrace_label_pt);
-//	sym_find(1, "BEG0000", ptrace_label_pt);
-
-//	sym_find(1, "BEG06", ptrace_pt);
-//	(*ptrace_pt)++;
-//printf("trace_pt %o\n", *ptrace_pt);
-
-//	sym_find(1, "BEGCM4", ptrace_pt);
-
-#if 0
-	sym_find(1, "BEG03", ptrace_pt);
-//	trace_pt_count = 3;
-//	max_trace_cycles = 1000;
-#endif
-
-//	sym_find(1, "COLD-REINIT-PPD-3", ptrace_pt);
-
-//	sym_find(1, "GET-AREA-ORIGINS", ptrace_pt);
-
-	sym_find(0, "READ-LABEL", ptrace_pt);
-	sym_find(0, "FUDGE-INITIAL-DISK-PARAMETERS", ptrace_pt);
-
-//	sym_find(1, "COLD-REINIT-PPD-0", ptrace_pt);
-
-//	trace_mcr_labels_flag = 1;
-//	trace_prom_flag = 1;
-//	stop_after_prom_flag = 1;
-
-	trace_disk_flag = 1;
+//	trace_disk_flag = 1;
 	trace_io_flag = 1;
 	trace_int_flag = 1;
+
+	if (breakpoint_name_prom) {
+		if (sym_find(0, breakpoint_name_prom, ptrace_pt)) {
+			if (isdigit(breakpoint_name_prom[0])) {
+				sscanf(breakpoint_name_prom, "%o", ptrace_pt);
+			} else {
+				fprintf(stderr, "can't find prom breakpoint '%s'\n",
+					breakpoint_name_prom);
+				return -1;
+			}
+		}
+		printf("breakpoint [prom]: %s %o\n", breakpoint_name_prom, *ptrace_pt);
+		*ptrace_pt_count = 1;
+	}
+
+	if (breakpoint_name_mcr) {
+		if (sym_find(1, breakpoint_name_mcr, ptrace_pt)) {
+			if (isdigit(breakpoint_name_mcr[0])) {
+				sscanf(breakpoint_name_mcr, "%o", ptrace_pt);
+			} else {
+				fprintf(stderr, "can't find mcr breakpoint '%s'\n",
+					breakpoint_name_mcr);
+				return -1;
+			}
+		}
+		printf("breakpoint [mcr]: %s %o\n", breakpoint_name_mcr, *ptrace_pt);
+		*ptrace_pt_count = 1;
+	}
+
+	if (breakpoint_count) {
+		*ptrace_pt_count = breakpoint_count;
+	}
+
+	if (tracelabel_name_mcr) {
+		if (sym_find(1, tracelabel_name_mcr, ptrace_label_pt)) {
+			fprintf(stderr, "can't find mcr trace label '%s'\n",
+				tracelabel_name_mcr);
+			return -1;
+		}
+		printf("trace label point [mcr]: %s %o\n",
+		       tracelabel_name_mcr, *ptrace_label_pt);
+	}
+
+	return 0;
+}
+
+void
+show_label_closest(unsigned int upc)
+{
+	int offset;
+	char *sym;
+
+	if (sym = sym_find_last(!prom_enabled_flag, upc, &offset)) {
+		if (offset == 0)
+			printf("%s", sym);
+		else
+			printf("%s+%o", sym, offset);
+	}
 }
 
 int
@@ -1076,6 +1252,9 @@ run(void)
 {
 	int trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
+
+	phys_ram_pages = 8192;
+	phys_ram_pages = 8192/8;
 
 	u_pc = 0;
 	prom_enabled_flag = 1;
@@ -1105,7 +1284,7 @@ run(void)
 		unsigned int left_mask, right_mask, mask;
 		int left_mask_index, right_mask_index;
 
-		int disp_cont, disp_addr;
+		int disp_const, disp_addr;
 		int map, len, rot;
 		int out_bus;
 		int carry_in, do_add, do_sub;
@@ -1237,16 +1416,19 @@ run(void)
 				printf("%s:\n", sym);
 			}
 #else
-			if (sym = sym_find_last(!prom_enabled_flag, p0_pc, &offset)) {
-				if (offset == 0)
-					printf("%s:\n", sym);
-				else
-					printf("%s+%o:\n", sym, offset);
-			}
+			printf("\n");
+			show_label_closest(p0_pc);
+			printf(":\n");
 #endif
 
-			printf("%03o %016Lo %s\n",
-			       p0_pc, u, i_long ? "(i-long)" : "");
+			printf("%03o %016Lo%s",
+			       p0_pc, u, i_long ? " (i-long)" : "");
+
+			if (lc != 0) {
+				printf(" (lc=%011o %011o)", lc, lc>>2);
+			}
+
+			printf("\n");
 			disassemble_ucode_loc(p0_pc, u);
 		}
 
@@ -1256,8 +1438,8 @@ run(void)
 				int offset;
 				if (sym = sym_find_last(1, p0_pc, &offset)) {
 					if (offset == 0 && sym != last_sym) {
-						printf("%s: (lc=%011o)\n",
-						       sym, lc);
+						printf("%s: (lc=%011o %011o)\n",
+						       sym, lc, lc>>2);
 						last_sym = sym;
 					}
 				}
@@ -1280,7 +1462,7 @@ run(void)
 				break;
 			case 1: /* SPC pointer <28-24>, SPC data <18-0> */
 				m_src_value = (spc_stack_ptr << 24) |
-					(spc_stack[spc_stack_ptr] & 0777777);
+					(spc_stack[spc_stack_ptr] & 01777777);
 				break;
 			case 2: /* PDL pointer <9-0> */
 				m_src_value = pdl_ptr & 01777;
@@ -1295,6 +1477,7 @@ run(void)
 				m_src_value = pdl_memory[pdl_index];
 				break;
 			case 6: /* OPC registers <13-0> */
+printf("read opc %o\n", opc);
 				m_src_value = opc;
 				break;
 			case 7: /* Q register */
@@ -1329,7 +1512,11 @@ run(void)
 				break;
 			case 014:
 				m_src_value = (spc_stack_ptr << 24) |
-					(spc_stack[spc_stack_ptr] & 0777777);
+					(spc_stack[spc_stack_ptr] & 01777777);
+
+				tracef("reading spc[%o] + ptr -> %o\n",
+				       spc_stack_ptr, m_src_value);
+
 				spc_stack_ptr = (spc_stack_ptr - 1) & 037;
 				break;
 
@@ -1358,10 +1545,12 @@ run(void)
 		switch (op_code = (u >> 43) & 03) {
 		case 0: /* alu */
 
+#if 1
 			/* nop short cut */
-			if ((u & 03777777777777777) == 0) {
+			if ((u & 03777777777767777) == 0) {
 				goto next;
 			}
+#endif
 
 			dest = (u >> 14) & 07777;
 			out_bus = (u >> 12) & 3;
@@ -1382,6 +1571,7 @@ run(void)
 				       dest, out_bus);
 			}
 
+			/* (spec) ir7 is backward in memo? */
 		        if (ir8 == 0 && ir7 == 0) {
 				/* logic */
 				alu_carry = 0;
@@ -1634,6 +1824,8 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				}
 			}
 
+			take_jump = 0;
+
 			/* Q control */
 			switch (u & 3) {
 			case 1:
@@ -1655,7 +1847,11 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				break;
 			}
 
+			/* output bus control */
 			switch (out_bus) {
+			case 0:
+				printf("out_bus == 0!\n");
+				break;
 			case 1: out_bus = alu_out;
 				break;
 			case 2: out_bus = (alu_out >> 1) | 
@@ -1697,7 +1893,10 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			/* jump condition */
 			if (u & (1<<5)) {
 				switch (u & 017) {
-				case 0: break;
+				case 0:
+					if (op_code != 2)
+						printf("jump-condition == 0! u_pc=%o\n", p0_pc);
+					break;
 				case 1:
 					take_jump = m_src_value < a_src_value;
 					break;
@@ -1736,6 +1935,10 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				m_src_value = rotate_left(m_src_value, rot);
 				tracef("after %o\n", m_src_value);
 				take_jump = m_src_value & 1;
+			}
+
+			if (((u >> 10) & 3) == 3) {
+				printf("jump w/misc-3!\n");
 			}
  
 			if (invert_sense)
@@ -1779,12 +1982,17 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				u_pc = new_pc;
 
 				/* inhibit possible popj */
+//				if (popj) {
+//					pop_spc();
+//				}
+
+//if (op_code != 2)
 				popj = 0;
 			}
 			break;
 
 		case 2: /* dispatch */
-			disp_cont = (u >> 32) & 01777;
+			disp_const = (u >> 32) & 01777;
 
 			n_plus1 = (u >> 25) & 1;
 			enable_ish = (u >> 24) & 1;
@@ -1817,7 +2025,9 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					lc1 = (lc >> 1) & 1;
 
 					pos = u & 017;
-					pos |= (ir4 ^ lc1) << 4;
+//					pos |= (ir4 ^ lc1) << 4;
+					/* (spec) result needs to be inverted*/
+					pos |= ((ir4 ^ lc1) ? 0 : 1) << 4;
 					tracef("16b-mode, pos %o\n", pos);
 				}
 			}
@@ -1849,37 +2059,33 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 			/* tweek dispatch-addr with l2 map bits */
 			if (map) {
-				int l2_map, bit14, bit15;
+				int l2_map, bit18, bit19;
 
-				disp_addr &= ~1;
+// confusion - replace bit?
+//				disp_addr &= ~1;
 
 				l2_map = map_vtop(md, (int *)0, (int *)0);
 
-#if 0
-				bit15 = ((l2_map >> 15) & 1) ? 1 : 0;
-				bit14 = ((l2_map >> 14) & 1) ? 1 : 0;
-#else
-				/* schematics show this as bit 19,18 */
-				bit15 = ((l2_map >> 19) & 1) ? 1 : 0;
-				bit14 = ((l2_map >> 18) & 1) ? 1 : 0;
-#endif
+				/* (spec) schematics show this as bit 19,18 */
+				bit19 = ((l2_map >> 19) & 1) ? 1 : 0;
+				bit18 = ((l2_map >> 18) & 1) ? 1 : 0;
 
-				tracef("md %o, l2_map %o, b15 %o, b14 %o\n",
-				       md, l2_map, bit15, bit14);
+				tracef("md %o, l2_map %o, b19 %o, b18 %o\n",
+				       md, l2_map, bit19, bit18);
 
 				switch (map) {
-				case 1: disp_addr |= bit14; break;
-				case 2: disp_addr |= bit15; break;
-				case 3: disp_addr |= bit14 | bit15; break;
+				case 1: disp_addr |= bit18; break;
+				case 2: disp_addr |= bit19; break;
+				case 3: disp_addr |= bit18 | bit19; break;
 				}
 			}
 
-			tracef("dispatch[%o] -> %o  ",
+			tracef("dispatch[%o] -> %o ",
 			       disp_addr, dispatch_memory[disp_addr]);
 
 			disp_addr = dispatch_memory[disp_addr];
 
-			dispatch_constant = disp_cont;
+			dispatch_constant = disp_const;
 
 			/* 14 bits */
 			new_pc = disp_addr & 037777;
@@ -1906,6 +2112,20 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 				advance_lc((int *)0);
 			}
 
+			if (p_bit && r_bit) {
+				if (n_bit)
+					printf("NPR! u_pc %o\n", p0_pc);
+				if (n_bit)
+					no_exec_next = 1;
+				goto dispatch_done;
+			}
+
+if (popj && r_bit == 0 && p_bit == 0) {
+	printf("popped!\n");
+	pop_spc();
+}
+
+//if (p_bit) u_pc = new_pc;
 			goto process_jump;
 
 		dispatch_done:
@@ -1921,6 +2141,40 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 			widthm1 = (u >> 5) & 037;
 			pos = u & 037;
+
+#if 1
+			/* misc function 3 */
+			if (((u >> 10) & 3) == 3) {
+				if (lc_byte_mode_flag) {
+					/* byte mode */
+					char ir4, ir3, lc1, lc0;
+
+					ir4 = (u >> 4) & 1;
+					ir4 = (u >> 3) & 1;
+					lc1 = (lc >> 1) & 1;
+					lc0 = (lc >> 0) & 1;
+
+					pos = u & 007;
+					pos |= ((ir4 ^ (lc1 ^ lc0)) << 4) |
+						((ir3 ^ lc0) << 3);
+
+					tracef("byte-mode, pos %o\n", pos);
+				} else {
+					/* 16 bit mode */
+					char ir4, lc1;
+
+					ir4 = (u >> 4) & 1;
+					lc1 = (lc >> 1) & 1;
+//printf("ir4 %d, lc1 %d\n", ir4, lc1);
+
+					pos = u & 017;
+//					pos |= (ir4 ^ lc1) << 4;
+					pos |= ((ir4 ^ lc1) ? 0 : 1) << 4;
+
+					tracef("16b-mode, pos %o\n", pos);
+				}
+			}
+#endif
 
 			if (mr_sr_bits & 2)
 				right_mask_index = pos;
@@ -1994,12 +2248,19 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 			/* spc<14> */
 			if ((u_pc >> 14) & 1) {
+//printf("bit 14! pc %o\n", new_pc);
 				advance_lc(&u_pc);
 			}
 
 			u_pc &= 037777;
 //			no_exec_next = 1;
 		}
+	}
+
+	{
+		int offset;
+		sym = sym_find_last(!prom_enabled_flag, u_pc, &offset);
+		printf("%s+%o:\n", sym, offset);
 	}
 
 	timing_stop();

@@ -324,7 +324,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 				printf("jump-always "); break;
 			}
 		} else {
-			printf("m-rot<< %d", u & 037);
+			printf("m-rot<< %o", u & 037);
 		}
 
 /*
@@ -348,6 +348,9 @@ disassemble_ucode_loc(int loc, ucw_t u)
 		map = (u >> 8) & 3;
 		len = (u >> 5) & 07;
 		rot = u & 037;
+
+		printf("m=", a_src);
+		disassemble_m_src(u, m_src);
 
 		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
 		       disp_cont, disp_addr, map, len, rot);
@@ -414,3 +417,226 @@ disassemble_prom(void)
 	}
 }
 
+/* ----------------------------------------------------------------- */
+
+/* see diskmaker.c */
+static int partoff = 046324;
+//static int partoff = 0114124;
+static int bnum = -1;
+static unsigned int buf[256];
+
+extern int disk_fd;
+
+static unsigned int
+read_virt(int fd, int addr, unsigned int *pv)
+{
+	int b;
+	off_t offset, ret;
+
+	addr &= 077777777;
+
+	b = addr / 256;
+
+	offset = (b + partoff) * (256*4);
+
+	if (b != bnum) {
+		bnum = b;
+
+		if (0) printf("block %d(10)\n", b);
+
+		ret = lseek(fd, offset, SEEK_SET);
+		if (ret != offset) {
+			perror("seek");
+			return -1;
+		}
+
+		ret = read(fd, buf, 256*4);
+		if (ret != 256*4) {
+			return -1;
+		}
+	}
+
+	*pv = buf[ addr % 256 ];
+	return 0;
+}
+
+char *
+show_string(unsigned int loc)
+{
+	unsigned int v;
+	int t, i, j;
+	unsigned int n;
+	static char s[256];
+
+	if (read_virt(disk_fd, loc, &v) == 0) {
+
+		if (0) printf("%o len %o\n", loc, v);
+
+		t = v & 0xff;
+		j = 0;
+		for (i = 0; i < t; i += 4) {
+			unsigned int l;
+
+			l = loc+1+(i/4);
+			if (read_virt(disk_fd, l, &v))
+				return;
+
+			if (0) printf("%o %o %08x\n", l, v, v);
+
+			s[j++] = v >> 0;
+			s[j++] = v >> 8;
+			s[j++] = v >> 16;
+			s[j++] = v >> 24;
+		}
+
+		s[t] = 0;
+		printf(" '%s' ", s);
+		return s;
+	}
+
+	return (char *)0;
+}
+
+/*
+ * a complete hack; given a pc, find the function header and print
+ * the function name.  helpful for debugging.
+ */
+char *
+show_function_header(int the_lc)
+{
+	int i, tag;
+	unsigned int loc = the_lc >> 2;
+	unsigned int v;
+
+	if (0) printf("find %o\n", loc);
+
+	/* search backward to find the function header */
+	for (i = 0; i < 512; i++) {
+
+		if (read_virt(disk_fd, loc, &v))
+			break;
+
+		tag = (v >> 24) & 077;
+		if (tag == 7) break;
+		loc--;
+	}
+
+	if (0) printf("%o found header, back %d\n", loc, i);
+
+	if (tag == 7) {
+		int t, i, j;
+		unsigned int n;
+		static char s[256];
+
+		/* find function symbol ptr */
+		if (read_virt(disk_fd, loc+2, &v) == 0) {
+
+			if (0) printf("%o ptr %o\n", loc, v);
+
+			loc = v;
+
+			if (read_virt(disk_fd, loc, &v))
+				return;
+
+			return show_string(v);
+		}
+	}
+
+}
+
+void
+show_list(unsigned int lp)
+{
+	unsigned int loc, l1, v;
+	int i;
+
+	loc = 031602653046;
+	loc = 001614546634;
+	loc = 030301442405;
+	read_virt(disk_fd, loc, &v);
+//	printf("%011o %011o\n", loc, v);
+//	loc = v;
+
+	for (i = 0; i < 10; i++) {
+		int tag, cdr, addr;
+
+		read_virt(disk_fd, loc, &v);
+
+		tag = (v >> 24) & 077;
+		cdr = (v >> 30) & 3;
+		addr = v & 0x00ffffff;
+
+		printf(" %011o %011o %03o %1o\n", loc, v, tag, cdr);
+
+		if (cdr == 2)
+			i = 100;
+
+		if (addr != 0)
+		switch (tag) {
+		case 003:
+			l1 = v;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			l1 = v;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			show_string(l1);
+			printf("\n");
+			break;
+		case 004:
+			l1 = v;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			show_string(l1);
+			printf("\n");
+			break;
+
+		case 016:
+//			loc = v;
+			break;
+		case 021:
+			l1 = v;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			show_string(l1);
+			printf("\n");
+#if 0
+			l1 = v;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			l1++;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+
+			l1++;
+			read_virt(disk_fd, l1, &v);
+			tag = (v >> 24) & 077;
+			cdr = (v >> 30) & 3;
+			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+#endif
+			break;
+		default:
+//			i = 100;
+			break;
+		}
+
+		loc++;
+	}
+}

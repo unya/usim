@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+#include "ucode.h"
 #include "config.h"
 
 int show_video_flag;
@@ -53,6 +54,12 @@ timing_stop()
 	printf("%.0f ns/cycle\n", (t / cycles) * 1000.0 * 1000.0 * 1000.0);
 }
 
+void
+usage(void)
+{
+	printf("usage:\n");
+	exit(1);
+}
 
 extern char *optarg;
 extern int trace;
@@ -66,17 +73,47 @@ main(int argc, char *argv[])
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "ntl")) != -1) {
+	while ((c = getopt(argc, argv, "b:c:C:l:np:q:tT:s")) != -1) {
 		switch (c) {
 		case 'n':
 			show_video_flag = 0;
 			break;
+		case 'b':
+			breakpoint_set_mcr(optarg);
+			break;
+		case 'c':
+			max_cycles = atol(optarg);
+			break;
+		case 'C':
+			max_trace_cycles = atol(optarg);
+			break;
+		case 'l':
+			tracelabel_set_mcr(optarg);
+			break;
+		case 'p':
+			breakpoint_set_prom(optarg);
+			break;
+		case 'q':
+			breakpoint_set_count(atoi(optarg));
+			break;
 		case 't':
 			trace = 1;
 			break;
-		case 'l':
-			trace_mcr_labels_flag = 1;
+		case 'T':
+			switch (optarg[0]) {
+			case 'd': trace_disk_flag = 1; break;
+			case 'i': trace_int_flag = 1; break;
+			case 'o': trace_io_flag = 1; break;
+			case 'p': trace_prom_flag = 1; break;
+			case 'm': trace_mcr_labels_flag = 1; break;
+			case 'l': trace_mcr_labels_flag = 1; break;
+			}
 			break;
+		case 's':
+			stop_after_prom_flag = 1;
+			break;
+		default:
+			usage();
 		}
 	}
 

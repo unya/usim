@@ -61,9 +61,15 @@ struct {
 } parts[] = {
 	{ "MCR1", 021,     0224 },
 	{ "MCR2", 0245,    0224 },
+#if 0
 	{ "PAGE", 0524,    020464 },
 	{ "LOD1", 021210,  020464 },
 	{ "LOD2", 041674,  020464 },
+#else
+	{ "PAGE", 0524,    045600 },
+	{ "LOD1", 046324,  045600 },
+	{ "LOD2", 0114124,  045600 },
+#endif
 	{ "LOD3", 062360,  020464 },
 	{ "LOD4", 0103044, 020464 },
 	{ "LOD5", 0123530, 020464 },
@@ -80,6 +86,19 @@ str4(char *s)
 #else
 	return (s[3]<<24) | (s[2]<<16) | (s[1]<<8) | s[0];
 #endif
+}
+
+int
+part_offset(char *name)
+{
+	int i;
+	for (i = 0; parts[i].name; i++) {
+		if (strcmp(name, parts[i].name) == 0) {
+			return parts[i].start;
+		}
+	}
+
+	return -1;
 }
 
 int
@@ -104,6 +123,7 @@ make_labl(int fd)
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
 	buffer[6] = str4("MCR1");	/* name of micr part */
 	buffer[7] = str4("LOD1");	/* name of load part */
+//#define BOOT_LOD2
 #ifdef BOOT_LOD2
 	buffer[7] = str4("LOD2");	/* name of load part */
 #endif
@@ -178,7 +198,7 @@ write_block(int fd, int block_no, unsigned char *buf)
 int
 make_mcr1(int fd)
 {
-	int ret, count, i, fd1;
+	int ret, count, i, fd1, offset;
 	unsigned char b[256*4];
 
 	printf("making MCR1...\n");
@@ -186,6 +206,9 @@ make_mcr1(int fd)
 	fd1 = open(mcr_filename, O_RDONLY);
 
 	count = 0;
+	offset = part_offset("MCR1");
+	printf("offset %o\n", offset);
+
 	while (1) {
 		ret = read(fd1, b, 256*4);
 		if (ret <= 0)
@@ -195,7 +218,8 @@ make_mcr1(int fd)
 		swapbytes((unsigned int *)b);
 #endif
 		/* MCR1 start XXX */
-		write_block(fd, 021+count, b);
+
+		write_block(fd, offset/*021*/+count, b);
 
 		count++;
 
@@ -211,7 +235,7 @@ make_mcr1(int fd)
 int
 make_lod1(int fd)
 {
-	int ret, count, i, fd1;
+	int ret, count, i, fd1, offset;
 	unsigned char b[256*4];
 
 	printf("making LOD1...\n");
@@ -219,13 +243,16 @@ make_lod1(int fd)
 	fd1 = open(lod1_filename, O_RDONLY);
 
 	count = 0;
+	offset = part_offset("LOD1");
+	printf("offset %o\n", offset);
+
 	while (1) {
 		ret = read(fd1, b, 256*4);
 		if (ret <= 0)
 			break;
 
 		/* LOD1 start XXX */
-		write_block(fd, 021210+count, b);
+		write_block(fd, offset+/*021210*/+count, b);
 
 		count++;
 

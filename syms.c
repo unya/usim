@@ -109,6 +109,7 @@ _sym_find(struct symtab_s *tab, char *name, int *pval)
 	struct sym_s *s;
 
 	for (s = tab->syms; s; s = s->next) {
+		if (0) printf("%s %s\n", name, s->name);
 		if (strcasecmp(name, s->name) == 0) {
 			*pval = s->v;
 			return 0;
@@ -127,6 +128,8 @@ _sym_read_file(struct symtab_s *tab, const char *filename)
 	int first = 1;
 	FILE *f;
 	char line[8*1024];
+
+	if (0) printf("tab %p, filename %s\n", tab, filename);
 
 	f = fopen(filename, "r");
 	if (f == NULL)
@@ -244,6 +247,15 @@ sym_find_by_val(int mcr, int v)
 		return _sym_find_by_val(&sym_mcr, 1/*I-MEM*/, v);
 
 	return _sym_find_by_val(&sym_prom, 1/*I-MEM*/, v);
+}
+
+char *
+sym_find_by_type_val(int mcr, int t, int v)
+{
+	if (mcr)
+		return _sym_find_by_val(&sym_mcr, t, v);
+
+	return _sym_find_by_val(&sym_prom, t, v);
 }
 
 char *

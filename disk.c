@@ -12,6 +12,9 @@
 
 #include "ucode.h"
 
+#define DELAY_DISK_INTERRUPT
+#define ALLOW_DISK_WRITE
+
 /*
 	disk controller registers:
 	  0 read status
@@ -220,7 +223,8 @@ _disk_read(int block_no, unsigned int *buffer)
 
 	offset = block_no * (256*4);
 
-	tracedio("disk: file image block %d, offset %ld\n", block_no, offset);
+	tracedio("disk: file image block %d(10), offset %ld(10)\n",
+		 block_no, offset);
 
 	ret = lseek(disk_fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -299,9 +303,10 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 	if (disk_fd) {
 		_disk_read(block_no, buffer);
 #if 0
-		if (vma == 0122400)
+		if (block_no == 10312)
 		for (i = 0; i < 32; i++) {
-			tracedio("vma %011o <- %011o\n", vma + i, buffer[i]);
+			tracedio("read; vma %011o <- %011o\n",
+				 vma + i, buffer[i]);
 		}
 #endif
 		for (i = 0; i < 256; i++) {
@@ -344,6 +349,13 @@ disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 		for (i = 0; i < 256; i++) {
 			read_phy_mem(vma + i, &buffer[i]);
 		}
+#if 0
+		if (block_no == 1812)
+		for (i = 0; i < 32; i++) {
+			tracedio("write; vma %011o <- %011o\n",
+				 vma + i, buffer[i]);
+		}
+#endif
 		_disk_write(block_no, buffer);
 		return 0;
 	}
@@ -359,6 +371,7 @@ disk_throw_interrupt(void)
 	assert_xbus_interrupt();
 }
 
+#ifdef DELAY_DISK_INTERRUPT
 static int disk_interrupt_delay;
 
 void
@@ -376,6 +389,9 @@ disk_poll()
 		}
 	}
 }
+#else
+void disk_poll() {}
+#endif
 
 void
 disk_show_cur_addr(void)
@@ -479,7 +495,7 @@ disk_start_read_compare(void)
 void
 disk_start_write(void)
 {
-#if 0
+#ifndef ALLOW_DISK_WRITE
 	disk_decode_addr();
 	disk_show_cur_addr();
 #else
@@ -524,10 +540,10 @@ disk_start_write(void)
 	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
-#if 0
-		disk_throw_interrupt();
-#else
+#ifdef DELAY_DISK_INTERRUPT
 		disk_future_interrupt();
+#else
+		disk_throw_interrupt();
 #endif
 	}
 #endif
@@ -670,7 +686,7 @@ disk_init(char *filename)
 	heads = label[3];
 	blocks_per_track = label[4];
 
-	tracedio("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
+	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
 
 	return 0;
 }

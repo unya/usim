@@ -1,5 +1,5 @@
 CADR simulator
-9/6/04
+10/11/04
 Brad Parker
 brad@heeltoe.com
 
@@ -21,16 +21,31 @@ first powered on.
 What state is this in?
 ----------------------
 
-The emulation is about 85% done.  It gets through the prom code and
-loads the microcode band.  The disk emulation reads from a 'disk
-image' file which is constructed with 'diskmaker'.  It looks like most
-of the ALU code is ok as is the branch and byte code.
+The emulation is about 90% done.  It gets through the prom code, loads
+the microcode band, copies the band to swap and begins executing.  It
+gets about half way into LISP-TOP-LEVEL before it traps and halts.
 
-The divide code is still broken and needs to be fixed.  I put in a
-hack which aborts the last step and now it seems ok, but I think
-something is wrong with my emulation of the h/w.
+Looks like CAR is trying to use a number as an argument when
+processing the system initialization list.  It executes about 15,000
+macroinstructions.  Many page faults.
 
-The dispatch code is implemented but not tested.
+See the file "poo.html" for a list of issues/questions/errata.
+
+If you want to see the label trace try:
+
+	./usim -n -t >output
+
+The disk emulation reads from a 'disk image' file which is constructed
+with 'diskmaker'.  It looks like most of the ALU code is ok as is the
+branch and byte code.
+
+I believe the divide code is still broken and needs to be fixed.  I
+put in a hack which aborts the last step and now it seems ok, but I
+think something is wrong with my emulation of the h/w.
+
+The dispatch code is implemented and somewhat tested.  It appears to
+be correct but I suspect there is a subtle issue. (but at least it
+works right for the "popj/call" hacks in the microcode)
 
 There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.
@@ -42,12 +57,9 @@ Some framebuffer ("tv") and keyboard/mouse emulation is in place.
 What needs to be done?
 ----------------------
 
+- figure out why the 2nd page fault is failing
 - fix the divide code
-- test the dispatch emulation
-
-And most important, find a valid load band.  Without this the emulation
-is uninteresting.  Once we have a load band
-
+- verify the dispatch emulation
 - debug "tv" emulation
 - finish mouse & keyboard emulation
 
@@ -55,6 +67,5 @@ And then we can boot the CADR into the lisp environment.
 
 Long term I want to do some recompiling of the microcode into C and
 assembler, both statically and on-the-fly.  This is the interesting
-part for me :-)
-
+part :-)
 
