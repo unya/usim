@@ -64,7 +64,7 @@ read_i_mem(int fd, int start, int size)
 			((unsigned long long)w3 << 16) |
 			((unsigned long long)w4 << 0);
 
-		if (0) {
+		if (1) {
 			printf("%03o %016Lo\n",
 			       loc, ll);
 		}

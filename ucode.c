@@ -406,7 +406,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		break;
 
 	case 016:
-		oa_reg_lo = out_bus & 0177777777;
+		oa_reg_lo = out_bus & 0377777777;
 		oa_reg_lo_set = 1;
 		printf("setting oa_reg lo %o\n", oa_reg_lo);
 		break;
@@ -565,7 +565,7 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 			u |= (ucw_t)oa_reg_hi << 26;
 		}
 
-		if (cycles++ > 16000) {
+		if (cycles++ > 400000) {
 			printf("cycle count exceeded\n");
 			break;
 		}
@@ -994,8 +994,7 @@ printf("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 
 			if (p_bit && r_bit) {
 				w = ((ucw_t)(a_src_value & 0177777) << 32) |
-					m_src_value;
-//				write_ucode(md, w);
+					(unsigned int)m_src_value;
 				write_ucode(new_pc, w);
 			}
 
@@ -1148,10 +1147,17 @@ printf("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			break;
 		}
 
+		/*
+		 * this fetch_next thing is such a hack;  I should
+		 * just make a "pc fifo" which simulates the fetch pipe
+		 * in the hardware and feed pc's into that...
+		 */
+
 		if ((u >> 42) & 1) {
 			printf("popj; ");
 			u_pc = pop_spc();
 			no_incr_pc = 1;
+			fetch_next = 1;
 		}
 		
 	next:
