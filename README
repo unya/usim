@@ -1,5 +1,5 @@
 CADR simulator
-10/18/04
+10/19/04
 Brad Parker
 brad@heeltoe.com
 
@@ -21,40 +21,88 @@ first powered on.
 What state is this in?
 ----------------------
 
+It boots a world!
+
 The emulation is about 90% done.  It gets through the prom code, loads
-the microcode band, copies the band to swap and executes the load band.
+the microcode band, copies the band to swap and executes the load band
+cleanly.
 
-and it boots a load band!
+It displays an X windows and tracks the mouse and keyboard.  The
+simplest way to run it is
 
-If you want to see the label trace try:
+	./usim
+
+If you want to see a trace of macrocode function names try:
+
+	./usim -n -Tl >output
+
+If you want to see a raw voluminous trace of every microcode instruction try:
 
 	./usim -n -t >output
 
 The disk emulation reads from a 'disk image' file which is constructed
-with 'diskmaker'.
+with 'diskmaker'.  The disk image looks like a Trident T-300 disk
+to the microcode, complete with a parition table.
+
+The display board and iob are emulated.  An X window displays in
+monochrome at 768x1024.  The mouse and keyboard are tracked.  The
+keyboard is "mapped" to the old Knight keyboard.
+
+The internal microsecont clock and the 60hz tv interrupt currently try
+and use wall clock time for a more realistic simulation.
+
+There is basic emualtion of the chaosnet board.  Packets sent are
+looped back. (currently the lisp code is rejecting my packets because
+of a bad bit count; can't see why.  needs debugging)
+
+The basic machine emulator seems to be (mostly) correct.
+
+There are some hacks for noticing unibus access but no xbus/unibus
+mapping support.  The two machine lash-up/debug interface is not (yet)
+supported.  I want to add this, however.
 
 I believe the divide code is still broken and needs to be fixed.  I
 put in a hack which aborts the last step and now it seems ok, but I
 think something is wrong with my emulation of the h/w.
 
-The think the dispatch code is now correct.
-
-There are some hacks for noticing unibus access but no xbus/unibus
-mapping support.
-
-Basic interrupt wiring is in place.
-
-Some frame buffer ("tv") and keyboard/mouse emulation is in place.  It
-emulates an old style "Knight" keyboard.
+There's a long delay when booting, even though the world is running
+and system-x works fine.  I need to track this down - possibly waiting
+for a time packet?
 
 What needs to be done?
 ----------------------
 
 - fix the divide code
 - cleanup keyboard emulation
-- add mouse emulation
-- add chaosnet emulation
+- cleanup mouse emulation
+- cleanup chaosnet emulation
+
+The keyboard mapping is a crock.  The mouse emulation works but
+doesn't track exactly.  The chaosnet emulation needs to be somehow
+made to work with 'real' ethernet.  I have a chaosnet implementation
+for linux so this should be doable.  Clearly we need a file server.
+
+f1	network
+f2	system
+f3	abort
+f4	clear
+f5	help
+f6	end
+f7	call
+delete	rubout
+
+I need to make this programmable with a reasonable default.  Ok, I was
+in a hurry :-)
 
 Long term I want to do some recompiling of the microcode into C and
 assembler, both statically and on-the-fly.  This is the interesting
-part :-)
+part...
+
+What programs are here?
+-----------------------
+
+usim		- the emulator
+diskmaker	- program to make CADR disk images from .mcr files and
+		  .lod files
+lod		- utiltity to pick apart load bands and show their insides
+

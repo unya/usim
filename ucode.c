@@ -6,7 +6,7 @@
  *
  * please remember this is not ment to be fast or pretty.
  * it's ment to be accurate, however.
- *
+ * 
  * Brad Parker <brad@heeltoe.com>
  * $Id$
  */
@@ -1465,12 +1465,15 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 			if (isdigit(breakpoint_name_prom[0])) {
 				sscanf(breakpoint_name_prom, "%o", ptrace_pt);
 			} else {
-				fprintf(stderr, "can't find prom breakpoint '%s'\n",
+				fprintf(stderr,
+					"can't find prom breakpoint '%s'\n",
 					breakpoint_name_prom);
 				return -1;
 			}
 		}
-		printf("breakpoint [prom]: %s %o\n", breakpoint_name_prom, *ptrace_pt);
+		printf("breakpoint [prom]: %s %o\n",
+		       breakpoint_name_prom, *ptrace_pt);
+
 		*ptrace_pt_count = 1;
 	}
 
@@ -1479,12 +1482,15 @@ set_breakpoints(int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
 			if (isdigit(breakpoint_name_mcr[0])) {
 				sscanf(breakpoint_name_mcr, "%o", ptrace_pt);
 			} else {
-				fprintf(stderr, "can't find mcr breakpoint '%s'\n",
+				fprintf(stderr,
+					"can't find mcr breakpoint '%s'\n",
 					breakpoint_name_mcr);
 				return -1;
 			}
 		}
-		printf("breakpoint [mcr]: %s %o\n", breakpoint_name_mcr, *ptrace_pt);
+		printf("breakpoint [mcr]: %s %o\n",
+		       breakpoint_name_mcr, *ptrace_pt);
+
 		*ptrace_pt_count = 1;
 	}
 
@@ -1532,6 +1538,19 @@ show_label_closest_padded(unsigned int upc)
 			printf("%-16s+%o", sym, offset);
 	}
 }
+
+/*
+ * 'The time has come,' the Walrus said,
+ *   'To talk of many things:
+ * Of shoes -- and ships -- and sealing wax --
+ *   Of cabbages -- and kings --
+ * And why the sea is boiling hot --
+ *   And whether pigs have wings.'
+ *       -- Lewis Carroll, The Walrus and Carpenter
+ *
+ * (and then, they ate all the clams :-)
+ *
+ */
 
 int
 run(void)
@@ -1788,12 +1807,11 @@ run(void)
 			case 5: /* PDL buffer (addressed by index) */
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_index, pdl_memory[pdl_index]);
-if (0) show_pdl_local();
+				if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_index];
 				break;
 			case 6: /* OPC registers <13-0> */
-printf("read opc %o\n", opc);
 				m_src_value = opc;
 				break;
 			case 7: /* Q register */
@@ -1842,7 +1860,7 @@ printf("read opc %o\n", opc);
 			case 024:
 				tracef("reading pdl[%o] -> %o, pop\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
-if (0) show_pdl_local();
+				if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_ptr];
 				pdl_ptr = (pdl_ptr - 1) & 01777;
@@ -1850,7 +1868,7 @@ if (0) show_pdl_local();
 			case 025:
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
-if (0) show_pdl_local();
+				if (0) show_pdl_local();
 
 				m_src_value = pdl_memory[pdl_ptr];
 				break;
@@ -2057,7 +2075,8 @@ if (0) show_pdl_local();
 //					alu_carry = (lv >> 32) ? 1 : 0;
 					alu_out = (m_src_value << 1) | 
 						(carry_in ? 1 : 0);
-					alu_carry = (m_src_value & 0x80000000) ? 1 : 0;
+					alu_carry = (m_src_value & 0x80000000)
+						? 1 : 0;
 					break;
 				}
 			}

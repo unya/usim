@@ -66,6 +66,11 @@ struct {
 	{ "PAGE", 0524,    020464 },
 	{ "LOD1", 021210,  020464 },
 	{ "LOD2", 041674,  020464 },
+	{ "LOD3", 062360,  020464 },
+	{ "LOD4", 0103044, 020464 },
+	{ "LOD5", 0123530, 020464 },
+	{ "LOD6", 0144214, 020464 },
+	{ "LOD7", 0164700, 020464 },
 #endif
 #if 0
 	{ "PAGE", 0524,    045600 },
@@ -73,20 +78,16 @@ struct {
 	{ "LOD2", 0114124,  045600 },
 #endif
 #if 0
-	{ "PAGE", 0524,    061400 },
-	{ "LOD1", 062124,  061400 },
+	{ "PAGE",    0524,  061400 },
+	{ "LOD1",  062124,  061400 },
 	{ "LOD2", 0143524,  061400 },
 #endif
 #if 1
-	{ "PAGE", 0524,    062000 },
-	{ "LOD1", 062524,  062000 },
-	{ "LOD2", 0144524,  062000 },
+	{ "PAGE",    0524,  0100000 },
+	{ "LOD1", 0100524,  061400 },
+	{ "LOD2", 0162124,  061400 },
+//	{ "FILE", 0243524,  070000 },
 #endif
-	{ "LOD3", 062360,  020464 },
-	{ "LOD4", 0103044, 020464 },
-	{ "LOD5", 0123530, 020464 },
-	{ "LOD6", 0144214, 020464 },
-	{ "LOD7", 0164700, 020464 },
 	{ (char *)0, 0, 0 }
 };
 
@@ -165,10 +166,10 @@ make_labl(int fd)
 			buffer[p++] = n;
 			buffer[p++] = parts[i].start;
 			buffer[p++] = parts[i].size;
-			buffer[p++] = str4("\200\200\200\200");
-			buffer[p++] = 0;
-			buffer[p++] = 0;
-			buffer[p++] = 0;
+			buffer[p++] = str4("    ");
+			buffer[p++] = str4("    ");
+			buffer[p++] = str4("    ");
+			buffer[p++] = str4("    ");
 
 		}
 	}
@@ -177,8 +178,8 @@ make_labl(int fd)
 	memset((char *)&buffer[010], '\200', 32);
 
 	/* pack text label - offset 020, 32 bytes */
-	memset((char *)&buffer[020], '\200', 32);
-	memcpy((char *)&buffer[020], "CADR", 4);
+	memset((char *)&buffer[020], ' ', 32);
+	memcpy((char *)&buffer[020], "CADR diskmaker image", 21);
 
 	/* comment - offset 030, 32 bytes */
 	memset((char *)&buffer[030], '\200', 32);
@@ -319,6 +320,36 @@ make_lod2(int fd)
 	return 0;
 }
 
+int
+make_file(int fd)
+{
+	int ret, count, i, fd1, offset;
+	unsigned char b[256*4];
+
+	count = 0;
+	offset = part_offset("FILE");
+
+	if (offset == 0)
+		return -1;
+
+	printf("making FILE...\n");
+	printf("offset %o\n", offset);
+
+	while (1) {
+		memset(b, 0, sizeof(b));
+
+		write_block(fd, offset+count, b);
+		count++;
+
+		if (ret < 256*4)
+			break;
+	}
+
+	printf("%d blocks\n", count);
+	return 0;
+}
+
+
 main(int argc, char *argv[])
 {
 	int fd;
@@ -352,6 +383,7 @@ main(int argc, char *argv[])
 	if (use_lod2) {
 		make_lod2(fd);
 	}
+	make_file(fd);
 
 	exit(0);
 }

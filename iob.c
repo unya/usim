@@ -21,7 +21,21 @@ int mouse_x, mouse_y;
 int mouse_head, mouse_middle, mouse_tail;
 int mouse_rawx, mouse_rawy;
 
+int chaos_csr;
+int chaos_addr = 0401;
+int chaos_bit_count;
+unsigned short chaos_xmit_buffer[1600/2];
+int chaos_xmit_buffer_size;
+int chaos_xmit_buffer_ptr;
+
+unsigned short chaos_rcv_buffer[1600/2];
+int chaos_rcv_buffer_ptr;
+int chaos_rcv_buffer_size;
+
+extern int u_pc;
+
 void tv_post_60hz_interrupt(void);
+void chaos_xmit_pkt(void);
 
 /*
  CADR i/o board
@@ -153,7 +167,7 @@ unsigned char kb_old_table[64][3] = {
 	' ',	' ',	' '
 };
 
-unsigned short kb_sdl_to_scancode[256][3];
+unsigned short kb_sdl_to_scancode[256][4];
 
 /*
 keys we need to map
@@ -198,8 +212,8 @@ csr - read
 7 ser int enable
 */
 
-//#define US_CLOCK_IS_WALL_CLOCK
-//#define USE_SIGVTARLM_FOR_60HZ
+#define US_CLOCK_IS_WALL_CLOCK
+#define USE_SIGVTARLM_FOR_60HZ
 //#define USE_US_CLOCK_FOR_60HZ
 
 unsigned long
@@ -268,6 +282,88 @@ unsigned int get_60hz_clock(void)
 	return 0;
 }
 
+/*
+chaos csr 
+	TIMER-INTERRUPT-ENABLE 1<<0
+	LOOP-BACK 1<<1
+	RECEIVE-ALL 1<<2
+	RECEIVER-CLEAR 1<<3
+	RECEIVE-ENABLE 1<<4
+	TRANSMIT-ENABLE 1<<5
+	INTERRUPT-ENABLES 3<<4
+	TRANSMIT-ABORT 1<<6
+	TRANSMIT-DONE 1<<7
+	TRANSMITTER-CLEAR 1<<8
+	LOST-COUNT 017<<9
+	RESET 1<<13
+	CRC-ERROR 1<<14
+	RECEIVE-DONE 1<<15
+
+;;; Offsets of other registers from CSR
+;;; These are in words, not bytes
+
+	MY-NUMBER-OFFSET 1
+	WRITE-BUFFER-OFFSET 1
+	READ-BUFFER-OFFSET 2
+	BIT-COUNT-OFFSET 3
+	START-TRANSMIT-OFFSET 5
+*/
+#define CHAOS_CSR_TIMER_INTERRUPT_ENABLE (1<<0)
+#define	CHAOS_CSR_LOOP_BACK		(1<<1)
+#define	CHAOS_CSR_RECEIVE_ALL		(1<<2)
+#define	CHAOS_CSR_RECEIVER_CLEAR	(1<<3)
+#define	CHAOS_CSR_RECEIVE_ENABLE	(1<<4)
+#define	CHAOS_CSR_TRANSMIT_ENABLE	(1<<5)
+#define	CHAOS_CSR_INTERRUPT_ENABLES	(3<<4)
+#define	CHAOS_CSR_TRANSMIT_ABORT	(1<<6)
+#define	CHAOS_CSR_TRANSMIT_DONE		(1<<7)
+#define	CHAOS_CSR_TRANSMITTER_CLEAR	(1<<8)
+#define	CHAOS_CSR_LOST_COUNT		(017<<9)
+#define	CHAOS_CSR_RESET			(1<<13)
+#define	CHAOS_CSR_CRC_ERROR		(1<<14)
+#define	CHAOS_CSR_RECEIVE_DONE		(1<<15)
+
+void
+chaos_rx_pkt(void)
+{
+	chaos_rcv_buffer_ptr = 0;
+	chaos_bit_count = chaos_rcv_buffer_size * 2 * 8;
+	chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
+//chaos_rcv_buffer[0] = 0xffff;
+	assert_unibus_interrupt(0404);
+}
+
+void
+chaos_xmit_pkt(void)
+{
+	int i, n;
+
+	printf("chaos_xmit_pkt() %d bytes\n", chaos_xmit_buffer_ptr * 2);
+	n = 0;
+	for (i = 0; i < chaos_xmit_buffer_ptr; i++) {
+		printf("%02x %02x ",
+		       chaos_xmit_buffer[i] & 0xff,
+		       (chaos_xmit_buffer[i] >> 8) & 0xff);
+		n += 2;
+		if (n > 16) {
+			n = 0;
+			printf("\n");
+		}
+	}
+	if (n)
+		printf("\n");
+
+	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
+
+	chaos_xmit_buffer_ptr = 0;
+	chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+	assert_unibus_interrupt(0400);
+
+	chaos_rcv_buffer_size = chaos_xmit_buffer_size;
+	memcpy(chaos_rcv_buffer, chaos_xmit_buffer, chaos_xmit_buffer_size*2);
+	chaos_rx_pkt();
+}
+
 void
 iob_unibus_read(int offset, int *pv)
 {
@@ -288,8 +384,15 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0104:
 		traceio("unibus: mouse y\n");
-		 *pv = (mouse_tail << 12) | (mouse_middle << 13) | (mouse_head << 14) |
+		 *pv = (mouse_tail << 12) |
+			 (mouse_middle << 13) |
+			 (mouse_head << 14) |
 			 (mouse_y & 07777); 
+
+		 mouse_tail = 0;
+		 mouse_middle = 0;
+		 mouse_head = 0;
+
 		 iob_kbd_csr &= ~(1 << 4);
 		break;
 	case 0106:
@@ -317,40 +420,44 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0140:
 		traceio("unibus: chaos read\n");
+		{
+			static int old_chaos_csr = 0;
+			if (chaos_csr != old_chaos_csr) {
+				old_chaos_csr = chaos_csr;
+				printf("unibus: chaos read csr %o\n",
+				       chaos_csr);
+			}
+		}
+		*pv = chaos_csr;
+		break;
+	case 0142:
+		printf/*traceio*/("unibus: chaos read my-number\n");
+		*pv = chaos_addr;
+		break;
+	case 0144:
+		if (chaos_rcv_buffer_ptr < chaos_rcv_buffer_size) {
+			*pv = chaos_rcv_buffer[chaos_rcv_buffer_ptr++];
+		}
+		chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
+		printf/*traceio*/("unibus: chaos read rcv buffer %o\n", *pv);
+		break;
+	case 0146:
+		*pv = chaos_bit_count;
+		printf/*traceio*/("unibus: chaos read bit-count %o\n", *pv);
+		break;
+	default:
+		if (offset > 0140 && offset <= 0150)
+			printf/*traceio*/("unibus: chaos read other %o\n", offset);
+		chaos_xmit_pkt();
 		break;
 	}
 }
 
-/*
-chaos csr 
-	TIMER-INTERRUPT-ENABLE 1<<0
-	LOOP-BACK 1<<1
-	RECEIVE-ALL 1<<2
-	RECEIVER-CLEAR 1<<3
-	RECEIVE-ENABLE 1<<4
-	TRANSMIT-ENABLE 1<<4
-	INTERRUPT-ENABLES 3<<4
-	TRANSMIT-ABORT 1<<6
-	TRANSMIT-DONE 1<<7
-	TRANSMITTER-CLEAR 1<<8
-	LOST-COUNT 017<<9
-	RESET 1<<13
-	CRC-ERROR 1<<14
-	RECEIVE-DONE 1<<15
-
-;;; Offsets of other registers from CSR
-;;; These are in words, not bytes
-
-	MY-NUMBER-OFFSET 1
-	WRITE-BUFFER-OFFSET 1
-	READ-BUFFER-OFFSET 2
-	BIT-COUNT-OFFSET 3
-	START-TRANSMIT-OFFSET 5
-*/
-
 void
 iob_unibus_write(int offset, int v)
 {
+	int mask;
+
 	switch (offset) {
 	case 0100:
 		traceio("unibus: kbd low\n");
@@ -382,16 +489,44 @@ iob_unibus_write(int offset, int v)
 		printf("unibus: START 60hz clock\n");
 		break;
 	case 0140:
-	{
-		extern int u_pc;
 		printf/*traceio*/("unibus: chaos write %011o, u_pc %011o ", v, u_pc);
 		show_label_closest(u_pc);
 		printf("\n");
-	}
+
+		v &= 0xffff;
+		mask = CHAOS_CSR_TRANSMIT_DONE |
+			CHAOS_CSR_LOST_COUNT |
+			CHAOS_CSR_CRC_ERROR |
+			CHAOS_CSR_RECEIVE_DONE;
+
+		chaos_csr = (chaos_csr & mask) | (v & ~mask);
+
+		printf("chaos: ");
+		if (chaos_csr & CHAOS_CSR_RESET) {
+			printf("reset ");
+			chaos_xmit_buffer_ptr = 0;
+			chaos_csr &= ~CHAOS_CSR_RESET;
+		}
+		if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
+			printf("rx-enable ");
+		}
+		if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
+			printf("tx-enable ");
+			chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+		} else {
+			chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
+		}
+		printf("\n");
+		break;
+	case 0142:
+		printf/*traceio*/("unibus: chaos write-buffer write %011o, u_pc %011o\n", v, u_pc);
+		if (chaos_xmit_buffer_ptr < sizeof(chaos_xmit_buffer)/2)
+			chaos_xmit_buffer[chaos_xmit_buffer_ptr++] = v;
+		chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
 		break;
 	default:
-		if (offset > 0140 && offset < 0150)
-			printf/*traceio*/("unibus: chaos other\n");
+		if (offset > 0140 && offset <= 0150)
+			printf/*traceio*/("unibus: chaos write other\n");
 		break;
 	}
 }
@@ -409,7 +544,13 @@ iob_sdl_key_event(int code, int extra)
 
 	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
 
-	if (code == 0 || code == 0x130)
+	if (code == 0 ||
+	    code == SDLK_LSHIFT ||
+	    code == SDLK_RSHIFT ||
+	    code == SDLK_LCTRL ||
+	    code == SDLK_RCTRL ||
+	    code == SDLK_LALT ||
+	    code == SDLK_RALT)
 		return;
 
 	/*
@@ -421,16 +562,16 @@ iob_sdl_key_event(int code, int extra)
 	*/
 	switch(code) {
 	case SDLK_F1:
-		iob_key_scan = 0 | (3 << 8); /* network */
+		iob_key_scan = 0 | (3 << 8);	/* network */
 		break;
 	case SDLK_F2:
-		iob_key_scan = 1 | (3 << 8); /* system */
+		iob_key_scan = 1 | (3 << 8);	/* system */
 		break;
 	case SDLK_F3:
-		iob_key_scan = 16 | (3 << 8); /* abort */
+		iob_key_scan = 16 | (3 << 8);	/* abort */
 		break;
 	case SDLK_F4:
-		iob_key_scan = 17; /* clear */
+		iob_key_scan = 17;		/* clear */
 		break;
 	case SDLK_F5:
 		iob_key_scan = 44 | (3 << 8); /* help */
@@ -441,20 +582,25 @@ iob_sdl_key_event(int code, int extra)
 	case SDLK_F7:
 		iob_key_scan = 16; /* call */
 		break;
+	case SDLK_BACKSPACE:
+		iob_key_scan = 15; /* backspace */
+		break;
 	case SDLK_RETURN:
 		iob_key_scan = 50; /* CR */
 		break;
 	default:
-		s = 0;
+		s = 0; /* unshifted */
 		if (extra & (3 << 6))
-			s = 1;
+			s = 1; /* shift */
 		if (extra & (3 << 10))
-			s = 2;
+			s = 2; /* control */
 		if (extra & (3 << 12))
-			s = 3;
+			s = 3; /* meta */
 
 		c = kb_sdl_to_scancode[code][s];
-		if (1) printf("code %x, s %d, c %x\n", code, s, c);
+		if (c == 0) {
+			printf("code %x, s %d, c %x\n", code, s, c);
+		}
 
 		iob_key_scan = c;
 		break;
@@ -465,12 +611,30 @@ iob_sdl_key_event(int code, int extra)
 }
 
 void
-iob_sdl_mouse_event(int dx, int dy, int buttons)
+iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
 {
-	printf("iob_sdl_mouse_event(dx=%x,dy=%x,buttons=%x)\n",
-	       dx, dy, buttons);
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0264);
+
+#if 0
+	printf("iob_sdl_mouse_event(dx=%x,dy=%x,buttons=%x) x %o, y %o\n",
+	       dx, dy, buttons, mouse_x, mouse_y);
+	mouse_x += dx;
+	mouse_y += dy;
+#endif
+
+	if (0)
+		printf("iob_sdl_mouse_event(x=%x,y=%x,buttons=%x)\n",
+		       x, y, buttons);
+	mouse_x = (x*3)/2;
+	mouse_y = (y*3)/2;
+
+	if (buttons & 1)
+		mouse_head = 1;
+	if (buttons & 2)
+		mouse_middle = 1;
+	if (buttons & 4)
+		mouse_tail = 1;
 }
 
 int tv_csr;
@@ -503,18 +667,6 @@ tv_post_60hz_interrupt(void)
 {
 	tv_csr |= 1 << 4;
 	assert_xbus_interrupt();
-
-#if 0
-	{static int c = 0;
-	c++;
-	if (c == 2) {
-		c = 0;
-		mouse_x += 0x20;
-		mouse_y += 0x20;
-		iob_sdl_mouse_event(0, 0, 0);
-	}
-	}
-#endif
 }
 
 void
@@ -576,6 +728,9 @@ iob_init(void)
 	/* map "Delete" to rubout */
 	kb_sdl_to_scancode[0x7f][0] = 38;
 
+	/* map tab to tab */
+	kb_sdl_to_scancode[9][0] = 18;
+
 	/* esc = esc */
 	kb_sdl_to_scancode[0x1b][0] = 1;
 
@@ -590,6 +745,13 @@ iob_init(void)
 		char k;
 		k = kb_old_table[i][0];
 		kb_sdl_to_scancode[k][2] = i | (3 << 10);
+	}
+
+	/* meta keys */
+	for (i = 0; i < 64; i++) {
+		char k;
+		k = kb_old_table[i][0];
+		kb_sdl_to_scancode[k][3] = i | (3 << 12);
 	}
 
 #ifdef USE_SIGVTARLM_FOR_60HZ

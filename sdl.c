@@ -19,6 +19,8 @@ static SDL_Surface *screen;
 static int video_width = 768;
 static int video_height = 1024;
 
+unsigned int tv_bitmap[(768 * 1024) / 32];
+
 typedef struct DisplayState {
     unsigned char *data;
     int linesize;
@@ -32,7 +34,7 @@ static DisplayState *ds = &display_state;
 
 #define MOUSE_EVENT_LBUTTON 1
 #define MOUSE_EVENT_MBUTTON 2
-#define MOUSE_EVENT_RBUTTON 3
+#define MOUSE_EVENT_RBUTTON 4
 
 static int old_run_state;
 
@@ -44,6 +46,9 @@ static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 
 	extra = 0;
 	if (mod_state & (KMOD_LMETA | KMOD_RMETA))
+		extra |= 3 << 12;
+
+	if (mod_state & (KMOD_LALT | KMOD_RALT))
 		extra |= 3 << 12;
 
 	if (mod_state & (KMOD_LSHIFT | KMOD_RSHIFT))
@@ -66,7 +71,7 @@ static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 
 static void sdl_send_mouse_event(void)
 {
-	int dx, dy, dz, state, buttons;
+	int x, y, dx, dy, dz, state, buttons;
 
 	state = SDL_GetRelativeMouseState(&dx, &dy);
 
@@ -74,13 +79,15 @@ static void sdl_send_mouse_event(void)
 	if (state & SDL_BUTTON(SDL_BUTTON_LEFT))
 		buttons |= MOUSE_EVENT_LBUTTON;
 
-	if (state & SDL_BUTTON(SDL_BUTTON_RIGHT))
-		buttons |= MOUSE_EVENT_RBUTTON;
-
 	if (state & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		buttons |= MOUSE_EVENT_MBUTTON;
 
-//	iob_sdl_mouse_event(dx, dy, buttons);
+	if (state & SDL_BUTTON(SDL_BUTTON_RIGHT))
+		buttons |= MOUSE_EVENT_RBUTTON;
+
+	state = SDL_GetMouseState(&x, &y);
+
+	iob_sdl_mouse_event(x, y, dx, dy, buttons);
 }
 
 static void sdl_update(DisplayState *ds, int x, int y, int w, int h)
@@ -196,7 +203,7 @@ static void sdl_cleanup(void)
 #define COLOR_BLACK	0
 
 void
-sdl_blah(void)
+sdl_setup_display(void)
 {
 	SDL_Surface *logo;
 	unsigned char *p = screen->pixels;
@@ -231,6 +238,10 @@ sdl_blah(void)
 void
 video_read(int offset, unsigned int *pv)
 {
+	*pv = 0;
+	if (offset < (768*1024)/32)
+		*pv = tv_bitmap[offset];
+#if 0
 	if (screen) {
 		unsigned char *ps = screen->pixels;
 		unsigned long bits;
@@ -242,6 +253,13 @@ video_read(int offset, unsigned int *pv)
 
 		v = offset / video_width;
 		h = offset % video_width;
+
+		if (offset > video_width*video_height) {
+			printf("video: video_read past end; offset %o\n",
+			       offset);
+			*pv = 0;
+			return;
+		}
 
 #if 0
 		if (v >= video_height) {
@@ -259,6 +277,7 @@ video_read(int offset, unsigned int *pv)
 
 		*pv = bits;
 	}
+#endif
 }
 
 void
@@ -267,6 +286,8 @@ video_write(int offset, unsigned int bits)
 	if (screen) {
 		unsigned char *ps = screen->pixels;
 		int i, h, v, n;
+
+		tv_bitmap[offset] = bits;
 
 //		offset /= 2;
 //		offset *= 16;
@@ -332,7 +353,9 @@ static void sdl_display_init(void)
     SDL_EnableKeyRepeat(250, 50);
 //    SDL_EnableUNICODE(1);
 
-    sdl_blah();
+    sdl_setup_display();
+
+    SDL_ShowCursor(0);
 
     atexit(sdl_cleanup);
 }
