@@ -48,6 +48,9 @@ int page_fault_flag;
 int interrupt_pending_flag;
 int sequence_break_flag;
 
+int interrupt_status_reg;
+
+int interrupt_enable_flag;
 int prom_enabled_flag;
 int run_ucode_flag;
 int stop_after_prom_flag;
@@ -79,6 +82,40 @@ int trace_prom_flag;
 extern char *sym_find_by_val(int, int);
 extern char *sym_find_last(int, int, int *);
 
+void
+set_interrupt_status_reg(int new)
+{
+	interrupt_status_reg = new;
+	interrupt_pending_flag = (interrupt_status_reg & 0140000) ? 1 : 0;
+}
+
+/*
+ * vectors:
+ 270 chaos int
+ 400 ether xmit done
+ 404 ether rcv done
+ 410 ether collision
+*/
+void
+post_unibus_interrupt(int vector)
+{
+	/* unibus interrupts enabeld? */
+	if (interrupt_status_reg & 02000) {
+		printf("post: unibus interrupt (enabled)\n");
+		set_interrupt_status_reg(
+			(interrupt_status_reg & ~01774) | 0100000 | (vector & 01774));
+	} else {
+		printf("post: unibus interrupt (disabld)\n");
+	}
+}
+
+void
+post_xbus_interrupt(void)
+{
+	printf("post: xbus interrupt\n");
+	set_interrupt_status_reg(interrupt_status_reg | 040000);
+}
+
 /*
  * map virtual address to physical address,
  * possibly returning l1 mapping
@@ -91,7 +128,13 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	unsigned int l2;
 
 	/* 22 bit address */
+/* humm.. maybe this should be 24 bits... */
 	virt &= 017777777;
+                 
+	if ((virt & 017400000) == 017400000) {
+		/*  077000000, size = 210560(8) */
+		printf("frame buffer\n");
+	}
 
 	if ((virt & 017777400) == 017377400) {
 		printf("forcing xbus mapping for disk\n");
@@ -136,6 +179,22 @@ add_new_page_no(int pn)
 			tracef("add_new_page_no(pn=%o)\n", pn);
 		}
 	}
+}
+
+int
+read_phy_mem(int paddr, unsigned int *pv)
+{
+	int pn = paddr >> 8;
+	int offset = paddr & 0377;
+	struct page_s *page;
+
+	if ((page = phy_pages[pn]) == 0) {
+		/* page does not exist */
+		return -1;
+	}
+
+	*pv = page->w[offset];
+	return 0;
 }
 
 /*
@@ -332,10 +391,16 @@ write_mem(int vaddr, unsigned int v)
 		switch (offset) {
 		case 040:
 			printf("unibus: write interrupt status %o\n", v);
+			set_interrupt_status_reg(
+				(interrupt_status_reg & ~0036001) |
+				(v & 0036001))
 			return 0;
 
 		case 042:
 			printf("unibus: write interrupt stim %o\n", v);
+			set_interrupt_status_reg(
+				(interrupt_status_reg & ~0101774) |
+				(v & 0101774));
 			return 0;
 
 		case 044:
@@ -497,14 +562,19 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 	case 2: /* interrrupt control <29-26> */
 		tracef("writing IC <- %o\n", out_bus);
 		interrupt_control = out_bus;
-		if (interrupt_control & (1 << 26))
+		if (interrupt_control & (1 << 26)) {
 			printf("ic: sequence break request\n");
-		if (interrupt_control & (1 << 27))
+			sequence_break_flag = 0;
+		}
+		if (interrupt_control & (1 << 27)) {
 			printf("ic: interrupt enable\n");
-		if (interrupt_control & (1 << 28))
+		}
+		if (interrupt_control & (1 << 28)) {
 			printf("ic: bus reset\n");
-		if (interrupt_control & (1 << 29))
+		}
+		if (interrupt_control & (1 << 29)) {
 			printf("ic: lc byte mode\n");
+		}
 		break;
 	case 010: /* PDL (addressed by Pointer) */
 		tracef("writing pdl[%o] <- %o\n",
@@ -661,10 +731,11 @@ run(void)
 //	sym_find(1, "COLD-READ-LABEL", &trace_pt);
 //	max_trace_cycles = 1000;
 
+#if 0
 	sym_find(1, "START-DISK-N-PAGES", &trace_pt);
 	trace_pt_count = 3;
 	max_trace_cycles = 1000;
-
+#endif
 
 	printf("run:\n");
 
@@ -715,7 +786,7 @@ run(void)
 #endif
 
 		/* see if we hit a trace point */
-		if (u_pc == trace_pt && trace == 0) {
+		if (trace_pt && u_pc == trace_pt && trace == 0) {
 			if (trace_pt_count) {
 				if (--trace_pt_count == 0)
 					trace = 1;
@@ -1289,10 +1360,12 @@ tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					take_jump = page_fault_flag;
 					break;
 				case 5:
+printf("jump i|pf\n");
 					take_jump = page_fault_flag |
 						interrupt_pending_flag;
 					break;
 				case 6:
+printf("jump i|pf|sb\n");
 					take_jump = page_fault_flag |
 						interrupt_pending_flag |
 						sequence_break_flag;

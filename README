@@ -37,6 +37,8 @@ all of the push/pop semantics are correct.
 There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.
 
+Basic interrupt wiring is in place.
+
 What needs to be done?
 ----------------------
 

@@ -48,6 +48,30 @@ swapbytes(unsigned int *buf)
 #endif
 }
 
+struct {
+	char *name;
+	int start;
+	int size;
+} parts[] = {
+	{ "MCR1", 021,     0224 },
+	{ "MCR2", 0245,    0224 },
+	{ "PAGE", 0524,    020464 },
+	{ "LOD1", 021210,  020464 },
+	{ "LOD2", 041674,  020464 },
+	{ "LOD3", 062360,  020464 },
+	{ "LOD4", 0103044, 020464 },
+	{ "LOD5", 0123530, 020464 },
+	{ "LOD6", 0144214, 020464 },
+	{ "LOD7", 0164700, 020464 },
+	{ (char *)0, 0, 0 }
+};
+
+unsigned long
+str4(char *s)
+{
+	return (s[3]<<24) | (s[2]<<16) | (s[1]<<8) | s[0];
+}
+
 int
 make_labl(int fd)
 {
@@ -68,14 +92,15 @@ make_labl(int fd)
 	buffer[3] = heads; /* # heads */
 	buffer[4] = blocks_per_track; /* # blocks */
 	buffer[5] = heads*blocks_per_track; /* heads*blocks */
-	buffer[6] = 'MCR1'; /* name of micr part */
-	buffer[7] = 'LOD1'; /* name of micr part */
+	buffer[6] = str4("MCR1"); /* name of micr part */
+	buffer[7] = str4("LOD1"); /* name of micr part */
 
+#if 0
 	buffer[0200] = 3; /* # of partitions */
 	buffer[0201] = 4; /* words / partition */
 
 	buffer[0202] = 'MCR1'; /* start of partition info */
-	buffer[0203] = 17/*18*/; /* micr address */
+	buffer[0203] = 17; /* micr address */
 	buffer[0204] = 148;   /* # blocks */
 	buffer[0205] = 0;
 
@@ -89,6 +114,40 @@ buffer[0206] = 010521640520;
 	buffer[0213] = 0;
 	buffer[0214] = 0;
 	buffer[0215] = 0;
+#else
+	{
+		int i, count;
+		int p = 0200;
+		
+		count = 0;
+		for (i = 0; parts[i].name; i++)
+			count++;
+
+		printf("%d partitions\n", i);
+
+		buffer[p++] = count; /* # of partitions */
+		buffer[p++] = 7; /* words / partition */
+
+		for (i = 0; i < count; i++) {
+			unsigned long n;
+			char *pn = parts[i].name;
+
+			printf("%s, start %o, size %o\n",
+			       pn, parts[i].start, parts[i].size);
+
+			n = str4(pn);
+
+			buffer[p++] = n;
+			buffer[p++] = parts[i].start;
+			buffer[p++] = parts[i].size;
+			buffer[p++] = 0;
+			buffer[p++] = 0;
+			buffer[p++] = 0;
+			buffer[p++] = 0;
+
+		}
+	}
+#endif
 
 /* pack text label - offset 020, 32 bytes */
 
@@ -150,7 +209,8 @@ make_mcr1(int fd)
 		}
 #endif
 
-		write_block(fd, 17/*18*/+count, b);
+		/* MCR1 start XXX */
+		write_block(fd, 17+count, b);
 
 		count++;
 

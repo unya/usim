@@ -19,8 +19,8 @@
 	  2 read da
 	  3 read ecc
 	  4 load cmd
-	  5 load clp
-	  6 load da
+	  5 load clp (command list pointer)
+	  6 load da (disk address)
 	  7 start
 
 	Commands (cmd reg)
@@ -35,6 +35,20 @@
 	  405 fault clear
 	  06 offset clear
 	  16 stop,reset
+
+	Command bits
+	  0
+	  1 cmd
+	  2
+	  3 cmd to memory
+	  4 servo offset plus
+	  5 servo offset
+	  6 data strobe early
+	  7 data strobe late
+	  8 fault clear
+	  9 recalibrate
+	  10 attn intr enb
+	  11 done intr enb
 
 	Status bits (status reg)
 	  0 active-
@@ -82,6 +96,42 @@
 	  7  block7
 	  ...
 	  0  block0
+
+	  ---
+
+	  CLP (command list pointer) points to list of CCW's
+	  Each CCW is phy address to write block
+
+	  clp register (22 bits)
+	  [21:16][15:0]
+	  fixed  counts up
+
+	  clp address is used to read in new ccw
+	  ccw's are read (up to 65535)
+
+	  ccw is used to produce dma address
+	  dma address comes from ccw + 8 bit counter
+
+	  ccw
+	  [21:1][1]
+          physr  |
+	  addr   0 = last ccw, 1 = more ccw's
+
+	  ccw   counter
+	  [21:8][7:0]
+
+	  ---
+
+	  read ma register
+	   t0  t1 CLP
+	  [23][22][21:0]
+            |   |
+            |   type 1 (show how controller is strapped; i.e. what type of
+            type 0      disk drive)
+
+	    (trident is type 0)
+
+
 */
 
 int disk_fd;
@@ -116,6 +166,7 @@ disk_set_cmd(int v)
 }
 
 int cyls, heads, blocks_per_track;
+int cur_unit, cur_cyl, cur_head, cur_block;
 
 void
 _swaplongbytes(unsigned int *buf)
@@ -181,12 +232,11 @@ _disk_read(int block_no, unsigned int *buffer)
 }
 
 int
-disk_read_block(int unit, int cyl, int head, int block)
+disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 {
-	int vma, block_no, i;
+	int block_no, i;
 	unsigned int buffer[256];
 
-	vma = 0;
 	block_no =
 		(cyl * blocks_per_track * heads) +
 		(head * blocks_per_track) + block;
@@ -219,32 +269,119 @@ disk_read_block(int unit, int cyl, int head, int block)
 	}
 }
 
+void
+disk_throw_interrupt(void)
+{
+	printf("disk: throw interrupt\n");
+	post_xbus_interrupt();
+}
+
+void
+disk_show_cur_addr(void)
+{
+	printf("disk: unit %d, CHB %o/%o/%o\n",
+	       cur_unit, cur_cyl, cur_head, cur_block);
+}
+
+void
+disk_decode_addr(void)
+{
+	cur_unit = (disk_da >> 28) & 07;
+	cur_cyl = (disk_da >> 16) & 07777;
+	cur_head = (disk_da >> 8) & 0377;
+	cur_block = disk_da & 0377;
+}
+
+void
+disk_incr_block(void)
+{
+	cur_block++;
+	if (cur_block > blocks_per_track) {
+		cur_block = 0;
+		cur_head++;
+		if (cur_head > heads) {
+			cur_head = 0;
+			cur_cyl++;
+		}
+	}
+}
+
+void
+disk_start_read(void)
+{
+	unsigned int ccw;
+	unsigned int vma;
+	int i;
+
+	disk_decode_addr();
+
+	/* process ccw's */
+	for (i = 0; i < 65535; i++) {
+		int f;
+
+		f = read_phy_mem(disk_clp, &ccw);
+		if (f) {
+			printf("disk: mem[clp=%o] yielded fault (no page)\n",
+			       disk_clp);
+
+			/* huh.  what to do now? */
+			return;
+		}
+
+		printf("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
+
+		vma = ccw & ~0377;
+
+		disk_show_cur_addr();
+
+		disk_read_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
+
+		disk_incr_block();
+			
+		if ((ccw & 1) == 0) {
+			printf("disk: last ccw\n");
+			break;
+		}
+
+		disk_clp++;
+	}
+
+	if (disk_cmd & 04000) {
+		disk_throw_interrupt();
+	}
+}
+
+void
+disk_start_read_compare(void)
+{
+	disk_decode_addr();
+	disk_show_cur_addr();
+}
+
+void
+disk_start_write(void)
+{
+	disk_decode_addr();
+	disk_show_cur_addr();
+}
+
 int
 disk_start(void)
 {
-	int unit, cyl, head, block;
-
-	unit = (disk_da >> 28) & 07;
-	cyl = (disk_da >> 16) & 07777;
-	head = (disk_da >> 8) & 0377;
-	block = disk_da & 0377;
-
-	printf("disk: unit %d, CHB %o/%o/%o\n",
-	       unit, cyl, head, block);
-
 	printf("disk: start, cmd ");
 
-	switch (disk_cmd & 07777) {
+	switch (disk_cmd & 01777) {
 	case 0:
-	case 04000:
 		printf("read\n");
-		disk_read_block(unit, cyl, head, block);
+		disk_start_read();
 		break;
 	case 010:
 		printf("read compare\n");
+		disk_start_read_compare();
 		break;
 	case 011:
 		printf("write\n");
+		disk_start_write();
 		break;
 	case 01005:
 		printf("recalibrate\n");
@@ -255,7 +392,6 @@ disk_start(void)
 	default:
 		printf("unknown\n");
 	}
-
 }
 
 int
