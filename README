@@ -30,9 +30,8 @@ The divide code is broken and needs to be fixed.  I put in a hack
 which shifts Q initially and now it seems ok, but I think something is
 wrong with my emulation of the h/w.
 
-The dispatch code is non-existant.  This needs to be added.  I am
-missing page 18 of the CADR memo.  I think this is important for
-dispatch.
+The dispatch code is partially implemented.  I need page 18 of the
+CADR memo to complete it.  Or at least I think I do.
 
 I added some basic disk emulation and a program to create a disk image
 with a microcode band.
@@ -41,7 +40,7 @@ What needs to be done?
 ----------------------
 
 - fix the divide code
-- fill in the dispatch emulation
+- finish the dispatch emulation
 
 And most important, find a valid load band.  Without this the emulation
 is uninteresting.  Once we have a load band

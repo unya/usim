@@ -225,10 +225,22 @@ write_mem(int vaddr, unsigned int v)
 	}
 
 	if (pn == 037766) {
-		int paddr = pn << 10;
-		printf("paddr %o\n", paddr);
+		/* unibus */
+		int paddr = pn << 12;
+
+		//printf("paddr %o, offset %o\n", paddr, offset);
+
+		switch (offset) {
+		case 5:
+			if (v == 044) {
+				printf("unibus: disabling prom enable flag\n");
+				prom_enabled_flag = 0;
+			}
+			break;
+		}
 	}
 
+	/* disk controller */
 	if (pn == 036777) {
 
 		printf("disk register write, offset %o <- %o\n", offset, v);
@@ -513,6 +525,12 @@ run(void)
 	prom_ucode[0257] = 0;
 #endif
 
+#if 0
+	/* test unibus prom enable flag */
+	prom_ucode[0505] = 0;
+	prom_ucode[0511] = 0;
+#endif
+
 	while (1) {
 		int a_src, m_src, new_pc, dest, alu_op;
 		int r_bit, p_bit, n_bit, ir8, ir7;
@@ -533,6 +551,13 @@ run(void)
 		long long lv;
 
 		ucw_t u, w;
+
+		int n_plus1, enable_ish;
+
+#if 0
+		/* test unibus prom enable flag */
+		if (u_pc == 0421) u_pc = 0477;
+#endif
 
 		/* do we need to execute instruction after jump first? */
 		if (fetch_next) {
@@ -565,7 +590,7 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 			u |= (ucw_t)oa_reg_hi << 26;
 		}
 
-		if (cycles++ > 400000) {
+		if (cycles++ > 60000/*400000*/) {
 			printf("cycle count exceeded\n");
 			break;
 		}
@@ -981,6 +1006,7 @@ printf("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 			invert_sense = (u >> 6) & 1;
 			take_jump = 0;
 
+		process_jump:
 			if (!n_bit) {
 				fetch_next = 1;
 			}
@@ -1054,22 +1080,72 @@ printf("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 		case 2: /* dispatch */
 			disp_cont = (u >> 32) & 01777;
 
-			if ((u >> 25) & 1) printf("N+1 ");
-			if ((u >> 24) & 1) printf("ISH ");
+			n_plus1 = (u >> 25) & 1;
+			enable_ish = (u >> 24) & 1;
 			disp_addr = (u >> 12) & 03777;
 			map = (u >> 8) & 3;
 			len = (u >> 5) & 07;
-			rot = u & 037;
+			pos = u & 037;
 
+			/* */
 			if (((u >> 10) & 3) == 2) {
 				printf("dispatch_memory[%o] <- %o\n",
 				       disp_addr, a_src_value);
 				dispatch_memory[disp_addr] = a_src_value;
-			} else {
+				goto dispatch_done;
 			}
 
 			printf("addr %o, map %o, len %o, rot %o\n",
 			       disp_addr, map, len, rot);
+
+			/* rotate m-source */
+			m_src_value = rotate_left(m_src_value, rot);
+
+			/* generate mask */
+			left_mask_index = (len - 1) & 037;
+
+			mask = ~0;
+			mask >>= 31 - left_mask_index;
+
+			/* put ldb into dispatch-addr */
+			disp_addr |= m_src_value & mask;
+
+			/* tweek dispatch-addr with l2 map bits */
+			if (map) {
+				int l2_map, bit14, bit15;
+
+				disp_addr &= ~1;
+
+				l2_map = map_vtop(md, (int *)0, (int *)0);
+
+				bit14 = (l2_map & (1 << 14)) ? 1 : 0;
+				bit15 = (l2_map & (1 << 15)) ? 1 : 0;
+
+				switch (map) {
+				case 1: disp_addr |= bit14; break;
+				case 2: disp_addr |= bit15; break;
+				case 3: disp_addr |= bit14 | bit15; break;
+				}
+			}
+
+			disp_addr = dispatch_memory[disp_addr];
+
+			dispatch_constant = disp_cont;
+
+			/* xxx - I need page 18! */
+			new_pc = disp_addr & 037777;
+
+			r_bit = (disp_addr >> 15) & 1;
+			p_bit = (disp_addr >> 16) & 1;
+			n_bit = (disp_addr >> 17) & 1;
+
+			invert_sense = 0;
+			take_jump = 1;
+			u = 1<<5;
+
+			goto process_jump;
+
+		dispatch_done:
 			break;
 
 		case 3: /* byte */
