@@ -6,7 +6,7 @@
 Some notes on the CADR "principles of operation"
 <pre>
 Brad Parker
-10/11/04
+10/12/04
 brad@heeltoe.com
 </pre>
 
@@ -17,6 +17,7 @@ While writing a CADR emulator I ran into some issues and/or
 discrepancies in the available documentation.  I've tried to list them
 here.
 
+<p>
 <i>
 [These are my conclusions; If you read them and disagree, <b>please</b> send me email and
 set me straight.  I do not have a functional hardware description (i.e. verilog) yet, so
@@ -28,21 +29,30 @@ some things are assuptions based on quick scans of the schematics]
 
 <li>The description of the ALU mode selection using IR7 seems inverted.  IR7=0 should select
 the 'logic' side of the ALU.  IR7=1 should select the "math" side.
-
+<p>
 <li>The modification of the rotation count due to "misc function 3", in 16 bit mode talks
 about XOR of IR4 and LC1.  I think this is inverted, i.e. POS4 := NOT (IR4 XOR LC1)
-
+<p>
 <li>The modification of the dispatch address due to L2 map bits talks
 about bits 14 & 15.  In fact the map bits select L2 bit 18 & 19.
-
+<p>
+<li>The modification of the dispatch address due to L2 map bits talks about
+replacing bit 0.  In fact the l2 map result is or'd with the existing bit 0 (see msi 2F01)
+<p>
 <li>The PDL pointer, when used in PDL push, increments *before* the
 write.  Conversely, the PDL pointer, when used in PDL pop, decrements
 *after* the read.
-
+<p>
 <li>The SPC stack pointer, on a push, increments *before* the write.
 Conversly, the SPC stack pointer, on a pop, increments *before* the
 write.
-
+<p>
+<li>Here's an interesting quote: 
+<pre>
+		;NOTE THAT THE LC HARDWARE IGNORES THE LOW BIT
+		;AND READS IT BACK AS ZERO IN HALFWORD MODE
+</pre>
+<p>
 <li>The dispatch instruction is affected by the instruction pipeline.  Below some of the
 cases are enumerated for clarity.
 
@@ -50,7 +60,7 @@ cases are enumerated for clarity.
 
 <hr>
 
-<p3>Dispatch examples, enumerating cases</p3>
+<p3>Dispatch example - POPJ+DISPATCH, enumerating cases</p3>
 
 <pre>
 001 LABEL	(CHECK-PAGE-READ)
@@ -59,71 +69,72 @@ cases are enumerated for clarity.
 004
 005
 
-dispatch yields N=0,P=0,R=0
+<b>dispatch yields N=0,P=0,R=0</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
-   pc<- dispatch address
+   new pc<- dispatch address
    (disable popj)
-- exec alu                              fetch new pc
+- exec alu                              fetch new pc (dispatch address)
 
-dispatch yields N=0,P=0,R=1
+<b>dispatch yields N=0,P=0,R=1</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
-   pc <- spc[spc-ptr--]
+   new pc <- spc[spc-ptr--]
    (disable popj)
-- exec alu                              fetch new pc
+- exec alu                              fetch new pc (from stack)
 
-dispatch yields N=0,P=1,R=0
+<b>dispatch yields N=0,P=1,R=0</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
    spc[++spc-ptr] <- 004
-   pc <- dispatch address
+   new pc <- dispatch address
    (disable popj)
-- exec alu                              fetch new pc
+- exec alu                              fetch new pc (dispatch address)
 
-dispatch yields N=0,P=1,R=1
+<b>dispatch yields N=0,P=1,R=1</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
    ignore dispatch, do popj
-   pc <- spc[spc-ptr--]
+   new pc <- spc[spc-ptr--]
    if pc14, advance-lc
 - exec alu                              fetch new pc
 
-dispatch yields N=1,P=0,R=0
+<b>dispatch yields N=1,P=0,R=0</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
-   pc<- dispatch address
+   new pc<- dispatch address
    (disable popj)
 - (nop - pipe flush)                    fetch new pc
 
-dispatch yields N=1,P=0,R=1
+<b>dispatch yields N=1,P=0,R=1</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
-   pc <- spc[spc-ptr--]
+   new pc <- spc[spc-ptr--]
    if pc14, advance-lc
    (disable popj)
 - (nop - pipe flush)                    fetch new pc
 
-dispatch yields N=1,P=1,R=0
+<b>dispatch yields N=1,P=1,R=0</b>
 
 - exec check-page-read jump		fetch 002/popj
 - exec popj + dispatch			fetch 003/alu
    spc[++spc-ptr] <- 005
-   pc <- dispatch address
+   new pc <- dispatch address
    (disable popj)
 - exec alu                              fetch new pc
 </pre>
 
 <hr>
 
-<p3>Another Dispatch example - with CALL, enumerating cases</p3>
+<p3>Another Dispatch example - POPJ+DISPATCH with CALL, enumerating cases</p3>
 
+<pre>
 
 001 LABEL	(CHECK-PAGE-READ)
 002	(POPJ-AFTER-NEXT DISPATCH TRANSPORT READ-MEMORY-DATA) ;FOLLOW ALL INVZ
@@ -131,4 +142,123 @@ dispatch yields N=1,P=1,R=0
 004
 005
 
+<b>dispatch yields N=0,P=0,R=0</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   new pc<- dispatch address
+   (disable popj)
+- exec call                             fetch new pc (dispatch address)
+   spc[++spc-ptr] <- new pc+1
+   new pc<- call address
+- exec 1st inst @ dispatch address	fetch call address
+- exec 1st inst @ call address
+
+[help! I'm confused here. I don't think the action above is correct.  When the call returns
+it will return to new pc + 1...]
+
+<b>dispatch yields N=0,P=0,R=1</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   new pc <- spc[spc-ptr--]
+   (disable popj)
+- exec call                             fetch new pc (from stack)
+   spc[++spc-ptr] <- new pc+1
+   new pc<- call address
+- exec 1st inst @ new pc		fetch call address
+- exec 1st inst @ call address
+
+[again; I don't think the action above is correct.  When the call returns it will
+return to new pc + 1...]
+
+<b>dispatch yields N=0,P=1,R=0</b>a
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   spc[++spc-ptr] <- 004
+   new pc <- dispatch address
+   (disable popj)
+- exec call                             fetch new pc (dispatch address)
+   spc[++spc-ptr] <- new pc+1
+   new pc<- call address
+- exec 1st inst @ dispatch address	fetch call address
+- exec 1st inst @ call address
+
+<b>dispatch yields N=0,P=1,R=1</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   ignore dispatch, do popj
+   new pc <- spc[spc-ptr--]
+   if pc14, advance-lc
+- exec call                             fetch new pc (from stack)
+   spc[++spc-ptr] <- new pc+1
+   new pc<- call address
+- exec 1st inst @ new pc		fetch call address
+- exec 1st inst @ call address
+
+<b>dispatch yields N=1,P=0,R=0</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   new pc<- dispatch address
+   (disable popj)
+- (nop - pipe flush)                    fetch new pc (dispatch address)
+- exec 1st inst @ new pc		fetch new pc+1
+
+<b>dispatch yields N=1,P=0,R=1</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   new pc <- spc[spc-ptr--]
+   if pc14, advance-lc
+   (disable popj)
+- (nop - pipe flush)                    fetch new pc (from stack)
+- exec 1st inst @ new pc		fetch new pc+1
+
+<b>dispatch yields N=1,P=1,R=0</b>
+
+- exec check-page-read jump		fetch 002/popj
+- exec popj + dispatch			fetch 003/call
+   spc[++spc-ptr] <- 005
+   new pc <- dispatch address
+   (disable popj)
+- exec call                             fetch new pc (dispatch address)
+   spc[++spc-ptr] <- dispatch address+1
+   new pc<- call address
+- exec 1st inst @ new pc		fetch call address
+- exec 1st inst @ call address
+
+</pre>
+
+<hr>
+
+<p3>Another Dispatch example - with CALL, enumerating cases</p3>
+
+<pre>
+
+001	(NOP)
+002	(DISPATCH TRANSPORT READ-MEMORY-DATA) ;FOLLOW ALL INVZ
+003    	(CALL FUNC)
+004
+005
+
+<b>dispatch yields N=0,P=0,R=0</b>
+
+- exec check-page-read jump		fetch 002/dispatch
+- exec dispatch				fetch 003/call
+   new pc <- dispatch address
+- exec call w/n-bit			fetch new pc (dispatch address)
+   spc[++spc-ptr] <- new pc+1
+   new pc<- call address
+- (nop - pipe flush)			fetch call address
+- exec 1nd inst @ call address
+
+The call pushes the dispatch address + 1 and the pipe stalls because
+the call has the N bit set, followed by the 1st instruction at the
+call address.
+
 </html>
+
+

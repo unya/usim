@@ -1,5 +1,5 @@
 CADR simulator
-10/11/04
+10/12/04
 Brad Parker
 brad@heeltoe.com
 
@@ -23,11 +23,16 @@ What state is this in?
 
 The emulation is about 90% done.  It gets through the prom code, loads
 the microcode band, copies the band to swap and begins executing.  It
-gets about half way into LISP-TOP-LEVEL before it traps and halts.
+gets some half way into LISP-TOP-LEVEL before it traps and halts.
 
-Looks like CAR is trying to use a number as an argument when
-processing the system initialization list.  It executes about 15,000
-macroinstructions.  Many page faults.
+It does print a message to the cold load stream and it comes out on the
+console (woo hoo! output!).  The message "ERROR: Disk SI:DISK-RUN"
+
+(turns out my controller emulation was incrementing the end address once
+too many)
+
+Then ">>TRAP NIL, was of the wrong type.a number.SI:DISK-INIT" because
+I didn't give my disk pack a name.
 
 See the file "poo.html" for a list of issues/questions/errata.
 
@@ -36,8 +41,9 @@ If you want to see the label trace try:
 	./usim -n -t >output
 
 The disk emulation reads from a 'disk image' file which is constructed
-with 'diskmaker'.  It looks like most of the ALU code is ok as is the
-branch and byte code.
+with 'diskmaker'.
+
+It looks like most of the ALU code is ok as is the branch and byte code.
 
 I believe the divide code is still broken and needs to be fixed.  I
 put in a hack which aborts the last step and now it seems ok, but I

@@ -464,12 +464,14 @@ disk_start_read(void)
 
 		disk_read_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
 
-		disk_incr_block();
+//		disk_incr_block();
 			
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");
 			break;
 		}
+
+disk_incr_block();
 
 		disk_clp++;
 	}
@@ -527,12 +529,14 @@ disk_start_write(void)
 
 		disk_write_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
 
-		disk_incr_block();
+//		disk_incr_block();
 			
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");
 			break;
 		}
+
+disk_incr_block();
 
 		disk_clp++;
 	}

@@ -153,7 +153,7 @@ make_labl(int fd)
 			buffer[p++] = n;
 			buffer[p++] = parts[i].start;
 			buffer[p++] = parts[i].size;
-			buffer[p++] = 0;
+			buffer[p++] = str4("\200\200\200\200");
 			buffer[p++] = 0;
 			buffer[p++] = 0;
 			buffer[p++] = 0;
@@ -161,7 +161,15 @@ make_labl(int fd)
 		}
 	}
 
-/* pack text label - offset 020, 32 bytes */
+	/* pack brand text - offset 010, 32 bytes */
+	memset((char *)&buffer[010], '\200', 32);
+
+	/* pack text label - offset 020, 32 bytes */
+	memset((char *)&buffer[020], '\200', 32);
+	memcpy((char *)&buffer[020], "CADR", 4);
+
+	/* comment - offset 030, 32 bytes */
+	memset((char *)&buffer[030], '\200', 32);
 
 #ifdef NEED_SWAP
 	swapbytes(buffer);

@@ -217,6 +217,32 @@ sdl_blah(void)
 void
 video_read(int offset, unsigned int *pv)
 {
+	if (screen) {
+		unsigned char *ps = screen->pixels;
+		unsigned long bits;
+		int i, h, v, n;
+
+//		offset /= 2;
+//		offset *= 16;
+		offset *= 32;
+
+		v = offset / video_width;
+		h = offset % video_width;
+
+		if (v >= video_height) {
+			v -= 400;
+			offset = v*video_width + h;
+		}
+
+		bits = 0;
+		for (i = 0; i < 32; i++)
+		{
+			if (ps[offset + i] == COLOR_WHITE)
+				bits |= 1 << i;
+		}
+
+		*pv = bits;
+	}
 }
 
 void
@@ -224,14 +250,39 @@ video_write(int offset, unsigned int bits)
 {
 	if (screen) {
 		unsigned char *ps = screen->pixels;
-		int i, h, v;
+		int i, h, v, n;
 
-		offset *= 16;
+//		offset /= 2;
+//		offset *= 16;
+		offset *= 32;
+
 		v = offset / video_width;
 		h = offset % video_width;
-		printf("v,h %o,%o <- %o (offset %o)\n", v, h, bits, offset);
 
-		for (i = 0; i < 32; i++) {
+
+		if (0) printf("v,h %d,%d <- %o (offset %d)\n", v, h, bits, offset);
+
+#if 0
+		if (v != 895) {
+			printf("bits %3d %3d ", v, h);
+			for (i = 0; i < 32; i++)
+				if (bits & (1 << (31-i)))
+					printf("1");
+				else
+					printf(".");
+			printf("\n");
+		}
+#endif
+
+
+//		if (v >= video_height) return;
+		if (v >= video_height) {
+			v -= 400;
+			offset = v*video_width + h;
+		}
+
+		for (i = 0; i < 32; i++)
+		{
 			ps[offset + i] =
 //				(bits & 1) ? COLOR_BLACK : COLOR_WHITE;
 				(bits & 1) ? COLOR_WHITE : COLOR_BLACK;
