@@ -111,8 +111,6 @@ add_new_page_no(int pn)
 	}
 }
 
-int disk_reg0 = 1;
-
 /*
  * read virtual memory
  * returns -1 on fault
@@ -161,7 +159,7 @@ read_mem(int vaddr, unsigned int *pv)
 	if (pn == 036777) {
 		int paddr = pn << 10;
 
-		printf("disk read offset %o\n", offset);
+		printf("disk register read, offset %o\n", offset);
 
 		switch (offset) {
 		case 0370:
@@ -179,7 +177,7 @@ read_mem(int vaddr, unsigned int *pv)
 		case 0374:
 			printf("disk status read\n");
 			/* disk ready */
-			page->w[offset] = disk_reg0;
+			page->w[offset] = disk_get_status();
 			break;
 		}
 	}
@@ -204,7 +202,7 @@ write_mem(int vaddr, unsigned int v)
 
 	map = map_vtop(vaddr, (int *)0, &offset);
 
-	printf("write_mem(vaddr=%o)\n", vaddr);
+	printf("write_mem(vaddr=%o,v=%o)\n", vaddr, v);
 
 	/* 14 bit page # */
 	pn = map & 037777;
@@ -233,131 +231,23 @@ write_mem(int vaddr, unsigned int v)
 
 	if (pn == 036777) {
 
-		/*
-		  disk controller registers:
-		  0 read status
-		  1 read ma
-		  2 read da
-		  3 read ecc
-		  4 load cmd
-		  5 load clp
-		  6 load da
-		  7 start
-
-		  commands
-		  00 read
-		  10 read compare
-		  11 write
-		  02 read all
-		  13 write all
-		  04 seek
-		  05 at ease
-		  1005 recalibreate
-		  405 fault clear
-		  06 offset clear
-		  16 stop,reset
-
-		  status bits
-		  0 active-
-		  1 any attention
-		  2 sel unit attention
-		  3 intr
-		  4 multiple select
-		  5 no select
-		  6 sel unit fault
-		  7 sel unit read only
-		  8 on cyl sync-
-		  9 sel unit on line-
-		  10 sel unit seek error
-		  11 timeout error
-		  12 start block error
-		  13 stopped by error
-		  14 overrun
-		  15 ecc.soft
-
-		  16 ecc.hard
-		  17 header ecc err
-		  18 header compare err
-		  19 mem parity err
-		  20 nmx error
-		  21 ccw cyc
-		  22 read comp diff
-		  23 internal parity err
-		  
-		  24-31 block.ctr
-
-		  disk address (da)
-		  31 n/c
-		  30 unit2
-		  29 unit1
-		  28 unit0
-
-		  27 cyl11
-		  ...
-		  16 cyl0	  
-		  
-		  15 head7
-		  ...
-		  8  head0
-
-		  7  block7
-		  ...
-		  0  block0
-
-		*/
-		printf("disk write offset %o <- %o\n", offset, v);
+		printf("disk register write, offset %o <- %o\n", offset, v);
 
 		switch (offset) {
 		case 0374:
-			printf("disk: load cmd %o ", v);
-			switch (v & 07777) {
-			case 0:
-				printf("read\n"); break;
-			case 010:
-				printf("read compare\n"); break;
-			case 011:
-				printf("write\n"); break;
-			case 01005:
-				printf("recalibrate\n");
-				break;
-			case 0405:
-				printf("fault clear\n");
-				break;
-			default:
-				printf("unknown\n");
-			}
+			disk_set_cmd(v);
+			printf("disk: load cmd %o\n", v);
 			break;
 		case 0375:
 			printf("disk: load clp %o\n", v);
+			disk_set_clp(v);
 			break;
 		case 0376:
+			disk_set_da(v);
 			printf("disk: load da %o\n", v);
-			{
-				int unit, cyl, head, block;
-				unit = (v >> 28) & 07;
-				cyl = (v >> 16) & 07777;
-				head = (v >> 8) & 0377;
-				block = v & 0377;
-				printf("disk: unit %d, CHB %o/%o/%o\n",
-				       unit, cyl, head, block);
-			}
 			break;
 		case 0377:
-			printf("disk: start %o\n", v);
-			write_mem(0, 011420440514);
-			write_mem(1, 000000000001);
-			write_mem(2, 000000000000);
-			write_mem(3, 000000000000);
-			write_mem(4, 000000001000); /* # blocks */
-			write_mem(5, 000000000000);
-			write_mem(6, 000000001234); /* name of micr part */
-			write_mem(0200, 1); /* # of partitions */
-			write_mem(0201, 1); /* words / partition */
-
-			write_mem(0202, 01234); /* start of partition info */
-			write_mem(0203, 01000); /* micr address */
-			write_mem(0204, 010);   /* # blocks */
-			/* pack text label - offset 020, 32 bytes */
+			disk_start();
 			break;
 		}
 	}
@@ -367,19 +257,16 @@ write_mem(int vaddr, unsigned int v)
 }
 
 void
-write_ucode(int md, ucw_t w)
+write_ucode(int addr, ucw_t w)
 {
-	printf("u-code write; %Lo @ %o\n", w, md);
+	printf("u-code write; %Lo @ %o\n", w, addr);
 }
 
 void
 write_a_mem(int loc, unsigned int v)
 {
-	a_memory[loc] = v;
-	if (loc < 32)
-		m_memory[loc] = v;
-
 	printf("a_memory[%o] <- %o\n", loc, v);
+	a_memory[loc] = v;
 }
 
 unsigned int
@@ -391,7 +278,19 @@ read_a_mem(int loc)
 unsigned int
 read_m_mem(int loc)
 {
+	if (loc > 32) 
+		printf("read m-memory address > 32! (%o)\n", loc);
+
 	return m_memory[loc];
+}
+
+void
+write_m_mem(int loc, unsigned int v)
+{
+	m_memory[loc] = v;
+	printf("m_memory[%o] <- %o\n", loc, v);
+	a_memory[loc] = v;
+	printf("a_memory[%o] <- %o\n", loc, v);
 }
 
 void
@@ -592,7 +491,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		break;
 	}
 
-	write_a_mem(dest & 037, out_bus);
+	write_m_mem(dest & 037, out_bus);
 }
 
 int
@@ -754,7 +653,7 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 				break;
 			}
 		} else {
-			m_src_value = read_a_mem(m_src);
+			m_src_value = read_m_mem(m_src);
 		}
 
 		/*
@@ -962,14 +861,17 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 					break;
 				case 1: /* divide step */
 					printf("divide step\n");
-					do_sub = (q & 1) == 0;
+					do_sub = q & 1;
+printf("do_sub %d\n", do_sub);
 					if (do_sub) {
-						lv = m_src_value -
+						lv =
+							m_src_value -
 							a_src_value -
-							(carry_in ? 0 : 1);
+							(carry_in ? 1 : 0);
 					} else {
-						lv = a_src_value +
+						lv =
 							m_src_value +
+							a_src_value +
 							(carry_in ? 1 : 0);
 					}
 					alu_out = lv;
@@ -977,50 +879,77 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 					break;
 				case 5: /* remainder correction */
 					printf("remainder correction\n");
-					do_sub = (q & 1) == 0;
+					do_sub = q & 1;
 					if (a_src_value & 0x80000000)
-						do_sub = !do_sub;
+						do_add = !do_add;
+printf("do_sub %d\n", do_sub);
 					if (do_sub) {
 						/* setm */
-						alu_out = m_src_value;
+//						alu_out = m_src_value;
+//						alu_out = q;
 						alu_carry = 0;
 					} else {
-						lv = a_src_value +
-							m_src_value +
+						lv =
+							alu_out +
+							a_src_value +
 							(carry_in ? 1 : 0);
+						alu_out = lv;
+						alu_carry = (lv >> 32) ? 1 : 0;
 					}
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 011:
 					/* initial divide step */
 					printf("divide-first-step\n");
+#if 0
+q = 4;
+q = 8;
+a_src_value = 2;
+a_memory[011] = 2;
+
+q = 10/2;
+a_src_value = 3;
+a_memory[011] = 3;
+#endif
+printf("divide: %o / %o \n", q, a_src_value);
+					q >>= 1; 
+
 					lv = m_src_value -
 						a_src_value -
-						(carry_in ? 0 : 1);
+						(carry_in ? 1 : 0);
+
 					alu_out = lv;
+printf("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
+
+				default:
+					printf("UNKNOWN cond alu op code %o\n",
+					       alu_op);
 				}
 			}
 
 			/* Q control */
 			switch (u & 3) {
 			case 1:
+				printf("q<<\n");
 				q <<= 1;
 				/* inverse of alu sign */
 				if ((alu_out & 0x80000000) == 0)
 					q |= 1;
 				break;
 			case 2:
+				printf("q>>\n");
 				q >>= 1;
 				if (alu_out & 1)
 					q |= 0x80000000;
 				break;
 			case 3:
+				printf("q<-alu\n");
 				q = alu_out;
 				break;
 			}
+
+			printf("out_bus %d\n", out_bus);
 
 			switch (out_bus) {
 			case 1: out_bus = alu_out;
@@ -1057,13 +986,17 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 			}
 
 			if (p_bit) {
-				push_spc(u_pc+1);
+				if (fetch_next)
+					push_spc(u_pc+2);
+				else
+					push_spc(u_pc+1);
 			}
 
 			if (p_bit && r_bit) {
 				w = ((ucw_t)(a_src_value & 0177777) << 32) |
 					m_src_value;
-				write_ucode(md, w);
+//				write_ucode(md, w);
+				write_ucode(new_pc, w);
 			}
 
 			if (u & (1<<5)) {
@@ -1130,7 +1063,7 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 			rot = u & 037;
 
 			if (((u >> 10) & 3) == 2) {
-				printf("dispatch_memory[%o] = %o\n",
+				printf("dispatch_memory[%o] <- %o\n",
 				       disp_addr, a_src_value);
 				dispatch_memory[disp_addr] = a_src_value;
 			} else {
@@ -1199,9 +1132,9 @@ printf("fetch_next; old_pc %o, u_pc %o\n", old_pc, u_pc);
 				printf("dpb; m %o, pos %o\n", 
 				       m_src_value, pos);
 
-				m_src_value = rotate_left(m_src_value, pos);
+				/* mask is already rotated */
 
-//mask = rotate_left(mask, pos);
+				m_src_value = rotate_left(m_src_value, pos);
 
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);

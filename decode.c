@@ -256,8 +256,8 @@ disassemble_ucode_loc(int loc, ucw_t u)
 			switch (alu_op) {
 			case 0: printf("mult-step "); break;
 			case 1: printf("div-step "); break;
-			case 2: printf("rem-corr "); break;
-			case 3: printf("init-div-step "); break;
+			case 5: printf("rem-corr "); break;
+			case 011: printf("init-div-step "); break;
 			}
 		}
 

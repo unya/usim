@@ -3,16 +3,19 @@
 # $Id$
 #
 
-SRC = main.c decode.c ucode.c
+SRC = main.c decode.c ucode.c disk.c
 
-all: usim readmcr
+all: usim readmcr diskmaker
 
 usim: $(SRC)
 	cc -o usim -g $(SRC)
 	./usim >xx
 
 readmcr: readmcr.c
-	cc -o readmcr readmcr.c
+	cc -o $@ $<
+
+diskmaker: diskmaker.c
+	cc -o $@ $<
 
 clean:
 	rm -f *.o usim readmcr

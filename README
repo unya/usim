@@ -1,5 +1,5 @@
 CADR simulator
-8/31/04
+9/1/04
 Brad Parker
 brad@heeltoe.com
 
@@ -23,19 +23,24 @@ What state is this in?
 
 The emulation is about 75% done.  It gets pretty far into the prom
 code.  The disk emulation is a hack, but enough to get past the disk
-label code.  The divide code is broken and needs to be fixed.  I think
-most of the ALU code is ok as is the branch and byte code.
+label code.  I think most of the ALU code is ok as is the branch and
+byte code.
+
+The divide code is broken and needs to be fixed.  I put in a hack
+which shifts Q initially and now it seems ok, but I think something is
+wrong with my emulation of the h/w.
 
 The dispatch code is non-existant.  This needs to be added.  I am
 missing page 18 of the CADR memo.  I think this is important for
 dispatch.
 
+I added some basic disk emulation and a program to create a disk image
+with a microcode band.
+
 What needs to be done?
 ----------------------
 
 - fix the divide code
-- create a proper disk emulation (i.e. one which uses a disk image)
-- create a disk image with a real label and a microcode band
 - fill in the dispatch emulation
 
 And most important, find a valid load band.  Without this the emulation
