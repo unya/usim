@@ -139,6 +139,8 @@ int disk_fd;
 int disk_status = 1;
 int disk_cmd;
 int disk_clp;
+int disk_ma;
+int disk_ecc;
 int disk_da;
 
 int
@@ -163,6 +165,9 @@ int
 disk_set_cmd(int v)
 {
 	disk_cmd = v;
+
+	if ((disk_cmd & 06000) == 0)
+		deassert_xbus_interrupt();
 }
 
 int cyls, heads, blocks_per_track;
@@ -222,6 +227,8 @@ _disk_read(int block_no, unsigned int *buffer)
 	if (ret != size) {
 		printf("disk read error; ret %d, size %d\n", ret, size);
 		perror("read");
+
+		memset((char *)buffer, 0, size);
 		return -1;
 	}
 
@@ -273,7 +280,8 @@ void
 disk_throw_interrupt(void)
 {
 	printf("disk: throw interrupt\n");
-	post_xbus_interrupt();
+	disk_status |= 1<<3;
+	assert_xbus_interrupt();
 }
 
 void
@@ -290,6 +298,16 @@ disk_decode_addr(void)
 	cur_cyl = (disk_da >> 16) & 07777;
 	cur_head = (disk_da >> 8) & 0377;
 	cur_block = disk_da & 0377;
+}
+
+void
+disk_undecode_addr(void)
+{
+	disk_da =
+		((cur_unit & 07) << 28) |
+		((cur_cyl & 07777) << 16) |
+		((cur_head & 0377) << 8) |
+		((cur_block & 0377));
 }
 
 void
@@ -331,6 +349,7 @@ disk_start_read(void)
 		printf("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
 		vma = ccw & ~0377;
+		disk_ma = vma;
 
 		disk_show_cur_addr();
 
@@ -345,6 +364,8 @@ disk_start_read(void)
 
 		disk_clp++;
 	}
+
+	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
 		disk_throw_interrupt();
@@ -368,7 +389,7 @@ disk_start_write(void)
 int
 disk_start(void)
 {
-	printf("disk: start, cmd ");
+	printf("disk: start, cmd (%o) ", disk_cmd);
 
 	switch (disk_cmd & 01777) {
 	case 0:
@@ -392,6 +413,82 @@ disk_start(void)
 	default:
 		printf("unknown\n");
 	}
+}
+
+int
+disk_xbus_write(int offset, unsigned int v)
+{
+	tracef("disk register write, offset %o <- %o\n", offset, v);
+
+	switch (offset) {
+	case 0370:
+		printf/*tracef*/("disk: load status %o\n", v);
+		break;
+	case 0374:
+		disk_set_cmd(v);
+		printf/*tracef*/("disk: load cmd %o\n", v);
+		break;
+	case 0375:
+		printf("disk: load clp %o (phys page %o)\n", v, v << 8);
+		disk_set_clp(v);
+		break;
+	case 0376:
+		disk_set_da(v);
+		tracef("disk: load da %o\n", v);
+		break;
+	case 0377:
+		disk_start();
+		break;
+	default:
+		printf("disk: unknown reg write %o\n", offset);
+		break;
+	}
+
+	return 0;
+}
+
+int
+disk_xbus_read(int offset, unsigned int *pv)
+{
+	tracef("disk register read, offset %o\n", offset);
+
+	switch (offset) {
+	case 0370:
+		tracef("disk: read status\n");
+		*pv = disk_get_status();
+		break;
+	case 0371:
+		tracef("disk: read ma\n");
+		*pv = disk_ma;
+		break;
+	case 0372:
+		tracef("disk: read da\n");
+		*pv = disk_da;
+		break;
+	case 0373:
+		tracef("disk: read ecc\n");
+		*pv = disk_ecc;
+		break;
+	case 0374:
+		tracef("disk: status read\n");
+		/* disk ready */
+		*pv = disk_get_status();
+		break;
+	case 0375:
+		*pv = disk_clp;
+		break;
+	case 0376:
+		*pv = disk_da;
+		break;
+	case 0377:
+		*pv = 0;
+		break;
+	default:
+		printf("disk: unknown reg read %o\n", offset);
+		break;
+	}
+
+	return 0;
 }
 
 int

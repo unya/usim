@@ -180,6 +180,8 @@ csr - read
 7 ser int enable
 */
 
+int iob_kbd_csr;
+
 void
 iob_unibus_read(int offset, int *pv)
 {
@@ -203,6 +205,7 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0112:
 		printf("unibus: kbd csr\n");
+		*pv = iob_kbd_csr;
 		break;
 	case 0120:
 		printf("unibus: usec clock\n");
@@ -237,6 +240,8 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0112:
 		printf("unibus: kbd csr\n");
+		iob_kbd_csr = 
+			(iob_kbd_csr & ~017) | (v & 017);
 		break;
 	case 0120:
 	case 0122:
@@ -258,12 +263,27 @@ void
 iob_sdl_key_event(int code, int extra)
 {
 	iob_key_scan = kb_ascii_to_scancode[code] | extra;
-	post_unibus_interrupt(0260);
+	iob_kbd_csr |= 1 << 5;
+	assert_unibus_interrupt(0260);
 }
 
 void
 iob_sdl_mouse_event(int dx, int dy, int buttons)
 {
+	iob_kbd_csr |= 1 << 4;
+	assert_unibus_interrupt(0260);
+}
+
+//xxx tv interrupt
+// tv csr @ base, 1<<4 = interrupt flag
+// writing back clears int
+// 60hz
+
+void
+iob_sdl_clock_event()
+{
+	iob_kbd_csr |= 1 << 6;
+	assert_unibus_interrupt(0274);
 }
 
 int

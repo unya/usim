@@ -37,6 +37,8 @@ mapping support.
 
 Basic interrupt wiring is in place.
 
+Some framebuffer ("tv") and keyboard/mouse emulation is in place.
+
 What needs to be done?
 ----------------------
 
@@ -46,8 +48,8 @@ What needs to be done?
 And most important, find a valid load band.  Without this the emulation
 is uninteresting.  Once we have a load band
 
-- add "tv" emulation
-- add mouse & keyboard emulation
+- debug "tv" emulation
+- finish mouse & keyboard emulation
 
 And then we can boot the CADR into the lisp environment.
 

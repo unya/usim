@@ -349,7 +349,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 		len = (u >> 5) & 07;
 		rot = u & 037;
 
-		printf("disp const %o, disp addr %o, map %o, len %o, rot %o ",
+		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
 		       disp_cont, disp_addr, map, len, rot);
 		break;
 	case 3: /* byte */

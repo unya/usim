@@ -93,23 +93,43 @@ set_interrupt_status_reg(int new)
 }
 
 void
-post_unibus_interrupt(int vector)
+assert_unibus_interrupt(int vector)
 {
 	/* unibus interrupts enabeld? */
 	if (interrupt_status_reg & 02000) {
-		printf("post: unibus interrupt (enabled)\n");
+		printf("assert: unibus interrupt (enabled)\n");
 		set_interrupt_status_reg(
-			(interrupt_status_reg & ~01774) | 0100000 | (vector & 01774));
+			(interrupt_status_reg & ~01774) |
+			0100000 | (vector & 01774));
 	} else {
-		printf("post: unibus interrupt (disabld)\n");
+		printf("assert: unibus interrupt (disabld)\n");
 	}
 }
 
 void
-post_xbus_interrupt(void)
+deassert_unibus_interrupt(int vector)
 {
-	printf("post: xbus interrupt\n");
+	if (interrupt_status_reg & 0100000) {
+		printf("deassert: unibus interrupt\n");
+		set_interrupt_status_reg(
+			interrupt_status_reg & ~(01774 | 0100000));
+	}
+}
+
+void
+assert_xbus_interrupt(void)
+{
+	printf("assert: xbus interrupt\n");
 	set_interrupt_status_reg(interrupt_status_reg | 040000);
+}
+
+void
+deassert_xbus_interrupt(void)
+{
+	if (interrupt_status_reg & 040000) {
+		printf("deassert: xbus interrupt\n");
+		set_interrupt_status_reg(interrupt_status_reg & ~040000);
+	}
 }
 
 /*
@@ -287,28 +307,7 @@ read_mem(int vaddr, unsigned int *pv)
 
 		/* 75776000 */
 		//printf("disk; paddr=%o\n", paddr);
-
-		tracef("disk register read, offset %o\n", offset);
-
-		switch (offset) {
-		case 0370:
-			tracef("disk: read status\n");
-			break;
-		case 0371:
-			tracef("disk: read ma\n");
-			break;
-		case 0372:
-			tracef("disk: read da\n");
-			break;
-		case 0373:
-			tracef("disk: read ecc\n");
-			break;
-		case 0374:
-			tracef("disk status read\n");
-			/* disk ready */
-			page->w[offset] = disk_get_status();
-			break;
-		}
+		return disk_xbus_read(offset, pv);
 	}
 
 	tracef("read_mem(vaddr=%o) -> %o\n", vaddr, page->w[offset]);
@@ -431,26 +430,7 @@ write_mem(int vaddr, unsigned int v)
 
 	/* disk controller on xbus */
 	if (pn == 036777) {
-
-		tracef("disk register write, offset %o <- %o\n", offset, v);
-
-		switch (offset) {
-		case 0374:
-			disk_set_cmd(v);
-			tracef("disk: load cmd %o\n", v);
-			break;
-		case 0375:
-			printf("disk: load clp %o (phys page %o)\n", v, v << 8);
-			disk_set_clp(v);
-			break;
-		case 0376:
-			disk_set_da(v);
-			tracef("disk: load da %o\n", v);
-			break;
-		case 0377:
-			disk_start();
-			break;
-		}
+		return disk_xbus_write(offset, v);
 	}
 
 	page->w[offset] = v;
@@ -560,7 +540,9 @@ advance_lc(int *ppc)
 	int old_lc = lc & 077777777;
 	unsigned int v;
 
-	printf("advance_lc()\n");
+	printf("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
+	       lc_byte_mode_flag, lc,
+	       ((lc >> 30) & 1) ? 1 : 0);
 
 	if (lc_byte_mode_flag) {
 		/* byte mode */
@@ -592,7 +574,10 @@ advance_lc(int *ppc)
 
 		lc1 = (lc & 2) ? 1 : 0;
 
-		last_byte_in_word = lc0b & lc1;
+		last_byte_in_word = (~lc0b & ~lc1) ? 1 : 0;
+
+		printf("lc0b %d, lc1 %d, last_byte_in_word %d\n",
+		       lc0b, lc1, last_byte_in_word);
 
 		if (last_byte_in_word)
 			/* set need-fetch */
@@ -767,6 +752,45 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 	write_m_mem(dest & 037, out_bus);
 }
 
+void
+dump_state(void)
+{
+	int i;
+
+	printf("u-code pc %o\n", u_pc);
+	printf("vma %o, md %o, q %o, opc %o, disp-const %o\n",
+	       vma, md, q, opc, dispatch_constant);
+	printf("oa-lo %o, oa-hi %o\n", oa_reg_lo, oa_reg_hi);
+	printf("pdl-ptr %o\n", pdl_ptr);
+	printf("lc %o\n", lc);
+	printf("spc-ptr %o\n", spc_stack_ptr);
+
+	for (i = 0; i < 32; i++) {
+		printf("%cspc[%o] %o\n",
+		       (i == spc_stack_ptr) ? '*' : ' ',
+		       i, spc_stack[i]);
+	}
+	printf("\n");
+
+	for (i = 0; i < 32; i += 4) {
+		printf("m[%o] %011o %011o %011o %011o\n",
+		       i, m_memory[i], m_memory[i+1], m_memory[i+2], m_memory[i+3]);
+	}
+	printf("\n");
+
+	for (i = 0; i < 32; i += 4) {
+		printf("l1[%o] %011o %011o %011o %011o\n",
+		       i, l1_map[i], l1_map[i+1], l1_map[i+2], l1_map[i+3]);
+	}
+	printf("\n");
+
+	for (i = 0; i < 32; i += 4) {
+		printf("l2[%o] %011o %011o %011o %011o\n",
+		       i, l2_map[i], l2_map[i+1], l2_map[i+2], l2_map[i+3]);
+	}
+	printf("\n");
+}
+
 int
 run(void)
 {
@@ -790,7 +814,7 @@ run(void)
 //	trace = 1;
 //	max_cycles = 300000;
 //	max_cycles = 350000;
-	max_cycles = 100000*4;
+	max_cycles = 100000*10;
 //	max_trace_cycles = 100;
 
 //	sym_find(1, "INIMAP5", &trace_pt);
@@ -802,9 +826,9 @@ run(void)
 //	sym_find(1, "COLD-READ-LABEL", &trace_pt);
 //	max_trace_cycles = 1000;
 
-#if 0
-	sym_find(1, "START-DISK-N-PAGES", &trace_pt);
-	trace_pt_count = 3;
+#if 1
+	sym_find(1, "BEG03", &trace_pt);
+//	trace_pt_count = 3;
 	max_trace_cycles = 1000;
 #endif
 
@@ -858,12 +882,15 @@ run(void)
 
 		/* see if we hit a trace point */
 		if (trace_pt && u_pc == trace_pt && trace == 0) {
-			if (trace_pt_count) {
-				if (--trace_pt_count == 0)
-					trace = 1;
-			} else
-				trace = 1;
 
+			if (prom_enabled_flag == 0) {
+				
+				if (trace_pt_count) {
+					if (--trace_pt_count == 0)
+						trace = 1;
+				} else
+					trace = 1;
+			}
 
 			if (trace)
 				printf("trace on\n");
@@ -959,7 +986,7 @@ run(void)
 		}
 
 		/* trace label names in mcr */
-		if (trace_mcr_labels_flag) {
+		if (trace_mcr_labels_flag && !trace) {
 			if (!prom_enabled_flag) {
 				int offset;
 				if (sym = sym_find_last(1, pc, &offset)) {
@@ -1474,7 +1501,7 @@ printf("jump i|pf|sb\n");
 
 			if (take_jump) {
 
-				if (new_pc == u_pc && !fetch_next) {
+				if (new_pc == u_pc && !fetch_next && !p_bit) {
 					printf("loop detected pc %o\n", u_pc);
 					run_ucode_flag = 0;
 				}
@@ -1514,6 +1541,8 @@ printf("jump i|pf|sb\n");
 					pos = u & 007;
 					pos |= ((ir4 ^ (lc1 ^ lc0)) << 4) |
 						((ir3 ^ lc0) << 3);
+
+					printf("byte-mode, pos %o\n", pos);
 				} else {
 					/* 16 bit mode */
 					char ir4, lc1;
@@ -1523,6 +1552,7 @@ printf("jump i|pf|sb\n");
 
 					pos = u & 017;
 					pos |= (ir4 ^ lc1) << 4;
+					printf("16b-mode, pos %o\n", pos);
 				}
 			}
 
@@ -1534,7 +1564,7 @@ printf("jump i|pf|sb\n");
 				goto dispatch_done;
 			}
 
-			tracef("addr %o, map %o, len %o, pos %o\n",
+			tracef("disp-addr %o, map %o, len %o, pos %o\n",
 			       disp_addr, map, len, pos);
 
 			/* rotate m-source */
@@ -1557,8 +1587,20 @@ printf("jump i|pf|sb\n");
 
 				l2_map = map_vtop(md, (int *)0, (int *)0);
 
-				bit14 = (l2_map & (1 << 14)) ? 1 : 0;
-				bit15 = (l2_map & (1 << 15)) ? 1 : 0;
+#if 0
+				bit15 = ((l2_map >> 15) & 1) ? 1 : 0;
+				bit14 = ((l2_map >> 14) & 1) ? 1 : 0;
+#else
+				/* schematics show this as bit 19,18 */
+				bit15 = ((l2_map >> 19) & 1) ? 1 : 0;
+				bit14 = ((l2_map >> 18) & 1) ? 1 : 0;
+#endif
+
+				tracef("md %o, l2_map %o, b15 %o, b14 %o\n",
+				       md, l2_map, bit15, bit14);
+
+//temp hack for debugging
+//bit15 = 1;
 
 				switch (map) {
 				case 1: disp_addr |= bit14; break;
@@ -1566,6 +1608,9 @@ printf("jump i|pf|sb\n");
 				case 3: disp_addr |= bit14 | bit15; break;
 				}
 			}
+
+			tracef("dispatch[%o] -> %o  ",
+			       disp_addr, dispatch_memory[disp_addr]);
 
 			disp_addr = dispatch_memory[disp_addr];
 
@@ -1577,6 +1622,15 @@ printf("jump i|pf|sb\n");
 			n_bit = (disp_addr >> 14) & 1;
 			p_bit = (disp_addr >> 15) & 1;
 			r_bit = (disp_addr >> 16) & 1;
+
+			tracef("%s%s%s\n",
+			       n_bit ? "N " : "",
+			       p_bit ? "P " : "",
+			       r_bit ? "R " : "");
+
+			if (n_plus1 && n_bit) {
+				u_pc--;
+			}
 
 			invert_sense = 0;
 			take_jump = 1;
@@ -1593,12 +1647,12 @@ printf("jump i|pf|sb\n");
 			break;
 
 		case 3: /* byte */
-			tracef("a=%o (%o), m=%o (%o)\n",
-			       a_src, a_src_value,
-			       m_src, m_src_value);
-
 			dest = (u >> 14) & 07777;
 			mr_sr_bits = (u >> 12) & 3;
+
+			tracef("a=%o (%o), m=%o (%o), dest=%o\n",
+			       a_src, a_src_value,
+			       m_src, m_src_value, dest);
 
 			widthm1 = (u >> 5) & 037;
 			pos = u & 037;
@@ -1694,4 +1748,6 @@ printf("jump i|pf|sb\n");
 		else
 			u_pc++;
 	}
+
+	dump_state();
 }
