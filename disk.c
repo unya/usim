@@ -676,7 +676,7 @@ disk_init(char *filename)
 	if (disk_fd < 0) {
 		disk_fd = 0;
 		perror(filename);
-		return -1;
+		exit(1);
 	}
 
 	_disk_read(0, label);

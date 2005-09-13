@@ -27,12 +27,17 @@ read_prom_files(void)
 
 		printf("%s\n", name);
 		fd = open(name, O_RDONLY);
-		if (fd) {
-			ret = read(fd, prom[i], 512);
-			close(fd);
+		if (fd < 0) {
+			perror(name);
+			exit(1);
+		}
+
+		ret = read(fd, prom[i], 512);
+		close(fd);
 				
-			if (ret != 512)
-				return -1;
+		if (ret != 512) {
+			fprintf(stderr, "read_prom_files: short read\n");
+			exit(1);
 		}
 	}
 

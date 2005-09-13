@@ -20,12 +20,15 @@ extern int trace_int_flag;
 extern int trace_vm_flag;
 #define tracevm if (trace_vm_flag) printf
 
+extern int run_ucode_flag;
+extern int warm_boot_flag;
 extern int trace_mcr_labels_flag;
 extern int trace_lod_labels_flag;
 extern int trace_prom_flag;
 extern int trace_mcr_flag;
 extern int stop_after_prom_flag;
 
+extern unsigned long cycles;
 extern unsigned long max_cycles;
 extern unsigned long max_trace_cycles;
 

@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include "ucode.h"
 
-//#define STAT_PC_HISTORY
+#define STAT_PC_HISTORY
 #define STAT_ALU_USE
 
 extern ucw_t prom_ucode[512];
@@ -61,6 +61,7 @@ int bus_reset_flag;
 int prom_enabled_flag;
 int run_ucode_flag;
 int stop_after_prom_flag;
+int warm_boot_flag;
 
 unsigned int md;
 unsigned int vma;
@@ -855,6 +856,16 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		/* set need fetch */
 		lc |= (1 << 31);
 
+		if (trace_lod_labels_flag) {
+			char *s;
+
+			s = find_function_name(lc);
+			show_label_closest(u_pc);
+			printf(": lc <- %o (%o)", lc, lc>>2);
+			if (s) printf(" '%s'", s);
+			printf("\n");
+		}
+
 /* isn't this pretty? :-) XXX add main option to trace on macro function name */
 #if 0
 { char *s;
@@ -1074,7 +1085,7 @@ if (0) show_pdl_local();
 	write_m_mem(dest & 037, out_bus);
 }
 
-#define MAX_PC_HISTORY 8
+#define MAX_PC_HISTORY 16
 struct {
 	unsigned int rpc;
 	unsigned int rvma;
@@ -1267,7 +1278,7 @@ dump_state(void)
 	       macro_pc_incrs);
 	printf("\n");
 
-#if STAT_PC_HISTORY
+#ifdef STAT_PC_HISTORY
 	show_pc_history();
 #endif
 
@@ -1572,7 +1583,7 @@ run(void)
 
 		int disp_const, disp_addr;
 		int map, len, rot;
-		int out_bus;
+		unsigned int out_bus;
 		int carry_in, do_add, do_sub;
 
 		long long lv;
@@ -1596,7 +1607,7 @@ run(void)
 
 		disk_poll();
 
-		if ((cycles & 0xffff) == 0) {
+		if ((cycles & 0x0fff) == 0) {
 			display_poll();
 		}
 
@@ -2122,14 +2133,16 @@ run(void)
 				case 011:
 					/* initial divide step */
 					tracef("divide-first-step\n");
-					tracef("divide: %o / %o \n", q, a_src_value);
+					tracef("divide: %o / %o \n",
+					       q, a_src_value);
 
 					lv = m_src_value -
 						a_src_value -
 						(carry_in ? 1 : 0);
 
 					alu_out = lv;
-					tracef("alu_out %08x %o %d\n", alu_out, alu_out, alu_out);
+					tracef("alu_out %08x %o %d\n",
+					       alu_out, alu_out, alu_out);
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 

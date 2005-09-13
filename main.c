@@ -15,8 +15,6 @@
 #include "config.h"
 
 int show_video_flag;
-extern unsigned long cycles;
-extern int run_ucode_flag;
 
 struct timeval tv1;
 
@@ -96,11 +94,11 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.2\n");
+	printf("CADR emulator v0.3\n");
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "b:c:C:l:np:q:tT:s")) != -1) {
+	while ((c = getopt(argc, argv, "b:c:C:l:np:q:tT:sw")) != -1) {
 		switch (c) {
 		case 'n':
 			show_video_flag = 0;
@@ -140,6 +138,9 @@ main(int argc, char *argv[])
 		case 's':
 			stop_after_prom_flag = 1;
 			break;
+		case 'w':
+			warm_boot_flag = 1;
+			break;
 		default:
 			usage();
 		}
@@ -165,6 +166,10 @@ main(int argc, char *argv[])
 #endif
 
 	signal_init();
+
+	if (warm_boot_flag) {
+		iob_warm_boot_key();
+	}
 
 	run();
 

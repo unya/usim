@@ -364,6 +364,7 @@ int
 display_init(void)
 {
 	sdl_display_init();
+	return 0;
 }
 
 void

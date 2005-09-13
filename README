@@ -106,3 +106,30 @@ diskmaker	- program to make CADR disk images from .mcr files and
 		  .lod files
 lod		- utiltity to pick apart load bands and show their insides
 
+
+Standing on the Shoulders of Giants
+-----------------------------------
+
+I would like to thanks the following people for helping me on this, er,
+project:
+
+Tom Knight
+Howard Shrobe
+Richard Greenblatt
+Danial Weinreb
+Al Kossow
+George Carrette
+Steve Krueger
+Alastair Bridgewater
+John Wroclawski
+
+Without their support or encouragement I would probably not have done
+this.  Certainly if Al had not sent me the prom images I would never
+have started.  And without Dan's box-of-tapes I could never have
+succeeded.  RG offered good explainations when I was confused.  TK and
+Howie were extremely supportive at the just right moment (and answered
+a lot of email).  George offered many good suggestions and answered
+lots of qustions. Steve helped me locate missing pages from "memo
+528". Alastair did some amazing work on several explorer emulators.
+And John's office is where I first saw a 3600 console and said,
+"what's that?".

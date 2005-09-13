@@ -12,6 +12,7 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <sys/poll.h>
+#include <sys/uio.h>
 
 #include "ucode.h"
 
@@ -25,6 +26,7 @@ int chaos_xmit_buffer_ptr;
 unsigned short chaos_rcv_buffer[1600/2];
 int chaos_rcv_buffer_ptr;
 int chaos_rcv_buffer_size;
+int chaos_rcv_buffer_empty;
 
 int chaos_fd;
 
@@ -81,6 +83,13 @@ chaos_rx_pkt(void)
 }
 
 void
+char_xmit_done_intr(void)
+{
+	chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+	assert_unibus_interrupt(0400);
+}
+
+void
 chaos_xmit_pkt(void)
 {
 	int i, n;
@@ -101,18 +110,18 @@ chaos_xmit_pkt(void)
 		printf("\n");
 
 	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
-
 	chaos_xmit_buffer_ptr = 0;
-	chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-	assert_unibus_interrupt(0400);
 
-chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* source */
-chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* checksum */
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] = chaos_addr; /* source */
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* checksum */
+
+	char_xmit_done_intr();
 
 	chaos_sent_to_chaosd((char *)chaos_xmit_buffer,
 			     chaos_xmit_buffer_size*2);
 
 #if 0
+	/* set back to ourselves - only for testing */
 	chaos_rcv_buffer_size = chaos_xmit_buffer_size + 2;
 	memcpy(chaos_rcv_buffer, chaos_xmit_buffer, chaos_xmit_buffer_size*2);
 
@@ -168,6 +177,10 @@ chaos_get_rcv_buffer(void)
 	int v = 0;
 	if (chaos_rcv_buffer_ptr < chaos_rcv_buffer_size) {
 		v = chaos_rcv_buffer[chaos_rcv_buffer_ptr++];
+
+		if (chaos_rcv_buffer_ptr == chaos_rcv_buffer_size)
+			chaos_rcv_buffer_empty = 1;
+
 	}
 	chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
 	return v;
@@ -205,7 +218,7 @@ chaos_get_addr(void)
 int
 chaos_set_csr(int v)
 {
-	int mask;
+	int mask, old_csr;
 	int send_fake;
 
 	v &= 0xffff;
@@ -214,6 +227,8 @@ chaos_set_csr(int v)
 		CHAOS_CSR_LOST_COUNT |
 		CHAOS_CSR_CRC_ERROR |
 		CHAOS_CSR_RECEIVE_DONE;
+
+	old_csr = chaos_csr;
 
 	chaos_csr = (chaos_csr & mask) | (v & ~mask);
 
@@ -227,16 +242,20 @@ chaos_set_csr(int v)
 	}
 	if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
 		printf("rx-enable ");
-//		send_fake = 1;
-		chaos_rcv_buffer_ptr = 0;
-		chaos_rcv_buffer_size = 0;
+
+		if (chaos_rcv_buffer_empty) {
+//			send_fake = 1;
+			chaos_rcv_buffer_ptr = 0;
+			chaos_rcv_buffer_size = 0;
 #if 1
-		chaos_poll_from_chaosd();
+			chaos_poll_from_chaosd();
+		}
 #endif
 	}
 	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
 		printf("tx-enable ");
-//		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+char_xmit_done_intr();
 	} else {
 		chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
 	}
@@ -275,15 +294,47 @@ chaos_poll_from_chaosd(void)
 		return -1;
 
 	if (ret > 0) {
-		ret = read(chaos_fd, (char *)chaos_rcv_buffer, 4096);
+		u_char lenbytes[4];
+		int len;
+
+		ret = read(chaos_fd, lenbytes, 4);
+		if (ret <= 0) {
+			perror("chaos read");
+			return -1;
+		}
+
+		len = (lenbytes[0] << 8) | lenbytes[1];
+
+		ret = read(chaos_fd, (char *)chaos_rcv_buffer, len);
 		if (ret < 0) {
-			perror("read");
+			perror("chaos read");
+			return -1;
+		}
+
+		if (ret != len) {
+			printf("chaos read; length error\n");
 			return -1;
 		}
 
 		printf("polling; got chaosd packet %d\n", ret);
 
 		chaos_rcv_buffer_size = (ret+1)/2;
+		chaos_rcv_buffer_empty = 0;
+
+#if 0
+		printf("rx to %o, my %o\n",
+		       chaos_rcv_buffer[chaos_rcv_buffer_size-3], chaos_addr);
+		printf("   from %o, crc %o\n",
+		       chaos_rcv_buffer[chaos_rcv_buffer_size-2],
+		       chaos_rcv_buffer[chaos_rcv_buffer_size-1]);
+#endif
+
+		if (chaos_rcv_buffer[chaos_rcv_buffer_size-3] != chaos_addr) {
+			chaos_rcv_buffer_size = 0;
+			chaos_rcv_buffer_empty = 1;
+			return 0;
+		}
+
 		chaos_rx_pkt();
 	}
 
@@ -295,7 +346,25 @@ chaos_sent_to_chaosd(char *buffer, int size)
 {
 	int ret;
 	if (chaos_fd) {
-		ret = write(chaos_fd, buffer, size);
+		struct iovec iov[2];
+		unsigned char lenbytes[4];
+
+		lenbytes[0] = size >> 8;
+		lenbytes[1] = size;
+		lenbytes[2] = 0;
+		lenbytes[3] = 0;
+
+		iov[0].iov_base = lenbytes;
+		iov[0].iov_len = 4;
+
+		iov[1].iov_base = buffer;
+		iov[1].iov_len = size;
+
+		ret = writev(chaos_fd, iov, 2);
+		if (ret < 0) {
+			perror("chaos write");
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -363,6 +432,8 @@ chaos_init(void)
 		chaos_fd = 0;
 		return -1;
 	}
+
+	chaos_rcv_buffer_empty = 1;
 
 	return 0;
 }

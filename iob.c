@@ -482,6 +482,12 @@ iob_sdl_key_event(int code, int extra)
 }
 
 void
+iob_warm_boot_key()
+{
+	iob_sdl_key_event(SDLK_RETURN, 0);
+}
+
+void
 iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
 {
 	iob_kbd_csr |= 1 << 4;
