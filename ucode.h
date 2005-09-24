@@ -3,7 +3,7 @@
  * $Id$
  */
 
-typedef unsigned long long ucw_t;
+typedef unsigned long long int ucw_t;
 
 extern int trace;
 #define tracef	if (trace) printf
@@ -27,6 +27,7 @@ extern int trace_lod_labels_flag;
 extern int trace_prom_flag;
 extern int trace_mcr_flag;
 extern int stop_after_prom_flag;
+extern int alt_prom_flag;
 
 extern unsigned long cycles;
 extern unsigned long max_cycles;

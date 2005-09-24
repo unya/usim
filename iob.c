@@ -7,6 +7,8 @@
  * $Id$
  */
 
+#include <stdio.h>
+#include <string.h>
 #include "ucode.h"
 
 #include <signal.h>
@@ -88,6 +90,11 @@ keyboard
 #define LM_K_ABORT 0
 #define LM_K_END 0
 
+/* ****
+;KEYBOARD TRANSLATE TABLE IS A 3 X 64 ARRAY.
+;3 ENTRIES FOR EACH OF 100 KEYS.  FIRST IS VANILLA, SECOND SHIFT, THIRD TOP.
+;THE FUNCTION KBD-INITIALIZE IS ONLY CALLED ONCE, IN ORDER TO SET UP THIS ARRAY.
+**** */
 unsigned char kb_old_table[64][3] = {
 	/* none,shift,top */
 	0201,	0201,	LM_K_NETWORK,	//BREAK,BREAK,NETWORK
@@ -309,6 +316,7 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
+		fprintf(stderr,"\a"); /* alert - beep */
 		break;
 	case 0112:
 		*pv = iob_kbd_csr;
@@ -336,14 +344,14 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0144:
 		*pv = chaos_get_rcv_buffer();
-		printf/*traceio*/("unibus: chaos read rcv buffer %o\n", *pv);
+		printf/*traceio*/("unibus: chaos read rcv buffer %06o\n", *pv);
 		break;
 	case 0146:
 		*pv = chaos_get_bit_count();
-		printf/*traceio*/("unibus: chaos read bit-count %o\n", *pv);
+		printf/*traceio*/("unibus: chaos read bit-count 0%o\n", *pv);
 		break;
 	default:
-		if (offset > 0140 && offset <= 0150)
+		if (offset > 0140 && offset <= 0153)
 			printf/*traceio*/("unibus: chaos read other %o\n", offset);
 		chaos_xmit_pkt();
 		break;
@@ -396,7 +404,7 @@ iob_unibus_write(int offset, int v)
 		chaos_put_xmit_buffer(v);
 		break;
 	default:
-		if (offset > 0140 && offset <= 0150)
+		if (offset > 0140 && offset <= 0152)
 			printf/*traceio*/("unibus: chaos write other\n");
 		break;
 	}
@@ -408,6 +416,15 @@ iob_get_key_scan(void)
 	return iob_key_scan;
 }
 
+/****
+;FORMAT OF DATA IN 764100 (IF USING OLD KEYBOARD):
+; 00077   0006	  ;KEY CODE
+; 00300   0602    ;SHIFT LEFT,RIGHT
+; 01400   1002    ;TOP LEFT,RIGHT
+; 06000   1202    ;CONTROL LEFT,RIGHT
+; 30000   1402    ;META LEFT,RIGHT
+; 40000   1601    ;SHIFT LOCK
+****/
 void
 iob_sdl_key_event(int code, int extra)
 {
@@ -453,6 +470,9 @@ iob_sdl_key_event(int code, int extra)
 	case SDLK_F7:
 		iob_key_scan = 16; /* call */
 		break;
+	case SDLK_F12:
+		iob_key_scan = 0; /* break */
+		break;
 	case SDLK_BACKSPACE:
 		iob_key_scan = 15; /* backspace */
 		break;
@@ -460,6 +480,9 @@ iob_sdl_key_event(int code, int extra)
 		iob_key_scan = 50; /* CR */
 		break;
 	default:
+#if 1
+	  iob_key_scan = kb_sdl_to_scancode[code][(extra & (3 << 6)) ? 1 : 0];
+#else
 		s = 0; /* unshifted */
 		if (extra & (3 << 6))
 			s = 1; /* shift */
@@ -474,8 +497,15 @@ iob_sdl_key_event(int code, int extra)
 		}
 
 		iob_key_scan = c;
+#endif
 		break;
 	}
+#if 1   /* This is also for Fx, Bsp, Del */
+	iob_key_scan |= extra & ~(3 << 6);	     /* keep C/M bits, Shift in scancode tbl */
+# if 0
+	printf("code 0%o, extra 0%o, scan 0%o\n", code, extra, iob_key_scan);
+# endif
+#endif
 
 	iob_kbd_csr |= 1 << 5;
 	assert_unibus_interrupt(0260);
@@ -503,8 +533,10 @@ iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
 	if (0)
 		printf("iob_sdl_mouse_event(x=%x,y=%x,buttons=%x)\n",
 		       x, y, buttons);
-	mouse_x = (x*3)/2;
-	mouse_y = (y*3)/2;
+//	mouse_x = (x*3)/2;
+//	mouse_y = (y*3)/2;
+	mouse_x = (x*5)/3;
+	mouse_y = (y*5)/3;
 
 	if (buttons & 1)
 		mouse_head = 1;
@@ -576,47 +608,52 @@ iob_init(void)
 {
 	int i, j;
 
+	/* #### bzzt! handle multiple modifiers!! */
 	memset((char *)kb_sdl_to_scancode, 0, sizeof(kb_sdl_to_scancode));
 
+	/* Walk unshifted old kbd table */
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
 		kb_sdl_to_scancode[k][0] = i;
 	}
 
-	kb_sdl_to_scancode['`'][0] = 13 | (3 << 6);
-	kb_sdl_to_scancode['`'][1] = 14 | (3 << 6);
+	/* Modify mapping to match present-day US kbd */
+	kb_sdl_to_scancode['`'][0] = 015 | (3 << 6); /* ` = Shift @ = ` */
+	kb_sdl_to_scancode['`'][1] = 016 | (3 << 6); /* Sh-` = Sh-^ = ~*/
+	
+	kb_sdl_to_scancode['\''][0] = 010 | (3<<6);  /* ' = Sh-7 = ' */
+	kb_sdl_to_scancode['\''][1] = 3 | (3<<6);    /* Sh-' = Sh-2 = " */
+	kb_sdl_to_scancode['='][0] = 014 | (3<<6);   /* = = Sh-- = = */
+	kb_sdl_to_scancode['2'][1] = 015;	     /* Sh-2 = @ (unshifted) */
 
-	kb_sdl_to_scancode['\''][0] = 8 | (3<<6);
-	kb_sdl_to_scancode['\''][1] = 3 | (3<<6);
-	kb_sdl_to_scancode['='][0] = 12 | (3<<6);
-	kb_sdl_to_scancode['2'][1] = 13;
+	kb_sdl_to_scancode['6'][1] = 016;	     /* Sh-6 = ^ (unshifted) */
+	kb_sdl_to_scancode['7'][1] = 7 | (3<<6);     /* Sh-7 = Sh-6 = & */
+	kb_sdl_to_scancode['8'][1] = 061 | (3<<6);   /* Sh-8 = Sh-: = * */
+	kb_sdl_to_scancode['9'][1] = 011 | (3<<6);   /* Sh-9 = Sh-8 = ( */
+	kb_sdl_to_scancode['0'][1] = 012 | (3<<6);   /* Sh-0 = Sh-9 = ) */
+	kb_sdl_to_scancode['-'][1] = 013 | (3<<6);   /* Sh-- = Sh-0 = _ */
+	kb_sdl_to_scancode['='][1] = 060 | (3<<6);   /* Sh-= = Sh-; = + */
 
-	kb_sdl_to_scancode['6'][1] = 14;
-	kb_sdl_to_scancode['7'][1] = 7 | (3<<6);
-	kb_sdl_to_scancode['8'][1] = 49 | (3<<6);
-	kb_sdl_to_scancode['9'][1] = 9 | (3<<6);
-	kb_sdl_to_scancode['0'][1] = 10 | (3<<6);
-	kb_sdl_to_scancode['-'][1] = 11 | (3<<6);
-	kb_sdl_to_scancode['='][1] = 48 | (3<<6);
-
-	kb_sdl_to_scancode[';'][1] = 49;
+	kb_sdl_to_scancode[';'][1] = 061;	     /* Sh-; = : (unshifted) */
 
 	/* map "Delete" to rubout */
-	kb_sdl_to_scancode[0x7f][0] = 38;
+	kb_sdl_to_scancode[0x7f][0] = 046;	     /* Delete = Rubout */
 
 	/* map tab to tab */
-	kb_sdl_to_scancode[9][0] = 18;
+	kb_sdl_to_scancode[9][0] = 022;		     /* Tab = Tab */
 
 	/* esc = esc */
-	kb_sdl_to_scancode[0x1b][0] = 1;
+	kb_sdl_to_scancode[0x1b][0] = 1;	     /* Esc = Esc (Terminal) */
 
+	/* Add shifts */
 	for (i = 0; i < 256; i++) {
 		if (kb_sdl_to_scancode[i][1] == 0)
 			kb_sdl_to_scancode[i][1] = kb_sdl_to_scancode[i][0] |
 				(3 << 6);
 	}
 
+#if 0   /* Don't do this */
 	/* control keys */
 	for (i = 0; i < 64; i++) {
 		char k;
@@ -630,6 +667,7 @@ iob_init(void)
 		k = kb_old_table[i][0];
 		kb_sdl_to_scancode[k][3] = i | (3 << 12);
 	}
+#endif
 
 #ifdef USE_SIGVTARLM_FOR_60HZ
 	{

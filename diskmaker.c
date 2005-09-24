@@ -174,15 +174,17 @@ make_labl(int fd)
 		}
 	}
 
+//#define LABEL_PAD_CHAR '\200'
+#define LABEL_PAD_CHAR '\0'
 	/* pack brand text - offset 010, 32 bytes */
-	memset((char *)&buffer[010], '\200', 32);
+	memset((char *)&buffer[010], LABEL_PAD_CHAR, 32);
 
 	/* pack text label - offset 020, 32 bytes */
 	memset((char *)&buffer[020], ' ', 32);
 	memcpy((char *)&buffer[020], "CADR diskmaker image", 21);
 
 	/* comment - offset 030, 32 bytes */
-	memset((char *)&buffer[030], '\200', 32);
+	memset((char *)&buffer[030], LABEL_PAD_CHAR, 32);
 
 	strcpy((char *)&buffer[030], mcr_filename);
 	printf("comment: '%s'\n", mcr_filename);
@@ -329,7 +331,7 @@ make_file(int fd)
 	count = 0;
 	offset = part_offset("FILE");
 
-	if (offset == 0)
+	if (offset <= 0)
 		return -1;
 
 	printf("making FILE...\n");
@@ -355,11 +357,16 @@ main(int argc, char *argv[])
 	int fd;
 
 	use_lod2 = 0;
+//	use_lod2 = 0;
 
 	img_filename = strdup("disk.img");
 	mcr_filename = strdup("ucadr.mcr.841");
 	lod1_filename = strdup("partition-78.48.lod1");
 	lod2_filename = strdup("partition-sys210.lod2");
+
+#if 0
+	mcr_filename = strdup("ucadr.mcr.979");
+#endif
 
 #if 0
 	mcr_filename = strdup("ucadr.mcr.979");

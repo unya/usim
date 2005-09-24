@@ -25,6 +25,10 @@ read_prom_files(void)
 
 		sprintf(name, "cadr_%1d.bin", i+1);
 
+		if (alt_prom_flag) {
+			sprintf(name, "../prom/alt_cadr_%1d.bin", i+1);
+		}
+
 		printf("%s\n", name);
 		fd = open(name, O_RDONLY);
 		if (fd < 0) {
@@ -238,7 +242,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 	case 0: /* alu */
 		printf("(alu) ");
 
-		if ((u & 03777777777777777) == 0) {
+		if ((u & 03777777777777777LL) == 0) {
 			printf("no-op");
 			goto done;
 		}

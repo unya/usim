@@ -15,6 +15,7 @@
 #include "config.h"
 
 int show_video_flag;
+int alt_prom_flag;
 
 struct timeval tv1;
 
@@ -94,14 +95,14 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.3\n");
+	printf("CADR emulator v0.4\n");
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "b:c:C:l:np:q:tT:sw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:c:C:l:np:q:tT:sw")) != -1) {
 		switch (c) {
-		case 'n':
-			show_video_flag = 0;
+		case 'a':
+			alt_prom_flag = 1;
 			break;
 		case 'b':
 			breakpoint_set_mcr(optarg);
@@ -114,6 +115,9 @@ main(int argc, char *argv[])
 			break;
 		case 'l':
 			tracelabel_set_mcr(optarg);
+			break;
+		case 'n':
+			show_video_flag = 0;
 			break;
 		case 'p':
 			breakpoint_set_prom(optarg);

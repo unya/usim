@@ -1403,6 +1403,18 @@ patch_prom_code(void)
 #ifdef PATCH_PROM_LOOPS_2
 	prom_ucode[0452] = 04000001000310030; /* m-c <- m-zero */
 #endif
+
+#if 0
+	/* quick hack while debugging verilog */
+	prom_ucode[0175] = 0;
+	prom_ucode[0202] = 0;
+	prom_ucode[0226] = 0;
+	prom_ucode[0232] = 0;
+	prom_ucode[0236] = 0;
+	prom_ucode[0244] = 0;
+	prom_ucode[0251] = 0;
+	prom_ucode[0256] = 0;
+#endif
 }
 
 char *breakpoint_name_prom;
@@ -1609,6 +1621,7 @@ run(void)
 
 		if ((cycles & 0x0fff) == 0) {
 			display_poll();
+			chaos_poll_from_chaosd();
 		}
 
 #define FETCH()	(prom_enabled_flag ? prom_ucode[u_pc] : ucode[u_pc])
@@ -1879,7 +1892,7 @@ run(void)
 
 #if 1
 			/* nop short cut */
-			if ((u & 03777777777767777) == 0) {
+			if ((u & 03777777777767777LL) == 0) {
 				goto next;
 			}
 #endif

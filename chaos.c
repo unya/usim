@@ -16,9 +16,14 @@
 
 #include "ucode.h"
 
+#ifndef CHAOS_MY_ADDRESS
+# define CHAOS_MY_ADDRESS 0401
+#endif
+ 
 int chaos_csr;
-int chaos_addr = 0401;
+int chaos_addr = CHAOS_MY_ADDRESS;
 int chaos_bit_count;
+int chaos_lost_count = 0;
 unsigned short chaos_xmit_buffer[1600/2];
 int chaos_xmit_buffer_size;
 int chaos_xmit_buffer_ptr;
@@ -30,7 +35,7 @@ int chaos_rcv_buffer_empty;
 
 int chaos_fd;
 
-int chaos_sent_to_chaosd(char *buffer, int size);
+int chaos_send_to_chaosd(char *buffer, int size);
 
 /*
 chaos csr 
@@ -78,8 +83,10 @@ chaos_rx_pkt(void)
 {
 	chaos_rcv_buffer_ptr = 0;
 	chaos_bit_count = (chaos_rcv_buffer_size * 2 * 8) - 1;
-	chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
-	assert_unibus_interrupt(0404);
+	if (chaos_rcv_buffer_size > 0) {
+	  chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
+	  assert_unibus_interrupt(0404);
+	}
 }
 
 void
@@ -110,15 +117,17 @@ chaos_xmit_pkt(void)
 		printf("\n");
 
 	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
-	chaos_xmit_buffer_ptr = 0;
 
-	chaos_xmit_buffer[chaos_xmit_buffer_size++] = chaos_addr; /* source */
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* dest */
+//	chaos_xmit_buffer[chaos_xmit_buffer_size++] = chaos_addr; /* source */
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* source */
 	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0; /* checksum */
 
-	char_xmit_done_intr();
-
-	chaos_sent_to_chaosd((char *)chaos_xmit_buffer,
+	chaos_send_to_chaosd((char *)chaos_xmit_buffer,
 			     chaos_xmit_buffer_size*2);
+
+	chaos_xmit_buffer_ptr = 0;
+	char_xmit_done_intr();
 
 #if 0
 	/* set back to ourselves - only for testing */
@@ -168,7 +177,10 @@ chaos_fake_rx(void)
 int
 chaos_get_bit_count(void)
 {
-	return chaos_bit_count;
+	if (chaos_rcv_buffer_size > 0)
+		return chaos_bit_count;
+
+	return 07777;
 }
 
 int
@@ -181,8 +193,11 @@ chaos_get_rcv_buffer(void)
 		if (chaos_rcv_buffer_ptr == chaos_rcv_buffer_size)
 			chaos_rcv_buffer_empty = 1;
 
+	} else {
+		/* read last word, clear receive done */
+		chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
+		chaos_rcv_buffer_size = 0;
 	}
-	chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
 	return v;
 }
 
@@ -206,13 +221,52 @@ chaos_get_csr(void)
 		}
 	}
 
-	return chaos_csr;
+	return chaos_csr | ((chaos_lost_count << 9) & 017);
 }
 
 int
 chaos_get_addr(void)
 {
 	return chaos_addr;
+}
+
+void
+print_csr_bits(int csr)
+{
+	if (csr & CHAOS_CSR_LOOP_BACK)
+		printf(" LUP");
+	if (csr & CHAOS_CSR_RECEIVE_ALL)
+		printf(" SPY");
+	if (csr & CHAOS_CSR_RECEIVER_CLEAR)
+		printf(" RCL");
+	if (csr & CHAOS_CSR_RECEIVE_ENABLE)
+		printf(" REN");
+	if (csr & CHAOS_CSR_TRANSMIT_ENABLE)
+		printf(" TEN");
+	if (csr & CHAOS_CSR_TRANSMIT_ABORT)
+		printf(" TAB");
+	if (csr & CHAOS_CSR_TRANSMIT_DONE)
+		printf(" TDN");
+	if (csr & CHAOS_CSR_TRANSMITTER_CLEAR)
+		printf(" TCL");
+	if (csr & CHAOS_CSR_RESET)
+		printf(" RST");
+	if (csr & CHAOS_CSR_RECEIVE_DONE)
+		printf(" RDN");
+	if (csr & CHAOS_CSR_CRC_ERROR)
+		printf(" ERR");
+	if (csr & CHAOS_CSR_LOST_COUNT)
+		printf(" Lost %d.",(csr & CHAOS_CSR_LOST_COUNT)>>9);
+
+	csr &= ~(CHAOS_CSR_LOST_COUNT|CHAOS_CSR_RESET|
+		 CHAOS_CSR_TRANSMITTER_CLEAR|CHAOS_CSR_TRANSMIT_ABORT|
+		 CHAOS_CSR_RECEIVE_DONE|CHAOS_CSR_RECEIVE_ENABLE|
+		 CHAOS_CSR_TRANSMIT_DONE|CHAOS_CSR_TRANSMIT_ENABLE|
+		 CHAOS_CSR_CRC_ERROR|CHAOS_CSR_LOOP_BACK|
+		 CHAOS_CSR_RECEIVE_ALL|CHAOS_CSR_RECEIVER_CLEAR);
+
+	if (csr)
+		printf(" unk bits 0%o",csr);
 }
 
 int
@@ -223,6 +277,7 @@ chaos_set_csr(int v)
 
 	v &= 0xffff;
 
+ 	/* Writing these don't stick */
 	mask = CHAOS_CSR_TRANSMIT_DONE |
 		CHAOS_CSR_LOST_COUNT |
 		CHAOS_CSR_CRC_ERROR |
@@ -230,15 +285,41 @@ chaos_set_csr(int v)
 
 	old_csr = chaos_csr;
 
+	printf("chaos: set csr bits 0%o (",v);
+	print_csr_bits(v);
+	printf ("), old 0%o ", chaos_csr);
+
 	chaos_csr = (chaos_csr & mask) | (v & ~mask);
 
 	send_fake = 0;
 
-	printf("chaos: ");
+	printf("chaos: set csr bits 0%o (",v);
+	print_csr_bits(v);
+ 	printf ("), old 0%o ", chaos_csr);
+
 	if (chaos_csr & CHAOS_CSR_RESET) {
 		printf("reset ");
 		chaos_xmit_buffer_ptr = 0;
-		chaos_csr &= ~CHAOS_CSR_RESET;
+		chaos_lost_count = 0;
+		chaos_bit_count = 0;
+		chaos_rcv_buffer_ptr = 0;
+		chaos_csr &= ~(CHAOS_CSR_RESET | CHAOS_CSR_RECEIVE_DONE);
+		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+	}
+	if (v & (CHAOS_CSR_RECEIVER_CLEAR | CHAOS_CSR_RECEIVE_DONE)) {
+	  chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
+	  chaos_lost_count = 0;
+	  chaos_bit_count = 0;
+	  chaos_rcv_buffer_ptr = 0;
+	}
+	if (v & CHAOS_CSR_TRANSMITTER_CLEAR) {
+	  chaos_csr &= ~CHAOS_CSR_TRANSMIT_ABORT;
+	  chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+	}
+	if (chaos_csr & CHAOS_CSR_TRANSMIT_DONE) {
+	  chaos_csr &= ~CHAOS_CSR_TRANSMIT_ABORT;
+	  chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+	  chaos_xmit_buffer_ptr = 0;
 	}
 	if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
 		printf("rx-enable ");
@@ -255,10 +336,14 @@ chaos_set_csr(int v)
 	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
 		printf("tx-enable ");
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-char_xmit_done_intr();
+#if 0
+		char_xmit_done_intr();
 	} else {
 		chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
+#endif
 	}
+	printf(" New csr 0%o", chaos_csr);
+	print_csr_bits(chaos_csr);
 	printf("\n");
 
 	if (send_fake) {
@@ -280,8 +365,17 @@ chaos_poll_from_chaosd(void)
 	struct pollfd pfd[1];
 	int nfds, timeout;
 
-	if (chaos_rcv_buffer_size > 0)
+	if (chaos_rcv_buffer_size > 0) {
+#if 0
+	  printf("chaos: Polling, but unread data exists (RDN=%o)\n",
+		 chaos_csr & CHAOS_CSR_RECEIVE_DONE);
+#endif
 		return 0;
+	}
+
+	if (chaos_fd == 0) {
+		return 0;
+	}
 
 	timeout = 0;
 	nfds = 1;
@@ -290,8 +384,13 @@ chaos_poll_from_chaosd(void)
 	pfd[0].revents = 0;
 
 	ret = poll(pfd, nfds, timeout);
-	if (ret < 0)
+	if (ret < 0) {
+#if 1
+	  printf("chaos: Polling, nothing there (RDN=%o)\n",
+		 chaos_csr & CHAOS_CSR_RECEIVE_DONE);
+#endif
 		return -1;
+	}
 
 	if (ret > 0) {
 		u_char lenbytes[4];
@@ -299,7 +398,10 @@ chaos_poll_from_chaosd(void)
 
 		ret = read(chaos_fd, lenbytes, 4);
 		if (ret <= 0) {
-			perror("chaos read");
+			perror("chaos: header read error");
+
+			close(chaos_fd);
+			chaos_fd = 0;
 			return -1;
 		}
 
@@ -307,7 +409,7 @@ chaos_poll_from_chaosd(void)
 
 		ret = read(chaos_fd, (char *)chaos_rcv_buffer, len);
 		if (ret < 0) {
-			perror("chaos read");
+			perror("chaos: read");
 			return -1;
 		}
 
@@ -316,17 +418,19 @@ chaos_poll_from_chaosd(void)
 			return -1;
 		}
 
-		printf("polling; got chaosd packet %d\n", ret);
+#if 1
+		printf("chaos: polling; got chaosd packet %d\n", ret);
+#endif
 
 		chaos_rcv_buffer_size = (ret+1)/2;
 		chaos_rcv_buffer_empty = 0;
 
-#if 0
+#if 1
 		printf("rx to %o, my %o\n",
 		       chaos_rcv_buffer[chaos_rcv_buffer_size-3], chaos_addr);
-		printf("   from %o, crc %o\n",
-		       chaos_rcv_buffer[chaos_rcv_buffer_size-2],
-		       chaos_rcv_buffer[chaos_rcv_buffer_size-1]);
+//		printf("   from %o, crc %o\n",
+//		       chaos_rcv_buffer[chaos_rcv_buffer_size-2],
+//		       chaos_rcv_buffer[chaos_rcv_buffer_size-1]);
 #endif
 
 		if (chaos_rcv_buffer[chaos_rcv_buffer_size-3] != chaos_addr) {
@@ -342,16 +446,49 @@ chaos_poll_from_chaosd(void)
 }
 
 int
-chaos_sent_to_chaosd(char *buffer, int size)
+chaos_send_to_chaosd(char *buffer, int size)
 {
-	int ret;
+	int ret, wcount;
+
+	/* local loopback */
+	if (chaos_csr & CHAOS_CSR_LOOP_BACK) {
+
+		printf("chaos: loopback %d bytes\n", size);
+		memcpy(chaos_rcv_buffer, buffer, size);
+
+		chaos_rcv_buffer_size = (size+1)/2;
+		chaos_rcv_buffer_empty = 0;
+
+		chaos_rx_pkt();
+
+		return 0;
+	}
+
+	wcount = (size+1)/2;
+
+#if 1
+	printf("chaos: -3 = %o, chaos_addr=%o, size %d, wcount %d\n", 
+	       ((u_short *)buffer)[wcount-3], chaos_addr, size, wcount);
+#endif
+
+	/* recieve packets address to ourselves */
+	if ( ((u_short *)buffer)[wcount-3] == chaos_addr) {
+		memcpy(chaos_rcv_buffer, buffer, size);
+
+		chaos_rcv_buffer_size = (size+1)/2;
+		chaos_rcv_buffer_empty = 0;
+
+		chaos_rx_pkt();
+	}
+
+	/* chaosd server */
 	if (chaos_fd) {
 		struct iovec iov[2];
 		unsigned char lenbytes[4];
 
 		lenbytes[0] = size >> 8;
 		lenbytes[1] = size;
-		lenbytes[2] = 0;
+		lenbytes[2] = 1;
 		lenbytes[3] = 0;
 
 		iov[0].iov_base = lenbytes;
@@ -366,6 +503,7 @@ chaos_sent_to_chaosd(char *buffer, int size)
 			return -1;
 		}
 	}
+
 	return 0;
 }
 

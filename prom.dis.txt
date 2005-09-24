@@ -121,15 +121,18 @@ GO
 167 4200132000440343 (jump) a=2 m=PDL[Pointer], pop pc 44, !next !jump M-src = A-src 
 170 4600101400070005 (byte) a=2 m=m[3] dpb pos=5, width=1 -><none>,m[1] 
 171 4600101460030002 (byte) a=2 m=m[3] dpb pos=2, width=1 ->MD ,m[0] 
+CLEAR-M-MEMORY
 172 4000140400050310 (alu) M+A [ADD] a=3 m=1 m[1] C=0 alu-> -><none>,m[1] 
 173 0600100434030216 (byte) a=2 m=m[1] dpb pos=16, width=5 ->OA-reg-lo ,m[0] 
 174 4000001000010030 (alu) SETM a=0 m=2 m[2] C=0 alu-> -><none>,m[0] 
 175 0200065001720343 (jump) a=1 m=MD pc 172, !next !jump M-src = A-src 
 176 4600101400070005 (byte) a=2 m=m[3] dpb pos=5, width=1 -><none>,m[1] 
+CLEAR-A-MEMORY
 177 4600100434030456 (byte) a=2 m=m[1] dpb pos=16, width=12 ->OA-reg-lo ,m[0] 
 200 0000001200010030 (alu) SETM a=0 m=2 m[2] C=0 alu-> ->a_mem[0] 
 201 4000100400050314 (alu) M+A [ADD] a=2 m=1 m[1] C=1 alu-> -><none>,m[1] 
 202 4200000401770326 (jump) a=0 m=m[1] pc 177, !next !jump m-rot<< 22
+MAKE-CONSTANTS
 203 0600101602030000 (byte) a=2 m=m[3] dpb pos=0, width=1 ->a_mem[40] 
 204 0600101602070001 (byte) a=2 m=m[3] dpb pos=1, width=1 ->a_mem[41] 
 205 0600101602130040 (byte) a=2 m=m[3] dpb pos=0, width=2 ->a_mem[42] 
@@ -147,6 +150,7 @@ GO
 221 4602501602530551 (byte) a=52 m=m[3] dpb pos=11, width=14 ->a_mem[52] 
 222 0602501602530027 (byte) a=52 m=m[3] dpb pos=27, width=1 ->a_mem[52] 
 223 4600101430230012 (byte) a=2 m=m[3] dpb pos=12, width=1 ->PDL ptr ,m[4] 
+CLEAR-PDL-BUFFER
 224 4000001022010030 (alu) SETM a=0 m=2 m[2] C=0 alu-> ->PDL[ptr],push ,m[0] 
 225 4000142000210310 (alu) M+A [ADD] a=3 m=4 m[4] C=0 alu-> -><none>,m[4] 
 226 0200102002240343 (jump) a=2 m=m[4] pc 224, !next !jump M-src = A-src 
@@ -156,6 +160,7 @@ CLEAR-SPC-MEMORY
 231 4000142000210310 (alu) M+A [ADD] a=3 m=4 m[4] C=0 alu-> -><none>,m[4] 
 232 0200102002300343 (jump) a=2 m=m[4] pc 230, !next !jump M-src = A-src 
 233 0000000060010000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> ->MD ,m[0] 
+CLEAR-LEVEL-1-MAP
 234 0600101446270032 (byte) a=2 m=m[3] dpb pos=32, width=1 ->VMA,write-map ,m[5] 
 235 0002425060010310 (alu) M+A [ADD] a=50 m=52 MD C=0 alu-> ->MD ,m[0] 
 236 0200025002340310 (jump) a=0 m=MD pc 234, !next !jump m-rot<< 8
@@ -167,28 +172,34 @@ CLEAR-LEVEL-2-MAP
 243 0002365060010310 (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0] 
 244 0200025002400310 (jump) a=0 m=MD pc 240, !next !jump m-rot<< 8
 245 4000000060210000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> ->MD ,m[4] 
+CLEAR-I-MEMORY
 246 4600125034030654 (byte) a=2 m=MD dpb pos=14, width=16 ->OA-reg-lo ,m[0] 
 247 4200202000001647 (jump) a=4 m=m[4] pc 0, R P !next jump-always 
 250 4002025060010310 (alu) M+A [ADD] a=40 m=52 MD C=0 alu-> ->MD ,m[0] 
 251 4200025002460322 (jump) a=0 m=MD pc 246, !next !jump m-rot<< 18
 252 4600101460230021 (byte) a=2 m=m[3] dpb pos=21, width=1 ->MD ,m[4] 
+CLEAR-D-MEMORY
 253 0600125034030514 (byte) a=2 m=MD dpb pos=14, width=13 ->OA-reg-lo ,m[0] 
 254 5400200000004000 (dispatch) disp const 4, disp addr 0, map 0, len 0, rot 0 
 255 4002025060010310 (alu) M+A [ADD] a=40 m=52 MD C=0 alu-> ->MD ,m[0] 
 256 4200025002530325 (jump) a=0 m=MD pc 253, !next !jump m-rot<< 21
+FUDGE-INITIAL-DISK-PARAMETERS
 257 4002100202710050 (alu) SETA a=42 m=0 m[0] C=0 alu-> ->a_mem[56] 
 260 0002100202750050 (alu) SETA a=42 m=0 m[0] C=0 alu-> ->a_mem[57] 
 261 0600101404030034 (byte) a=2 m=m[3] dpb pos=34, width=1 ->IC ,m[0] 
 262 0002300000210050 (alu) SETA a=46 m=0 m[0] C=0 alu-> -><none>,m[4] 
+RST
 263 4200102002630143 (jump) a=2 m=m[4] pc 263, !jump M-src = A-src 
 264 4002002000210264 (alu) M-A-1 [M-A-1] a=40 m=4 m[4] C=1 alu-> -><none>,m[4] 
 265 4600101404030033 (byte) a=2 m=m[3] dpb pos=33, width=1 ->IC ,m[0] 
+SET-UP-THE-MAP
 266 0000000060010000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> ->MD ,m[0] 
 267 0600101446030032 (byte) a=2 m=m[3] dpb pos=32, width=1 ->VMA,write-map ,m[0] 
 270 0000000000010000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> -><none>,m[0] 
 271 0000024400210030 (alu) SETM a=0 m=51 MAP[MD] C=0 alu-> -><none>,m[4] 
 272 0600102000250210 (byte) a=2 m=m[4] ldb pos=10, width=5 -><none>,m[5] 
 273 0200102400220343 (jump) a=2 m=m[5] pc 22, !next !jump M-src = A-src 
+SET-UP-FOUR-PAGES
 274 4600101446230166 (byte) a=2 m=m[3] dpb pos=26, width=4 ->VMA,write-map ,m[4] 
 275 4600201400270400 (byte) a=4 m=m[3] dpb pos=0, width=11 -><none>,m[5] 
 276 0002340060010050 (alu) SETA a=47 m=0 m[0] C=0 alu-> ->MD ,m[0] 
@@ -201,6 +212,7 @@ CLEAR-LEVEL-2-MAP
 305 4600201446030000 (byte) a=4 m=m[3] dpb pos=0, width=1 ->VMA,write-map ,m[0] 
 306 0000000000010000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> -><none>,m[0] 
 307 4000000040010170 (alu) SETO a=0 m=0 m[0] C=0 alu-> ->VMA ,m[0] 
+PAGE-0-PARITY-FIX
 310 0002024042010310 (alu) M+A [ADD] a=40 m=50 VMA C=0 alu-> ->VMA,start-read ,m[0] 
 311 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 312 0000025064010030 (alu) SETM a=0 m=52 MD C=0 alu-> ->MD,start-write ,m[0] 

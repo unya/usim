@@ -189,14 +189,18 @@ void
 _swaplongbytes(unsigned int *buf)
 {
 	int i;
-#if 0
+#if 1
 	unsigned char *p = (unsigned char *)buf;
 
 	for (i = 0; i < 256*4; i += 4) {
-		unsigned char t;
+		unsigned char t, u, v;
 		t = p[i];
-		p[i] = p[i+1];
-		p[i+1] = t;
+		u = p[i+1];
+		v = p[i+2];
+		p[i] = p[i+3];
+		p[i+1] = v;
+		p[i+2] = u;
+		p[i+3] = t;
 	}
 #endif
 #if 0
@@ -204,7 +208,7 @@ _swaplongbytes(unsigned int *buf)
 		buf[i] = ntohl(buf[i]);
 	}
 #endif
-#if 1
+#if 0
 	unsigned short *p = (unsigned short *)buf;
 
 	for (i = 0; i < 256*2; i += 2) {
@@ -246,12 +250,10 @@ _disk_read(int block_no, unsigned int *buffer)
 		return -1;
 	}
 
-#if 0
 	/* byte order fixups? */
 	if (disk_byteswap) {
 		_swaplongbytes((unsigned int *)buffer);
 	}
-#endif
 
 	return 0;
 }
@@ -275,12 +277,10 @@ _disk_write(int block_no, unsigned int *buffer)
 
 	size = 256*4;
 
-#if 0
 	/* byte order fixups? */
 	if (disk_byteswap) {
 		_swaplongbytes((unsigned int *)buffer);
 	}
-#endif
 
 	ret = write(disk_fd, buffer, size);
 	if (ret != size) {
@@ -466,14 +466,12 @@ disk_start_read(void)
 
 		disk_read_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
 
-//		disk_incr_block();
-			
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");
 			break;
 		}
 
-disk_incr_block();
+		disk_incr_block();
 
 		disk_clp++;
 	}
@@ -671,6 +669,10 @@ int
 disk_init(char *filename)
 {
 	unsigned int label[256];
+
+#ifdef __BIG_ENDIAN__
+	disk_set_byteswap(1);
+#endif
 
 	disk_fd = open(filename, O_RDWR);
 	if (disk_fd < 0) {
