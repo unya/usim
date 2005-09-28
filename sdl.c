@@ -101,12 +101,43 @@ sdl_system_shutdown_request(void)
 	exit(0);
 }
 
+int u_minh = 0x7fffffff, u_maxh, u_minv = 0x7fffffff, u_maxv;
+
+void
+accumulate_update(int h, int v, int hs, int vs)
+{
+	if (h < u_minh) u_minh = h;
+	if (h+hs > u_maxh) u_maxh = h+hs;
+	if (v < u_minv) u_minv = v;
+	if (v+vs > u_maxv) u_maxv = v+vs;
+}
+
+void
+send_accumulated_updates(void)
+{
+	int hs, vs;
+
+	hs = u_maxh - u_minh;
+	vs = u_maxv - u_minv;
+	if (u_minh != 0x7fffffff && u_minv != 0x7fffffff && u_maxh && u_maxv)
+		SDL_UpdateRect(screen, u_minh, u_minv, hs, vs);
+
+	u_minh = 0x7fffffff;
+	u_maxh = 0;
+	u_minv = 0x7fffffff;
+	u_maxv = 0;
+}
+
 void
 sdl_refresh(void)
 {
 	SDL_Event ev1, *ev = &ev1;
 	int mod_state;
 	int keysym;
+
+#if 1
+	send_accumulated_updates();
+#endif
 
 	while (SDL_PollEvent(ev)) {
 
@@ -327,7 +358,11 @@ video_write(int offset, unsigned int bits)
 			bits >>= 1;
 		}
 
+#if 0
 		SDL_UpdateRect(screen, h, v, 32, 1);
+#else
+		accumulate_update(h, v, 32, 1);
+#endif
 	}
 }
 

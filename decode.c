@@ -351,7 +351,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 		disp_cont = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 
-		if ((u >> 25) & 1) printf("N+1 ");
+		if ((u >> 25) & 1) printf("!N+1 ");
 		if ((u >> 24) & 1) printf("ISH ");
 		disp_addr = (u >> 12) & 03777;
 		map = (u >> 8) & 3;

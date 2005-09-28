@@ -16,6 +16,7 @@
 
 int show_video_flag;
 int alt_prom_flag;
+int dump_state_flag;
 
 struct timeval tv1;
 
@@ -67,9 +68,21 @@ sigint_handler(int arg)
 }
 
 void
+sighup_handler(int arg)
+{
+//	char *b = "XMMUL";
+	char *b = "FMPY";
+	extern int trace_late_set;
+	breakpoint_set_mcr(b);
+	printf("set breakpoint in %s\n", b);
+	trace_late_set = 1;
+}
+
+void
 signal_init(void)
 {
 	signal(SIGINT, sigint_handler);
+	signal(SIGHUP, sighup_handler);
 }
 
 void
@@ -83,7 +96,27 @@ signal_shutdown(void)
 void
 usage(void)
 {
-	printf("usage:\n");
+	fprintf(stderr, "usage:\n");
+	fprintf(stderr, "-a		use alternate prom file\n");
+	fprintf(stderr, "-b <sym-name>	set breakpoint in microcode\n");
+	fprintf(stderr, "-c <number>	set max # of microcode cycles to run\n");
+	fprintf(stderr, "-C <number>	set max # of traced microcode cycles to run\n");
+	fprintf(stderr, "-l <sym-name>	start tracing at symbol\n");
+	fprintf(stderr, "-n		run with no SDL video window\n");
+	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
+	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
+	fprintf(stderr, "-t		turn on microcode tracing\n");
+	fprintf(stderr, "-T<flags>	turn on tracing\n");
+	fprintf(stderr, "   d - disk\n");
+	fprintf(stderr, "   i - interrupts\n");
+	fprintf(stderr, "   o - i/o\n");
+	fprintf(stderr, "   p - prom\n");
+	fprintf(stderr, "   c - microcode\n");
+	fprintf(stderr, "   m - microcode labels\n");
+	fprintf(stderr, "   l - lod labels\n");
+	fprintf(stderr, "-s		halt after prom runs\n");
+	fprintf(stderr, "-w		warm boot\n");
+
 	exit(1);
 }
 
@@ -99,7 +132,7 @@ main(int argc, char *argv[])
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:c:C:l:np:q:tT:sw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:c:dC:l:np:q:tT:sw")) != -1) {
 		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
@@ -112,6 +145,9 @@ main(int argc, char *argv[])
 			break;
 		case 'C':
 			max_trace_cycles = atol(optarg);
+			break;
+		case 'd':
+			dump_state_flag = 1;
 			break;
 		case 'l':
 			tracelabel_set_mcr(optarg);

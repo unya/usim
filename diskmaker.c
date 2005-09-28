@@ -357,7 +357,7 @@ main(int argc, char *argv[])
 	int fd;
 
 	use_lod2 = 0;
-//	use_lod2 = 0;
+//	use_lod2 = 1;
 
 	img_filename = strdup("disk.img");
 	mcr_filename = strdup("ucadr.mcr.841");
@@ -369,11 +369,13 @@ main(int argc, char *argv[])
 #endif
 
 #if 0
+	use_lod2 = 1;
 	mcr_filename = strdup("ucadr.mcr.979");
 	lod1_filename = strdup("partition-sys210.lod2");
 #endif
 
 #if 0
+	use_lod2 = 1;
 	mcr_filename = strdup("ucadr.mcr.896");
 	lod1_filename = strdup("partition-sys210.lod2");
 #endif

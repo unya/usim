@@ -62,6 +62,7 @@ int prom_enabled_flag;
 int run_ucode_flag;
 int stop_after_prom_flag;
 int warm_boot_flag;
+int dump_state_flag;
 
 unsigned int md;
 unsigned int vma;
@@ -94,6 +95,7 @@ int trace_io_flag;
 int trace_vm_flag;
 int trace_disk_flag;
 int trace_int_flag;
+int trace_late_set;
 
 int macro_pc_incrs;
 
@@ -455,6 +457,23 @@ if ((vaddr & 077700000) == 077200000) {
 	return 0;
 }
 
+int
+read_mem_debug(int vaddr, unsigned int *pv)
+{
+	int save_access_fault_bit = access_fault_bit;
+	int save_write_fault_bit = write_fault_bit;
+	int save_page_fault_flag = page_fault_flag;
+
+	read_mem(vaddr, pv);
+
+	access_fault_bit = save_access_fault_bit;
+	write_fault_bit = save_write_fault_bit;
+	page_fault_flag = save_page_fault_flag;
+
+	return 0;
+}
+
+
 /*
  * write virtual memory
  */
@@ -747,12 +766,13 @@ pop_spc(void)
 inline void
 advance_lc(int *ppc)
 {
-	int old_lc = lc & 077777777;
+	/* lc is 26 bits */
+	int old_lc = lc & 0377777777;
 	unsigned int v;
 
 	tracef("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
 	       lc_byte_mode_flag, lc,
-	       ((lc >> 30) & 1) ? 1 : 0);
+	       ((lc >> 31) & 1) ? 1 : 0);
 
 	if (lc_byte_mode_flag) {
 		/* byte mode */
@@ -842,9 +862,9 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 
 	switch (dest >> 5) {
 		/* case 0: none */
-	case 1: /* LC (location counter) */
+	case 1: /* LC (location counter) 26 bits */
 		tracef("writing LC <- %o\n", out_bus);
-		lc = (lc & ~077777777) | (out_bus & 077777777);
+		lc = (lc & ~0377777777) | (out_bus & 0377777777);
 
 		if (lc_byte_mode_flag) {
 			/* not sure about byte mode... */
@@ -1146,6 +1166,13 @@ show_pc_history(void)
 		       pc_history[pc_history_ptr].rpdl);
 		       
 		printf("\n");
+
+#if 1
+		{
+			ucw_t u = ucode[pc];
+			disassemble_ucode_loc(pc, u);
+		}
+#endif
 
 		pc_history_ptr++;
 		if (pc_history_ptr == MAX_PC_HISTORY)
@@ -1513,6 +1540,33 @@ set_breakpoints(int *ptrace_pt_prom, int *ptrace_pt, int *ptrace_pt_count, int *
 	return 0;
 }
 
+int
+set_late_breakpoint(int *ptrace_pt, int *ptrace_pt_count)
+{
+	if (breakpoint_name_mcr) {
+		if (sym_find(1, breakpoint_name_mcr, ptrace_pt)) {
+			if (isdigit(breakpoint_name_mcr[0])) {
+				sscanf(breakpoint_name_mcr, "%o", ptrace_pt);
+			} else {
+				fprintf(stderr,
+					"can't find mcr breakpoint '%s'\n",
+					breakpoint_name_mcr);
+				return -1;
+			}
+		}
+		printf("breakpoint [mcr]: %s %o\n",
+		       breakpoint_name_mcr, *ptrace_pt);
+
+		*ptrace_pt_count = 1;
+	}
+
+	if (breakpoint_count) {
+		*ptrace_pt_count = breakpoint_count;
+	}
+
+	return 0;
+}
+
 void
 show_label_closest(unsigned int upc)
 {
@@ -1672,6 +1726,11 @@ run(void)
 #ifdef STAT_PC_HISTORY
 		record_pc_history(p0_pc, vma, md);
 #endif
+
+		if (trace_late_set) {
+			set_late_breakpoint(&trace_pt, &trace_pt_count);
+			trace_late_set = 0;
+		}
 
 		/* see if we hit a label trace point */
 		if (trace_label_pt && p0_pc == trace_label_pt) {
@@ -2467,6 +2526,7 @@ run(void)
 				advance_lc((int *)0);
 			}
 
+			/* fall-through on dispatch */ 
 			if (p_bit && r_bit) {
 				if (n_bit)
 					no_exec_next = 1;
@@ -2610,5 +2670,7 @@ run(void)
 
 	timing_stop();
 
-	dump_state();
+	if (dump_state_flag) {
+		dump_state();
+	}
 }
