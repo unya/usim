@@ -71,7 +71,8 @@ void
 sighup_handler(int arg)
 {
 //	char *b = "XMMUL";
-	char *b = "FMPY";
+//	char *b = "FMPY";
+	char *b = "MPY";
 	extern int trace_late_set;
 	breakpoint_set_mcr(b);
 	printf("set breakpoint in %s\n", b);
@@ -128,7 +129,7 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.4\n");
+	printf("CADR emulator v0.5\n");
 
 	show_video_flag = 1;
 

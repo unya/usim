@@ -1675,7 +1675,7 @@ run(void)
 
 		if ((cycles & 0x0fff) == 0) {
 			display_poll();
-			chaos_poll_from_chaosd();
+			chaos_poll();
 		}
 
 #define FETCH()	(prom_enabled_flag ? prom_ucode[u_pc] : ucode[u_pc])
@@ -1753,12 +1753,18 @@ run(void)
 
 		if (trace_pt && p0_pc == trace_pt && trace == 0 && prom_enabled_flag == 0) {
 
+#if 0
 			if (trace_pt_count) {
 				if (--trace_pt_count == 0)
 					trace = 1;
 			} else {
 				trace = 1;
 			}
+#else
+/* debug mpy */
+			if (a_memory[022] == 0xffffffff && q == 01234)
+				trace = 1;
+#endif
 
 			if (trace)
 				printf("trace on\n");
@@ -2155,14 +2161,24 @@ run(void)
 					/* ADD if Q<0>=1, else SETM */
 					do_add = q & 1;
 					if (do_add) {
-						lv = a_src_value +
+#if 0
+						lv = (long long)a_src_value +
 							m_src_value +
 							(carry_in ? 1 : 0);
 						alu_out = lv;
 						alu_carry = (lv >> 32) ? 1 : 0;
+#else
+						/* this is faster */
+						alu_out = a_src_value +
+							m_src_value +
+							(carry_in ? 1 : 0);
+						alu_carry = carry_in ?
+						  (a_src_value >= ~m_src_value ? 0:1) :
+						  (a_src_value > ~m_src_value ? 0:1);
+#endif
 					} else {
 						alu_out = m_src_value;
-						alu_carry = 0;
+						alu_carry = alu_out & 0x80000000 ? 1 : 0;
 					}
 					break;
 				case 1: /* divide step */
@@ -2255,8 +2271,19 @@ run(void)
 				break;
 			case 1: out_bus = alu_out;
 				break;
-			case 2: out_bus = (alu_out >> 1) | 
+			case 2:
+#if 0
+				out_bus = (alu_out >> 1) | 
 					(alu_out & 0x80000000);
+#else
+				/*
+				 * "ALU output shifted right one, with
+				 * the correct sign shifted in,
+				 * regardless of overflow."
+				 */
+				out_bus = (alu_out >> 1) |
+					(alu_carry ? 0x80000000 : 0);
+#endif
 				break;
 			case 3: out_bus = (alu_out << 1) | 
 					((old_q & 0x80000000) ? 1 : 0);

@@ -344,7 +344,7 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0144:
 		*pv = chaos_get_rcv_buffer();
-		printf/*traceio*/("unibus: chaos read rcv buffer %06o\n", *pv);
+		traceio("unibus: chaos read rcv buffer %06o\n", *pv);
 		break;
 	case 0146:
 		*pv = chaos_get_bit_count();
@@ -400,7 +400,8 @@ iob_unibus_write(int offset, int v)
 		chaos_set_csr(v);
 		break;
 	case 0142:
-		printf/*traceio*/("unibus: chaos write-buffer write %011o, u_pc %011o\n", v, u_pc);
+		traceio("unibus: chaos write-buffer write %011o, u_pc %011o\n",
+			v, u_pc);
 		chaos_put_xmit_buffer(v);
 		break;
 	default:

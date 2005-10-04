@@ -15,11 +15,20 @@
 
 extern int run_ucode_flag;
 
-static SDL_Surface *screen;
-static int video_width = 768;
-static int video_height = 1024;
+#ifndef VIDEO_HEIGHT
+# define VIDEO_HEIGHT 896 /* 1024 */
+#endif
+#ifndef VIDEO_WIDTH
+# define VIDEO_WIDTH 768
+#endif
 
-unsigned int tv_bitmap[(768 * 1024) / 32];
+
+static SDL_Surface *screen;
+static int video_width = VIDEO_WIDTH;
+static int video_height = VIDEO_HEIGHT;
+
+#define MAX_BITMAP_OFFSET	((VIDEO_WIDTH * VIDEO_HEIGHT) / 32)
+unsigned int tv_bitmap[MAX_BITMAP_OFFSET];
 
 typedef struct DisplayState {
     unsigned char *data;
@@ -270,7 +279,9 @@ void
 video_read(int offset, unsigned int *pv)
 {
 	*pv = 0;
-	if (offset < (768*1024)/32)
+
+	/* the real h/w has memory for 768x1024 */
+	if (offset < MAX_BITMAP_OFFSET)
 		*pv = tv_bitmap[offset];
 #if 0
 	if (screen) {
