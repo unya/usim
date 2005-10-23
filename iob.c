@@ -312,7 +312,8 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0106:
 		traceio("unibus: mouse x\n");
-		 *pv = (mouse_rawx << 12) | (mouse_rawy << 14) | (mouse_x & 07777); 
+		 *pv = (mouse_rawx << 12) | (mouse_rawy << 14) |
+			 (mouse_x & 07777); 
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
@@ -350,9 +351,15 @@ iob_unibus_read(int offset, int *pv)
 		*pv = chaos_get_bit_count();
 		printf/*traceio*/("unibus: chaos read bit-count 0%o\n", *pv);
 		break;
+	case 0152:
+		*pv = chaos_get_addr();
+		printf/*traceio*/("unibus: chaos read xmt => %o\n", *pv);
+		chaos_xmit_pkt();
+		break;
 	default:
 		if (offset > 0140 && offset <= 0153)
-			printf/*traceio*/("unibus: chaos read other %o\n", offset);
+			printf/*traceio*/("unibus: chaos read other %o\n",
+					  offset);
 		chaos_xmit_pkt();
 		break;
 	}
@@ -466,12 +473,14 @@ iob_sdl_key_event(int code, int extra)
 		iob_key_scan = 44 | (3 << 8); /* help */
 		break;
 	case SDLK_F6:
+	case SDLK_END:
 		iob_key_scan = 50 | (3 << 8); /* end */
 		break;
 	case SDLK_F7:
 		iob_key_scan = 16; /* call */
 		break;
 	case SDLK_F12:
+	case SDLK_BREAK:
 		iob_key_scan = 0; /* break */
 		break;
 	case SDLK_BACKSPACE:
@@ -503,6 +512,9 @@ iob_sdl_key_event(int code, int extra)
 	}
 #if 1   /* This is also for Fx, Bsp, Del */
 	iob_key_scan |= extra & ~(3 << 6);	     /* keep C/M bits, Shift in scancode tbl */
+	/* but if Control/Meta, add in Shift */
+	if (extra & (17 << 10))
+	  iob_key_scan |= extra;
 # if 0
 	printf("code 0%o, extra 0%o, scan 0%o\n", code, extra, iob_key_scan);
 # endif
@@ -561,6 +573,8 @@ int
 tv_xbus_write(int offset, unsigned int v)
 {
 	if (0) printf("tv register write, offset %o, v %o\n", offset, v);
+	if ((tv_csr & 4) != (v & 4))
+		sdl_set_bow_mode((v & 4)>>2);
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);
 	deassert_xbus_interrupt();

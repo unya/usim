@@ -92,6 +92,34 @@ chaos csr
 #define	CHAOS_CSR_CRC_ERROR		(1<<14)
 #define	CHAOS_CSR_RECEIVE_DONE		(1<<15)
 
+static unsigned int
+ch_checksum(const unsigned char *addr, int count)
+{
+	/*
+	 * RFC1071
+	 * Compute Internet Checksum for "count" bytes
+	 *         beginning at location "addr".
+	 */
+	register long sum = 0;
+
+	while( count > 1 )  {
+		/*  This is the inner loop */
+		sum += *(addr)<<8 | *(addr+1);
+		addr += 2;
+		count -= 2;
+	}
+
+	/*  Add left-over byte, if any */
+	if( count > 0 )
+		sum += * (unsigned char *) addr;
+
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+
+	return (~sum) & 0xffff;
+}
+
 void
 chaos_rx_pkt(void)
 {
@@ -140,12 +168,15 @@ chaos_xmit_pkt(void)
 
 	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
 
-	/* dest */
-	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0;
-	/* source */
-	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0;
-	/* checksum (don't up size) */
-	chaos_xmit_buffer[chaos_xmit_buffer_size] = 0;
+	/* Dest is already in the buffer */
+//	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0;/* dest */
+
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] =	/* source */
+		chaos_addr;
+
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] =	/* checksum */
+		ch_checksum((u_char *)chaos_xmit_buffer,
+			    chaos_xmit_buffer_size*2);
 
 	chaos_send_to_chaosd((char *)chaos_xmit_buffer,
 			     chaos_xmit_buffer_size*2);
@@ -168,10 +199,10 @@ chaos_xmit_pkt(void)
 int
 chaos_get_bit_count(void)
 {
-  if (chaos_rcv_buffer_size > 0)
-	return chaos_bit_count;
-  else
-    return 07777;
+	if (chaos_rcv_buffer_size > 0)
+		return chaos_bit_count;
+	else
+		return 07777;
 }
 
 int
@@ -292,17 +323,17 @@ chaos_set_csr(int v)
 	}
 
 	if (v & CHAOS_CSR_RECEIVER_CLEAR) {
-	  chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
-	  chaos_lost_count = 0;
-	  chaos_bit_count = 0;
-	  chaos_rcv_buffer_ptr = 0;
-	  chaos_rcv_buffer_size = 0;
+		chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
+		chaos_lost_count = 0;
+		chaos_bit_count = 0;
+		chaos_rcv_buffer_ptr = 0;
+		chaos_rcv_buffer_size = 0;
 	}
 
-	if (v & CHAOS_CSR_TRANSMITTER_CLEAR) {
-	  chaos_csr &= ~CHAOS_CSR_TRANSMIT_ABORT;
-	  chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-	  chaos_xmit_buffer_ptr = 0;
+	if (v & (CHAOS_CSR_TRANSMITTER_CLEAR | CHAOS_CSR_TRANSMIT_DONE)) {
+		chaos_csr &= ~CHAOS_CSR_TRANSMIT_ABORT;
+		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+		chaos_xmit_buffer_ptr = 0;
 	}
 
 	if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
@@ -330,6 +361,7 @@ chaos_set_csr(int v)
 		chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
 #endif
 	}
+
 	printf(" New csr 0%o", chaos_csr);
 	print_csr_bits(chaos_csr);
 	printf("\n");

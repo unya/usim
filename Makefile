@@ -3,20 +3,24 @@
 # $Id$
 #
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c sdl.c
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c sdl.c \
+	   lashup.c
+
 USIM_HDR = ucode.h config.h
 
+#DEFINES=-DLASHUP
+
 # Mac OSX
+#USIM_LIBS = -framework SDL -lpthread
+#CFLAGS = -O3 -fomit-frame-pointer -framework Cocoa $(DEFINES)
+
+# Linux
 #USIM_LIBS = -lSDLmain -lSDL -lpthread -lobjc
 USIM_LIBS = -lSDL -lpthread
-
-#CFLAGS = -O -pg -g -fprofile-arcs
 #CFLAGS = -g
+#CFLAGS = -O -pg -g -fprofile-arcs
+CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 
-# Mac OSX
-#CFLAGS = -O3 -fomit-frame-pointer -framework Cocoa
-#CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686
-CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g
 
 all: usim readmcr diskmaker lod
 

@@ -1,12 +1,12 @@
 CADR simulator
-10/21/04
+10/17/05
 Brad Parker
 brad@heeltoe.com
 
 What is this?
 -------------
 
-This is a simple hack designed to emulate the CADR microprocessor
+This is a program designed to emulate the MIT CADR microprocessor
 hardware.  A CADR is a second generation MIT lisp machine.  A good
 description can be found in "A.I. Memo 528" from the MIT AI Labs
 entitled, "CADR".
@@ -18,17 +18,23 @@ This program attempts to interpret the microcode found in the machine
 starting with the "prom" microcode which runs when the machine is
 first powered on.
 
+There is sufficient hardware support for the disk and network to
+provide a reasonaly functional lisp machine experience.
+
+
 What state is this in?
 ----------------------
 
 It boots a world!
+It talks on the network!
+It talks to a FILE server!
 
-The emulation is about 90% done.  It gets through the prom code, loads
-the microcode band, copies the band to swap and executes the load band
-cleanly.
+The emulation is reasonably complete (modulo bugs).  It gets through the
+prom code, loads the microcode band, copies the band to swap and
+executes the load band cleanly.  The system boots and runs.
 
-It displays an X windows and tracks the mouse and keyboard.  The
-simplest way to run it is
+The console display is drawn into an X window (using SDL) which tracks
+the mouse and keyboard.  The simplest way to run it is
 
 	./usim
 
@@ -36,7 +42,8 @@ If you want to see a trace of macrocode function names try:
 
 	./usim -n -Tl >output
 
-If you want to see a raw voluminous trace of every microcode instruction try:
+If you want to see a voluminous trace of every microcode instruction
+try:
 
 	./usim -n -t >output
 
@@ -48,39 +55,34 @@ The display board and iob are emulated.  An X window displays in
 monochrome at 768x1024.  The mouse and keyboard are tracked.  The
 keyboard is "mapped" to the old Knight keyboard.
 
-The internal microsecont clock and the 60hz tv interrupt currently try
+The internal microsecond clock and the 60hz tv interrupt currently try
 and use wall clock time for a more realistic simulation.
 
-There is basic emualtion of the chaosnet board.  Packets sent are
-looped back. (currently the lisp code is rejecting my packets because
-of a bad bit count; can't see why.  needs debugging)
-
-The basic machine emulator seems to be (mostly) correct.
+There is also emulation of the chaosnet board.  Packets are sent via a
+unix socket to a "chaosd" daemon which distributes them to various
+client programs (see the chaos directory).
 
 There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.  The two machine lash-up/debug interface is not (yet)
 supported.  I want to add this, however.
 
-I finally fixed the divide code.  Naturally the Q shift and the ALU
-shift (with a bit conditional on the Q sign) happen at the same time
-in the hardware (but not in the C code :-).
+I have fixed several ALU bugs and the emulation now seems much more
+stable.
 
-There's a long delay when booting, even though the world is running
-and system-x works fine.  I need to track this down - possibly waiting
-for a time packet?  The system is available right away, however, try
-"F2-p".
+There's still a long delay when booting, even though the world is
+running and system-x works fine.  I need to track this down - possibly
+waiting for a time packet?  The system is available right away,
+however, try "F2-p".
 
 What needs to be done?
 ----------------------
 
 - cleanup keyboard emulation
 - cleanup mouse emulation
-- cleanup chaosnet emulation
+- speed up the network emulation
 
-The keyboard mapping is a crock.  The mouse emulation works but
-doesn't track exactly.  The chaosnet emulation needs to be somehow
-made to work with 'real' ethernet.  I have a chaosnet implementation
-for linux so this should be doable.  Clearly we need a file server.
+The keyboard mapping is a bit of a crock.  The mouse emulation works
+but doesn't track exactly.
 
 f1	network
 f2	system
@@ -91,8 +93,7 @@ f6	end
 f7	call
 delete	rubout
 
-I need to make this programmable with a reasonable default.  Ok, I was
-in a hurry :-)
+I'd liketo make this programmable with a reasonable default.
 
 Long term I want to do some recompiling of the microcode into C and
 assembler, both statically and on-the-fly.  This is the interesting
@@ -122,14 +123,15 @@ George Carrette
 Steve Krueger
 Alastair Bridgewater
 John Wroclawski
+Bjorn Victor
 
 Without their support or encouragement I would probably not have done
 this.  Certainly if Al had not sent me the prom images I would never
 have started.  And without Dan's box-of-tapes I could never have
-succeeded.  RG offered good explainations when I was confused.  TK and
+succeeded.  RG offered some good explainations when I was confused.  TK and
 Howie were extremely supportive at the just right moment (and answered
 a lot of email).  George offered many good suggestions and answered
-lots of qustions. Steve helped me locate missing pages from "memo
-528". Alastair did some amazing work on several explorer emulators.
+lots of questions. Steve helped me locate missing pages from "memo
+528".  Alastair did some amazing work on several explorer emulators.
 And John's office is where I first saw a 3600 console and said,
 "what's that?".

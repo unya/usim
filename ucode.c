@@ -1669,6 +1669,9 @@ run(void)
 		}
 
 	next:
+#ifdef LASHUP
+		lashup_poll();
+#endif
 		iob_poll(cycles);
 
 		disk_poll();
@@ -1721,6 +1724,10 @@ run(void)
 			u |= (ucw_t)oa_reg_hi << 26;
 		}
 
+#ifdef LASHUP
+		lashup_start(&p0_pc, &p0, &p1_pc, &p1, &u_pc, &trace);
+#endif
+
 		/* ----------- trace ------------- */
 
 #ifdef STAT_PC_HISTORY
@@ -1753,18 +1760,12 @@ run(void)
 
 		if (trace_pt && p0_pc == trace_pt && trace == 0 && prom_enabled_flag == 0) {
 
-#if 0
 			if (trace_pt_count) {
 				if (--trace_pt_count == 0)
 					trace = 1;
 			} else {
 				trace = 1;
 			}
-#else
-/* debug mpy */
-			if (a_memory[022] == 0xffffffff && q == 01234)
-				trace = 1;
-#endif
 
 			if (trace)
 				printf("trace on\n");

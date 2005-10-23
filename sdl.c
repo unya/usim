@@ -6,6 +6,8 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 
 #include <SDL/SDL.h>
@@ -54,24 +56,29 @@ static void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
 	mod_state = SDL_GetModState();
 
 	extra = 0;
-	if (mod_state & (KMOD_LMETA | KMOD_RMETA))
-		extra |= 3 << 12;
+	if (mod_state & (KMOD_LMETA | KMOD_LALT))
+		extra |= 2 << 12;
+	if (mod_state & (KMOD_RMETA | KMOD_RALT))
+		extra |= 1 << 12;
 
-	if (mod_state & (KMOD_LALT | KMOD_RALT))
-		extra |= 3 << 12;
+	if (mod_state & KMOD_LSHIFT)
+		extra |= 2 << 6;
+	if (mod_state & KMOD_RSHIFT)
+		extra |= 1 << 6;
 
-	if (mod_state & (KMOD_LSHIFT | KMOD_RSHIFT))
-		extra |= 3 << 6;
-
-	if (mod_state & (KMOD_LCTRL | KMOD_RCTRL))
-		extra |= 3 << 10;
+	if (mod_state & KMOD_LCTRL)
+		extra |= 2 << 10;
+	if (mod_state & KMOD_RCTRL)
+		extra |= 1 << 10;
 
 	if (updown) {
 #if 0
-		printf("scancode %x, sym %x, mod %x, unicode %x\n",
+		printf("scancode %x, sym %x, mod %x, modstate %x, extra %x, unicode %x\n",
 		       ev->keysym.scancode,
 		       ev->keysym.sym,
 		       ev->keysym.mod,
+		       mod_state,
+		       extra,
 		       ev->keysym.unicode);
 #endif
 		iob_sdl_key_event(ev->keysym.sym, extra);
@@ -242,6 +249,34 @@ static void sdl_cleanup(void)
 #define COLOR_WHITE	0xff
 #define COLOR_BLACK	0
 
+char video_bow_mode = 1;	/* 1 => White on Black, 0 => Black on White */
+
+
+void
+sdl_set_bow_mode(char new_mode)
+{
+  unsigned char *p = screen->pixels;
+  int i, j;
+
+#if 1
+  printf("Setting Black-on-White mode: was %d, setting %d\n",
+	 video_bow_mode, new_mode);
+#endif
+  if (video_bow_mode == new_mode)
+    return;
+
+  /* Need to complement it */
+  video_bow_mode = new_mode;
+
+  for (i = 0; i < video_width; i++)
+    for (j = 0; j < video_height; j++) {
+      *p = ~*p;
+      p++;
+    }
+
+  SDL_UpdateRect(screen, 0, 0, video_width, video_height);
+}
+
 void
 sdl_setup_display(void)
 {
@@ -366,6 +401,8 @@ video_write(int offset, unsigned int bits)
 			ps[offset + i] =
 //				(bits & 1) ? COLOR_BLACK : COLOR_WHITE;
 				(bits & 1) ? COLOR_WHITE : COLOR_BLACK;
+			if (video_bow_mode == 0)
+			  ps[offset + i] ^= ~0;
 			bits >>= 1;
 		}
 

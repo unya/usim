@@ -129,7 +129,7 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.5\n");
+	printf("CADR emulator v0.6\n");
 
 	show_video_flag = 1;
 
