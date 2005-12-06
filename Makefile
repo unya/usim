@@ -5,9 +5,10 @@
 
 OS = LINUX
 #OS = OSX
+#OS = WIN32
 
-#DISPLAY = SDL
-DISPLAY = X11
+DISPLAY = SDL
+#DISPLAY = X11
 
 USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c
 USIM_HDR = ucode.h config.h
