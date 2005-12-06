@@ -10,11 +10,17 @@
 #include <stdio.h>
 #include <string.h>
 #include "ucode.h"
-
 #include <signal.h>
-#include <sys/time.h>
 
+#ifdef linux
+#include <sys/time.h>
+#endif
+
+#ifdef _WIN32
 #include <SDL/SDL_keysym.h>
+#else
+#include "SDL/SDL_keysym.h"
+#endif
 
 int iob_key_scan;
 int iob_kbd_csr;
@@ -140,7 +146,7 @@ unsigned char kb_old_table[64][3] = {
 	's',	'S',	'',
 	'd',	'D',	'',
 	'f',	'F',	'',
-	'g',	'G',	'',
+	'g',	'G',	'\032',
 	'h',	'H',	0206,	//h,H,HELP
 	'j',	'J',	'',
 	'k',	'K',	'',
@@ -209,8 +215,13 @@ csr - read
 */
 
 #define US_CLOCK_IS_WALL_CLOCK
+#ifdef linux
 #define USE_SIGVTARLM_FOR_60HZ
-//#define USE_US_CLOCK_FOR_60HZ
+#endif
+
+#ifdef _WIN32
+#define USE_US_CLOCK_FOR_60HZ
+#endif
 
 unsigned long
 get_us_clock()

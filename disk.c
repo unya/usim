@@ -9,7 +9,10 @@
 
 #include <stdio.h>
 #include <fcntl.h>
+
+#ifdef linux
 #include <unistd.h>
+#endif
 
 #include "ucode.h"
 
@@ -674,7 +677,7 @@ disk_init(char *filename)
 	disk_set_byteswap(1);
 #endif
 
-	disk_fd = open(filename, O_RDWR);
+	disk_fd = open(filename, O_RDWR | O_BINARY);
 	if (disk_fd < 0) {
 		disk_fd = 0;
 		perror(filename);

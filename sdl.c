@@ -10,7 +10,11 @@
 #include <string.h>
 #include <signal.h>
 
+#ifdef _WIN32
+#include "SDL/SDL.h"
+#else
 #include <SDL/SDL.h>
+#endif
 //#include <SDL/SDL_image.h>
 
 #include "logo.h"
@@ -427,7 +431,9 @@ static void sdl_display_init(void)
 
     /* NOTE: we still want Ctrl-C to work - undo the SDL redirections*/
     signal(SIGINT, SIG_DFL);
+#ifdef linux
     signal(SIGQUIT, SIG_DFL);
+#endif
 
     sdl_resize(ds, video_width, video_height);
 

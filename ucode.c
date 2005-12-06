@@ -1652,7 +1652,7 @@ run(void)
 		unsigned int out_bus;
 		int carry_in, do_add, do_sub;
 
-		long long lv;
+		int64 lv;
 
 		ucw_t u, w;
 		ucw_t p1;
@@ -1958,7 +1958,7 @@ run(void)
 
 #if 1
 			/* nop short cut */
-			if ((u & 03777777777767777LL) == 0) {
+			if ((u & NOP_MASK) == 0) {
 				goto next;
 			}
 #endif

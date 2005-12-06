@@ -7,6 +7,8 @@
    - desynchronize network process from CPU
  */
 
+#ifdef linux /* until I split out the unix socket code */
+
 #include <stdio.h>
 #include <unistd.h>
 
@@ -695,3 +697,55 @@ chaos_reconnect(void)
 
 	return 0;
 }
+
+#endif /* linux */
+
+/* these are stubs; eventually I'll fix the code work with win32 sockets */
+#ifdef WIN32
+int
+chaos_init(void)
+{
+	return 0;
+}
+
+void
+chaos_xmit_pkt(void)
+{
+}
+ 
+int
+chaos_get_bit_count(void)
+{
+	return 0;
+}
+ 
+int
+chaos_get_rcv_buffer(void)
+{
+	return 0;
+}
+ 
+int
+chaos_get_csr(void)
+{
+	return 0;
+}
+ 
+int
+chaos_put_xmit_buffer(int v)
+{
+	return 0;
+}
+ 
+int
+chaos_get_addr(void)
+{
+	return 0;
+}
+
+int
+chaos_set_csr(int v)
+{
+	return 0;
+}
+#endif

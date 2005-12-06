@@ -10,8 +10,15 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
+
+#ifdef linux
+#include <unistd.h>
+#endif
+
+#ifdef WIN32
+typedef unsigned long off_t;
+#endif
 
 char *img_filename;
 char *mcr_filename;

@@ -3,7 +3,31 @@
  * $Id$
  */
 
-typedef unsigned long long int ucw_t;
+#ifdef linux
+typedef long long int64;
+typedef unsigned long long uint64;
+
+#define NOP_MASK 03777777777767777LL
+#define O_BINARY 0
+#endif
+
+#ifdef WIN32
+typedef __int64 int64;
+typedef __int64 uint64;
+
+struct timeval {
+	unsigned int tv_sec;
+	unsigned int tv_usec;
+};
+
+typedef unsigned char u_char;
+typedef unsigned long off_t;
+
+#define inline 
+#define NOP_MASK 03777777777767777
+#endif
+
+typedef uint64 ucw_t;
 
 extern int trace;
 #define tracef	if (trace) printf

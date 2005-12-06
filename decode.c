@@ -31,7 +31,7 @@ read_prom_files(void)
 		}
 
 		printf("%s\n", name);
-		fd = open(name, O_RDONLY);
+		fd = open(name, O_RDONLY | O_BINARY);
 		if (fd < 0) {
 			perror(name);
 			exit(1);
@@ -48,12 +48,12 @@ read_prom_files(void)
 
 	for (i = 0; i < 512; i++) {
 		prom_ucode[511-i] =
-			((unsigned long long)prom[0][i] << (8*5)) |
-			((unsigned long long)prom[1][i] << (8*4)) |
-			((unsigned long long)prom[2][i] << (8*3)) |
-			((unsigned long long)prom[3][i] << (8*2)) |
-			((unsigned long long)prom[4][i] << (8*1)) |
-			((unsigned long long)prom[5][i] << (8*0));
+			((uint64)prom[0][i] << (8*5)) |
+			((uint64)prom[1][i] << (8*4)) |
+			((uint64)prom[2][i] << (8*3)) |
+			((uint64)prom[3][i] << (8*2)) |
+			((uint64)prom[4][i] << (8*1)) |
+			((uint64)prom[5][i] << (8*0));
 	}
 
 	return 0;
@@ -92,7 +92,7 @@ show_prom(void)
 	return 0;
 }
 
-#define l48(n)		((unsigned long long)(n))
+#define l48(n)		((uint64)(n))
 #define mask(v, n)	(l48(v) << (n))
 #define bit(n)		(l48(1) << (n))
 
@@ -243,7 +243,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 	case 0: /* alu */
 		printf("(alu) ");
 
-		if ((u & 03777777777777777LL) == 0) {
+		if ((u & NOP_MASK) == 0) {
 			printf("no-op");
 			goto done;
 		}

@@ -222,9 +222,11 @@ PAGE-0-PARITY-FIX
 316 4602201444030011 (byte) a=44 m=m[3] dpb pos=11, width=1 ->VMA,start-write ,m[0] 
 317 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 320 0200000005300647 (jump) a=0 m=m[0] pc 530, P !next jump-always 
+SAVE-A-PAGE
 321 0002000000410050 (alu) SETA a=40 m=0 m[0] C=0 alu-> -><none>,m[10] 
 322 0200000005610447 (jump) a=0 m=m[0] pc 561, P jump-always 
 323 4000000000210000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> -><none>,m[4] 
+READ-LABEL
 324 4000000000410000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> -><none>,m[10] 
 325 0200000005570447 (jump) a=0 m=m[0] pc 557, P jump-always 
 326 4000000000210000 (alu) SETZ a=0 m=0 m[0] C=0 alu-> -><none>,m[4] 
@@ -236,6 +238,7 @@ PAGE-0-PARITY-FIX
 334 0600241400270026 (byte) a=5 m=m[3] dpb pos=26, width=1 -><none>,m[5] 
 335 4600241400270072 (byte) a=5 m=m[3] dpb pos=32, width=2 -><none>,m[5] 
 336 4600241400270036 (byte) a=5 m=m[3] dpb pos=36, width=1 -><none>,m[5] 
+DECODE-LABEL
 337 4000100042310050 (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6] 
 340 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 341 4200265000260343 (jump) a=5 m=MD pc 26, !next !jump M-src = A-src 
@@ -264,6 +267,7 @@ PAGE-0-PARITY-FIX
 370 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 371 0000025000210030 (alu) SETM a=0 m=52 MD C=0 alu-> -><none>,m[4] 
 372 0002003000310310 (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6] 
+SEARCH-LABEL
 373 0200103400300243 (jump) a=2 m=m[7] pc 30, !next M-src = A-src 
 374 0000003042010030 (alu) SETM a=0 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[0] 
 375 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
@@ -271,6 +275,7 @@ PAGE-0-PARITY-FIX
 377 0000203000310310 (alu) M+A [ADD] a=4 m=6 m[6] C=0 alu-> -><none>,m[6] 
 400 4200000003730047 (jump) a=0 m=m[0] pc 373, jump-always 
 401 4002003400350264 (alu) M-A-1 [M-A-1] a=40 m=7 m[7] C=1 alu-> -><none>,m[7] 
+FOUND-PARTITION
 402 0002003042310310 (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6] 
 403 4200000000240244 (jump) a=0 m=m[0] pc 24, !next pf 
 404 4000025203110030 (alu) SETM a=0 m=52 MD C=0 alu-> ->a_mem[62] 

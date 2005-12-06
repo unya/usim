@@ -8,8 +8,11 @@
  */
 
 #include <stdio.h>
-#include <sys/time.h>
 #include <signal.h>
+
+#ifdef linux
+#include <sys/time.h>
+#endif
 
 #include "ucode.h"
 #include "config.h"
@@ -83,7 +86,9 @@ void
 signal_init(void)
 {
 	signal(SIGINT, sigint_handler);
+#ifndef _WIN32
 	signal(SIGHUP, sighup_handler);
+#endif
 }
 
 void
@@ -129,7 +134,7 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.6\n");
+	printf("CADR emulator v0.7\n");
 
 	show_video_flag = 1;
 
