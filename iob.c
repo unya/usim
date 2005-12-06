@@ -16,10 +16,39 @@
 #include <sys/time.h>
 #endif
 
+#ifdef DISPLAY_SDL
 #ifdef _WIN32
 #include <SDL/SDL_keysym.h>
 #else
 #include "SDL/SDL_keysym.h"
+#endif
+#endif /* USE_SDL */
+
+#ifdef DISPLAY_X11
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
+#include <X11/keysym.h>
+
+/* this is a hack, but it works */
+#define SDLK_LSHIFT	XK_Shift_L
+#define SDLK_RSHIFT	XK_Shift_R
+#define SDLK_LCTRL	XK_Control_L
+#define SDLK_RCTRL	XK_Control_R
+#define SDLK_LALT	XK_Alt_L
+#define SDLK_RALT	XK_Alt_R
+#define SDLK_F1		XK_F1
+#define SDLK_F2 	XK_F2
+#define SDLK_F3		XK_F3
+#define SDLK_F4		XK_F4
+#define SDLK_F5		XK_F5
+#define SDLK_F6		XK_F6
+#define SDLK_F7		XK_F7
+#define SDLK_END	XK_F11
+#define SDLK_F12	XK_F12
+#define SDLK_BACKSPACE	XK_BackSpace
+#define SDLK_BREAK	XK_Break
+#define SDLK_RETURN	XK_Return
 #endif
 
 int iob_key_scan;
@@ -584,8 +613,11 @@ int
 tv_xbus_write(int offset, unsigned int v)
 {
 	if (0) printf("tv register write, offset %o, v %o\n", offset, v);
-	if ((tv_csr & 4) != (v & 4))
+	if ((tv_csr & 4) != (v & 4)) {
+#ifdef DISPLAY_SDL
 		sdl_set_bow_mode((v & 4)>>2);
+#endif
+	}
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);
 	deassert_xbus_interrupt();
