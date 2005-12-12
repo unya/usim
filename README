@@ -1,5 +1,5 @@
 CADR simulator
-10/17/05
+12/11/05
 Brad Parker
 brad@heeltoe.com
 
@@ -14,24 +14,69 @@ entitled, "CADR".
 The CADR was a 32 bit microcoded microprocessor designed to run the
 lisp language.
 
-This program attempts to interpret the microcode found in the machine
-starting with the "prom" microcode which runs when the machine is
-first powered on.
+This program interprets the microcode found in the machine starting
+with the "prom" microcode which runs when the machine is first powered
+on.  The prom microcode loads additional microcode from the simulated
+disk and then boots the load band.
 
 There is sufficient hardware support for the disk and network to
 provide a reasonaly functional lisp machine experience.
 
 
+Recent Changes
+--------------
+
+v0.7 - added raw X11 support.  Bjorn's new keyboard configuration code.
+       diskmaker now takes a template file and will show info on existing
+       disk images.
+v0.6 - better network support
+
+
+Building
+--------
+
+Unix, Linus, OS X:
+
+There are three defines at the top of the Makefile you should check.
+They are OS, DISPLAY and KEYBOARD.  For the most part you should only
+have to change OS and set it to LINUX, OSX or WIN32.
+
+The X11 display works but the keyboard mapping is not correct yet.  Both
+the OLD and NEW keyboard code works, I would recomment using NEW.
+
+Once the Makefile is changed just type "make".
+
+Win32:
+
+I used a VC 6.0 project to make under win32.
+
+
+Making a disk
+-------------
+
+I would recommend using the distributed disk.img unless you understand
+the structure of a CADR disk.  The program "diskmaker" will interpret
+a disk image partition table and make a new disk using a template file.
+
+The distributed disk was made using "template.disk1".  The template file
+basically feeds all the parameters to diskmaker to build a valid disk
+image an populate it with microcode and a load band.
+
+
 What state is this in?
 ----------------------
 
-It boots a world!
-It talks on the network!
-It talks to a FILE server!
+Everything basically works.  The simulator will boot a load band and talk
+on the (simulated) network.
 
 The emulation is reasonably complete (modulo bugs).  It gets through the
 prom code, loads the microcode band, copies the band to swap and
 executes the load band cleanly.  The system boots and runs.
+
+The code was originally written to run on x86 linux using SDL and X
+Windows.  It's since been ported to run on OS X and Win32, both with
+SDL libraries.  A native X11 interface has also been added.  It should
+compile and run on X86 linux, Win32 and and OS X.
 
 The console display is drawn into an X window (using SDL) which tracks
 the mouse and keyboard.  The simplest way to run it is
@@ -53,7 +98,8 @@ to the microcode, complete with a parition table.
 
 The display board and iob are emulated.  An X window displays in
 monochrome at 768x1024.  The mouse and keyboard are tracked.  The
-keyboard is "mapped" to the old Knight keyboard.
+keyboard is "mapped" to the old Knight keyboard or new style depending
+on compilation options.
 
 The internal microsecond clock and the 60hz tv interrupt currently try
 and use wall clock time for a more realistic simulation.
@@ -69,35 +115,32 @@ supported.  I want to add this, however.
 I have fixed several ALU bugs and the emulation now seems much more
 stable.
 
-There's still a long delay when booting, even though the world is
-running and system-x works fine.  I need to track this down - possibly
-waiting for a time packet?  The system is available right away,
-however, try "F2-p".
+There's still a long delay when booting the distributed world.  The
+system is available right away, however, try "F2-p".
 
 What needs to be done?
 ----------------------
 
-- cleanup keyboard emulation
 - cleanup mouse emulation
 - speed up the network emulation
+- speed up the microcode simulation
 
-The keyboard mapping is a bit of a crock.  The mouse emulation works
-but doesn't track exactly.
+The keyboard mapping has been cleaned up by Bjorn Victor (thanks!).  The
+latest (v0.7+) code uses the "keyboard.cfg" file to map the PC keyboard
+onto the lispm keyboard.
 
-f1	network
+Some default keys:
+
+f1	terminal
 f2	system
-f3	abort
-f4	clear
-f5	help
-f6	end
-f7	call
-delete	rubout
+f3	network
+f4	abort
+f5	clear_input
+home	Call
+end	End
+backspace rubout
 
-I'd liketo make this programmable with a reasonable default.
-
-Long term I want to do some recompiling of the microcode into C and
-assembler, both statically and on-the-fly.  This is the interesting
-part...
+The mouse emulation works but doesn't track exactly.
 
 What programs are here?
 -----------------------
@@ -128,10 +171,11 @@ Bjorn Victor
 Without their support or encouragement I would probably not have done
 this.  Certainly if Al had not sent me the prom images I would never
 have started.  And without Dan's box-of-tapes I could never have
-succeeded.  RG offered some good explainations when I was confused.  TK and
-Howie were extremely supportive at the just right moment (and answered
-a lot of email).  George offered many good suggestions and answered
-lots of questions. Steve helped me locate missing pages from "memo
-528".  Alastair did some amazing work on several explorer emulators.
-And John's office is where I first saw a 3600 console and said,
-"what's that?".
+succeeded.  RG offered some good explainations when I was confused.
+TK and Howie were extremely supportive at the just right moment (and
+answered a lot of email).  George offered many good suggestions and
+answered lots of questions. Steve helped me locate missing pages from
+"memo 528".  Alastair did some amazing work on several explorer
+emulators.  Bjorn has used the code, offered many suggestions, fixes
+and improvements.  And John's office is where I first saw a 3600
+console and said, "what's that?".

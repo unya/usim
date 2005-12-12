@@ -7,10 +7,14 @@
    - desynchronize network process from CPU
  */
 
-#ifdef linux /* until I split out the unix socket code */
+#include "usim.h"
+
+ /* until I split out the unix socket code */
+#if defined(LINUX) || defined(OSX)
 
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -698,7 +702,7 @@ chaos_reconnect(void)
 	return 0;
 }
 
-#endif /* linux */
+#endif /* linux || osx */
 
 /* these are stubs; eventually I'll fix the code work with win32 sockets */
 #ifdef WIN32

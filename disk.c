@@ -7,10 +7,14 @@
  * $Id$
  */
 
+#include "usim.h"
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 
-#ifdef linux
+#if defined(LINUX) || defined(OSX)
 #include <unistd.h>
 #endif
 

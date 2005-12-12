@@ -3,6 +3,10 @@
  * $Id$
  */
 
+#include "usim.h"
+
+#include <string.h>
+
 #include "config.h"
 
 static char mcrsym_filename[1024];

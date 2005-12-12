@@ -7,15 +7,26 @@
  * $Id$
  */
 
+#include "usim.h"
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 
-#ifdef linux
+#if defined(LINUX) || defined(OSX)
 #include <sys/time.h>
 #endif
 
 #include "ucode.h"
 #include "config.h"
+
+#ifdef DISPLAY_SDL
+#ifdef _WIN32
+#include <SDL/SDL.h>
+#else
+#include "SDL/SDL.h"
+#endif
+#endif /* DISPLAY_SDL */
 
 int show_video_flag;
 int alt_prom_flag;
