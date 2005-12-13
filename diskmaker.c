@@ -1,8 +1,16 @@
 /*
- * make a disk image for the CADR simulator
+ * diskmaker.c
  *
+ * make a disk image for the CADR simulator
  * reads template file or internal default disk partition
  *
+ * NOTE:
+ * Disk images are interpreted by the CADR as blocks of 32 bit values.
+ * 32 bit values stored in disk images are kept in little endian
+ * format.  usim will compensate when run on big endian machines.
+ *
+ * This program should be "byte order safe" and produce identical disk
+ * images when run on big and little endian machines.
  *
  * $Id$
  */
@@ -20,6 +28,10 @@
 
 #ifdef WIN32
 typedef unsigned long off_t;
+#endif
+
+#ifdef __BIG_ENDIAN__
+#define NEED_SWAP
 #endif
 
 char *template_filename;
@@ -51,27 +63,27 @@ int part_count;
 
 
 void
-swapbytes(unsigned int *buf)
+_swaplongbytes(unsigned int *buf, int words)
 {
 	int i;
-#if 0
 	unsigned char *p = (unsigned char *)buf;
 
-	for (i = 0; i < 256*4; i += 2) {
-		unsigned char t;
+	for (i = 0; i < words*4; i += 4) {
+		unsigned char t, u, v;
 		t = p[i];
-		p[i] = p[i+1];
-		p[i+1] = t;
+		u = p[i+1];
+		v = p[i+2];
+		p[i] = p[i+3];
+		p[i+1] = v;
+		p[i+2] = u;
+		p[i+3] = t;
 	}
-#endif
-#if 0
-	int i;
+}
 
-	for (i = 0; i < 256; i++) {
-		buf[i] = htonl(buf[i]);
-	}
-#endif
-#if 1
+void
+swapwords(unsigned int *buf)
+{
+	int i;
 	unsigned short *p = (unsigned short *)buf;
 
 	for (i = 0; i < 256*2; i += 2) {
@@ -80,7 +92,6 @@ swapbytes(unsigned int *buf)
 		p[i] = p[i+1];
 		p[i+1] = t;
 	}
-#endif
 }
 
 int
@@ -102,28 +113,17 @@ add_partition(char *name, int start, int size, int ptype, char *filename)
 unsigned long
 str4(char *s)
 {
-#ifdef NEED_SWAP
-	return (s[0]<<24) | (s[1]<<16) | (s[2]<<8) | s[3];
-#else
 	return (s[3]<<24) | (s[2]<<16) | (s[1]<<8) | s[0];
-#endif
 }
 
 char *
 unstr4(unsigned long s)
 {
 	static char b[5];
-#ifdef NEED_SWAP
-	b[0] = s >> 24;
-	b[1] = s >> 16;
-	b[2] = s >> 8;
-	b[3] = s;
-#else
 	b[3] = s >> 24;
 	b[2] = s >> 16;
 	b[1] = s >> 8;
 	b[0] = s;
-#endif
 	b[4] = 0;
 	return b;
 }
@@ -189,7 +189,9 @@ make_labl(int fd)
 	printf("comment: '%s'\n", comment);
 
 #ifdef NEED_SWAP
-	swapbytes(buffer);
+	/* don't swap the text */
+	_swaplongbytes(&buffer[0], 8);
+	_swaplongbytes(&buffer[0200], 128);
 #endif
 
 	write(fd, buffer, 256*4);
@@ -253,7 +255,7 @@ make_one_partition(int fd, int index)
 				break;
 
 			if (memcmp(parts[index].name, "MCR", 3) == 0) {
-				swapbytes((unsigned int *)b);
+				swapwords((unsigned int *)b);
 			}
 
 			if (write_block(fd, offset+count, b))
@@ -397,7 +399,7 @@ fillout_image_file(int fd)
 		return -1;
 	}
 
-#if 1
+#if 0
 	{
 		unsigned char b[256*4];
 
@@ -409,6 +411,8 @@ fillout_image_file(int fd)
 		}
 	}
 #endif
+
+	lseek(fd, (off_t)0, SEEK_SET);
 
 	return 0;
 }
@@ -427,10 +431,9 @@ create_disk(char *template, char *image)
 		return -1;
 	}
 
-#ifdef __APPLE__
-	/* a failed OS X experiment */
-	fillout_image_file(fd);
-#endif
+//#ifdef __APPLE__
+//	fillout_image_file(fd);
+//#endif
 
 	make_labl(fd);
 	make_partitions(fd);
@@ -491,6 +494,12 @@ show_partition_info(char *filename)
 		perror(filename);
 		return -1;
 	}
+
+#ifdef NEED_SWAP
+	/* don't swap the text */
+	_swaplongbytes(&buffer[0], 8);
+	_swaplongbytes(&buffer[0200], 128);
+#endif
 
 	if (buffer[0] != str4("LABL")) {
 		fprintf(stderr, "%s: no valid disk label found\n", filename);
