@@ -19,8 +19,8 @@
 
 #include "ucode.h"
 
-#define STAT_PC_HISTORY
-#define STAT_ALU_USE
+//#define STAT_PC_HISTORY
+//#define STAT_ALU_USE
 
 extern ucw_t prom_ucode[512];
 ucw_t ucode[16*1024];
@@ -1681,7 +1681,7 @@ run(void)
 
 		disk_poll();
 
-		if ((cycles & 0x0fff) == 0) {
+		if ((cycles & 0x0ffff) == 0) {
 			display_poll();
 			chaos_poll();
 		}

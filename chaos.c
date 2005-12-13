@@ -31,7 +31,7 @@
 #endif
 
 #ifndef CHAOS_DEBUG
-# define CHAOS_DEBUG 1
+# define CHAOS_DEBUG 0
 #endif
 
 #define CHAOS_DEBUG_PKT 0
@@ -54,6 +54,10 @@ int chaos_rcv_buffer_empty;
 
 int chaos_fd;
 int chaos_need_reconnect;
+static int reconnect_delay;
+static int reconnect_time;
+void chaos_force_reconect(void);
+
 
 int chaos_send_to_chaosd(char *buffer, int size);
 
@@ -132,9 +136,12 @@ chaos_rx_pkt(void)
 	chaos_rcv_buffer_ptr = 0;
 	chaos_bit_count = (chaos_rcv_buffer_size * 2 * 8) - 1;
 	if (chaos_rcv_buffer_size > 0) {
+#if CHAOS_DEBUG
 	  printf("chaos: set RDN, generate interrupt\n");
+#endif
 	  chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
-	  assert_unibus_interrupt(0404);
+	  if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE)
+	    assert_unibus_interrupt(0404);
 	}
 }
 
@@ -142,7 +149,8 @@ void
 char_xmit_done_intr(void)
 {
 	chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-	assert_unibus_interrupt(0400);
+	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE)
+	  assert_unibus_interrupt(0400);
 }
 
 void
@@ -244,8 +252,10 @@ chaos_get_csr(void)
 		static int old_chaos_csr = 0;
 		if (chaos_csr != old_chaos_csr) {
 			old_chaos_csr = chaos_csr;
+#if CHAOS_DEBUG
 			printf("unibus: chaos read csr %o\n",
 			       chaos_csr);
+#endif
 		}
 	}
 
@@ -311,14 +321,18 @@ chaos_set_csr(int v)
 		CHAOS_CSR_RECEIVE_DONE |
 	  	CHAOS_CSR_RECEIVER_CLEAR;
 
+#if CHAOS_DEBUG
 	printf("chaos: set csr bits 0%o (",v);
 	print_csr_bits(v);
 	printf ("), old 0%o ", chaos_csr);
+#endif
 
 	chaos_csr = (chaos_csr & mask) | (v & ~mask);
 
 	if (chaos_csr & CHAOS_CSR_RESET) {
+#if CHAOS_DEBUG
 		printf("reset ");
+#endif
 		chaos_rcv_buffer_size = 0;
 		chaos_xmit_buffer_ptr = 0;
 		chaos_lost_count = 0;
@@ -326,6 +340,9 @@ chaos_set_csr(int v)
 		chaos_rcv_buffer_ptr = 0;
 		chaos_csr &= ~(CHAOS_CSR_RESET | CHAOS_CSR_RECEIVE_DONE);
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
+
+		reconnect_delay = 200; /* Do it right away */
+		chaos_force_reconect();
 	}
 
 	if (v & CHAOS_CSR_RECEIVER_CLEAR) {
@@ -343,8 +360,9 @@ chaos_set_csr(int v)
 	}
 
 	if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
+#if CHAOS_DEBUG
 		printf("rx-enable ");
-
+#endif
 		if (chaos_rcv_buffer_empty) {
 			chaos_rcv_buffer_ptr = 0;
 			chaos_rcv_buffer_size = 0;
@@ -359,7 +377,9 @@ chaos_set_csr(int v)
 	}
 
 	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
+#if CHAOS_DEBUG
 		printf("tx-enable ");
+#endif
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
 #if 0
 		char_xmit_done_intr();
@@ -368,9 +388,11 @@ chaos_set_csr(int v)
 #endif
 	}
 
+#if CHAOS_DEBUG
 	printf(" New csr 0%o", chaos_csr);
 	print_csr_bits(chaos_csr);
 	printf("\n");
+#endif
 }
 
 #define UNIX_SOCKET_PATH	"/var/tmp/"
@@ -383,7 +405,9 @@ static struct sockaddr_un unix_addr;
 void
 chaos_force_reconect(void)
 {
+#if CHAOS_DEBUG || 1
 	printf("chaos: forcing reconnect to chaosd\n");
+#endif
 	close(chaos_fd);
 	chaos_fd = 0;
 	chaos_need_reconnect = 1;
@@ -672,9 +696,6 @@ chaos_init(void)
 	return 0;
 }
 
-static int reconnect_delay;
-static int reconnect_time;
-
 int
 chaos_reconnect(void)
 {
@@ -692,7 +713,9 @@ chaos_reconnect(void)
 	}
 	reconnect_time = time(NULL);
 
+# if CHAOS_DEBUG || 1
 	printf("chaos: reconnecting to chaosd\n");
+#endif
 	if (chaos_init() == 0) {
 		printf("chaos: reconnected\n");
 		chaos_need_reconnect = 0;

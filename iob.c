@@ -247,7 +247,7 @@ iob_unibus_read(int offset, int *pv)
 		*pv = chaos_get_csr();
 		break;
 	case 0142:
-		printf/*traceio*/("unibus: chaos read my-number\n");
+		traceio("unibus: chaos read my-number\n");
 		*pv = chaos_get_addr();
 		break;
 	case 0144:
@@ -256,11 +256,11 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0146:
 		*pv = chaos_get_bit_count();
-		printf/*traceio*/("unibus: chaos read bit-count 0%o\n", *pv);
+		traceio("unibus: chaos read bit-count 0%o\n", *pv);
 		break;
 	case 0152:
 		*pv = chaos_get_addr();
-		printf/*traceio*/("unibus: chaos read xmt => %o\n", *pv);
+		traceio("unibus: chaos read xmt => %o\n", *pv);
 		chaos_xmit_pkt();
 		break;
 	default:
@@ -306,11 +306,12 @@ iob_unibus_write(int offset, int v)
 		printf("unibus: START 60hz clock\n");
 		break;
 	case 0140:
-		printf/*traceio*/("unibus: chaos write %011o, u_pc %011o ",
+		traceio("unibus: chaos write %011o, u_pc %011o ",
 				  v, u_pc);
+#ifdef CHAOS_DEBUG
 		show_label_closest(u_pc);
 		printf("\n");
-
+#endif
 		chaos_set_csr(v);
 		break;
 	case 0142:
