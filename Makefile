@@ -3,8 +3,8 @@
 # $Id$
 #
 
-#OS = LINUX
-OS = OSX
+OS = LINUX
+#OS = OSX
 #OS = WIN32
 
 DISPLAY = SDL

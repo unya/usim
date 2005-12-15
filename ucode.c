@@ -1110,7 +1110,7 @@ if (0) show_pdl_local();
 	write_m_mem(dest & 037, out_bus);
 }
 
-#define MAX_PC_HISTORY 16
+#define MAX_PC_HISTORY 64
 struct {
 	unsigned int rpc;
 	unsigned int rvma;
@@ -1118,6 +1118,8 @@ struct {
 	int rpf;
 	int rpdl_ptr;
 	unsigned int rpdl;
+	unsigned int rq;
+	unsigned int m[8];
 } pc_history[MAX_PC_HISTORY];
 int pc_history_ptr, pc_history_max, pc_history_stores;
 
@@ -1144,6 +1146,12 @@ record_pc_history(unsigned int pc, unsigned int vma, unsigned int md)
 	pc_history[index].rpf = page_fault_flag;
 	pc_history[index].rpdl_ptr = pdl_ptr;
 	pc_history[index].rpdl = pdl_memory[pdl_ptr];
+
+	pc_history[index].rq = q;
+	pc_history[index].m[0] = m_memory[015];
+	pc_history[index].m[1] = m_memory[016];
+	pc_history[index].m[2] = m_memory[022];
+	pc_history[index].m[3] = m_memory[023];
 }
 
 void
@@ -1169,6 +1177,15 @@ show_pc_history(void)
 		       pc_history[pc_history_ptr].rpf,
 		       pc_history[pc_history_ptr].rpdl_ptr,
 		       pc_history[pc_history_ptr].rpdl);
+
+#if 1
+		printf(" Q %08x M %08x %08x %08x %08x\n",
+		       pc_history[pc_history_ptr].rq,
+		       pc_history[pc_history_ptr].m[0],
+		       pc_history[pc_history_ptr].m[1],
+		       pc_history[pc_history_ptr].m[2],
+		       pc_history[pc_history_ptr].m[3]);
+#endif
 		       
 		printf("\n");
 
@@ -1746,6 +1763,8 @@ run(void)
 
 		/* see if we hit a label trace point */
 		if (trace_label_pt && p0_pc == trace_label_pt) {
+//			show_pc_history();
+//			trace = 1;
 			trace_mcr_labels_flag = 1;
 		}
 
@@ -2059,95 +2078,96 @@ run(void)
 					alu_carry = 0;
 					break;
 				case 1: /* (M&A)-1 */
-					lv = (m_src_value & a_src_value) -
+					lv = (long long)(m_src_value & a_src_value) -
 						(carry_in ? 0 : 1);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 2: /* (M&~A)-1 */
-					lv = (m_src_value & ~a_src_value) -
+					lv = (long long)(m_src_value & ~a_src_value) -
 						(carry_in ? 0 : 1);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 3: /* M-1 */
-					lv = m_src_value - (carry_in ? 0 : 1);
+					lv = (long long)m_src_value - (carry_in ? 0 : 1);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 4: /* M|~A */
-					lv = (m_src_value | ~a_src_value) +
+					lv = (long long)(m_src_value | ~a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 5: /* (M|~A)+(M&A) */
-					lv = (m_src_value | ~a_src_value) +
+					lv = (long long)(m_src_value | ~a_src_value) +
 						(m_src_value & a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 6: /* M-A-1 [SUB] */
-					lv = m_src_value - a_src_value -
+					lv = (long long)m_src_value - a_src_value -
 						(carry_in ? 0 : 1);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 7: /* (M|~A)+M */
-					lv = (m_src_value | ~a_src_value) +
+					lv = (long long)(m_src_value | ~a_src_value) +
 						m_src_value +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 010: /* M|A */
-					lv = m_src_value | a_src_value +
+//?? is this right? check 74181
+					lv = (long long)(m_src_value | a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 011: /* M+A [ADD] */
-					lv = a_src_value + m_src_value +
+					lv = (long long)a_src_value + m_src_value +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 012: /* (M|A)+(M&~A) */
-					lv = (m_src_value | a_src_value) +
+					lv = (long long)(m_src_value | a_src_value) +
 						(m_src_value & ~a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 013: /* (M|A)+M */
-					lv = (m_src_value | a_src_value) +
+					lv = (long long)(m_src_value | a_src_value) +
 						m_src_value +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 014: /* M */
-					lv = m_src_value + (carry_in ? 1 : 0);
+					lv = (long long)m_src_value + (carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 015: /* M+(M&A) */
-					lv = m_src_value +
+					lv = (long long)m_src_value +
 						(m_src_value & a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 016: /* M+(M|~A) */
-					lv = m_src_value +
+					lv = (long long)m_src_value +
 						(m_src_value | ~a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 017: /* M+M */
-					lv = m_src_value + m_src_value +
+					lv = (long long)m_src_value + m_src_value +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
