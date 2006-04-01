@@ -9,7 +9,8 @@
 
 #include "config.h"
 
-static char mcrsym_filename[1024];
+static char *mcrsym_filename;
+static char *disk_filename;
 
 const char *
 config_get_promsym_filename(void)
@@ -20,7 +21,7 @@ config_get_promsym_filename(void)
 const char *
 config_get_mcrsym_filename(void)
 {
-	if (mcrsym_filename[0])
+	if (mcrsym_filename)
 		return mcrsym_filename;
 
 	return "ucadr.sym.841";
@@ -29,13 +30,22 @@ config_get_mcrsym_filename(void)
 void
 config_set_mcrsym_filename(const char *fn)
 {
-	strcpy(mcrsym_filename, fn);
+	mcrsym_filename = strdup(fn);
 }
 
 
 const char *
 config_get_disk_filename(void)
 {
+	if (disk_filename)
+		return disk_filename;
+
 	return "disk.img";
+}
+
+void
+config_set_disk_filename(const char *filename)
+{
+	disk_filename = strdup(filename);
 }
 

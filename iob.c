@@ -128,14 +128,13 @@ get_us_clock()
 	static unsigned long last_hz60;
 	static struct timeval tv;
 	struct timeval tv2;
-	unsigned long ds, du, hz60;
+	unsigned long ds, du;
 
 	if (tv.tv_sec == 0) {
 		gettimeofday(&tv, 0);
 		v = 0;
 		last_hz60 = 0;
 	} else {
-		unsigned int newsec;
 		gettimeofday(&tv2, 0);
 
 		if (tv2.tv_usec < tv.tv_usec) {

@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 
@@ -224,7 +225,7 @@ showstr(int a, int cr)
 	if (cr) printf("\n");
 }
 
-int
+void
 show_fef_func_name(unsigned int fefptr)
 {
 	unsigned int n, v;
@@ -322,6 +323,8 @@ find_and_dump_fef(unsigned int pc)
 		loc = addr+i/2;
 		disass(addr, loc, (i%2) ? 0 : 1, ib[i]);
 	}
+
+	return 0;
 }
 
 
@@ -353,10 +356,11 @@ int show_fef;
 int show_initial_sg;
 int show_memory;
 
+int
 main(int argc, char *argv[])
 {
 	unsigned int com;
-	int i, n, c;
+	int i, c;
 	unsigned int pc, addr;
 
 	while ((c = getopt(argc, argv, "l:i:csfgp:a:m:")) != -1) {
@@ -520,5 +524,5 @@ main(int argc, char *argv[])
 	}
 #endif
 
-
+	exit(0);
 }

@@ -14,6 +14,7 @@
 #include <signal.h>
 
 #if defined(LINUX) || defined(OSX)
+#include <unistd.h>
 #include <sys/time.h>
 #endif
 
@@ -31,6 +32,17 @@
 int show_video_flag;
 int alt_prom_flag;
 int dump_state_flag;
+
+/* */
+extern int display_init(void);
+extern void display_poll(void);
+extern int disk_init(const char *filename);
+extern int read_prom_files(void);
+extern int read_sym_files(void);
+extern int iob_init(void);
+extern int chaos_init(void);
+extern void iob_warm_boot_key(void);
+extern void run(void);
 
 struct timeval tv1;
 
@@ -141,15 +153,16 @@ extern char *optarg;
 extern int trace;
 extern int trace_mcr_labels_flag;
 
+int
 main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.7\n");
+	printf("CADR emulator v0.8\n");
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:c:dC:l:np:q:tT:sw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:c:dC:i:l:np:q:tT:sw")) != -1) {
 		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
@@ -165,6 +178,9 @@ main(int argc, char *argv[])
 			break;
 		case 'd':
 			dump_state_flag = 1;
+			break;
+		case 'i':
+			config_set_disk_filename(optarg);
 			break;
 		case 'l':
 			tracelabel_set_mcr(optarg);

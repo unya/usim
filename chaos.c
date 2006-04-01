@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -57,9 +58,12 @@ int chaos_need_reconnect;
 static int reconnect_delay;
 static int reconnect_time;
 void chaos_force_reconect(void);
-
-
 int chaos_send_to_chaosd(char *buffer, int size);
+int chaos_reconnect(void);
+
+
+extern void assert_unibus_interrupt(int v);
+
 
 /*
 chaos csr 
@@ -156,7 +160,9 @@ char_xmit_done_intr(void)
 void
 chaos_xmit_pkt(void)
 {
+#if CHAOS_DEBUG_PKT
 	int i, n;
+#endif
 
 #if CHAOS_DEBUG
 	printf("chaos_xmit_pkt() %d bytes, data len %d\n",
@@ -188,9 +194,10 @@ chaos_xmit_pkt(void)
 	chaos_xmit_buffer[chaos_xmit_buffer_size++] =	/* source */
 		chaos_addr;
 
-	chaos_xmit_buffer[chaos_xmit_buffer_size++] =	/* checksum */
+	chaos_xmit_buffer[chaos_xmit_buffer_size] =	/* checksum */
 		ch_checksum((u_char *)chaos_xmit_buffer,
 			    chaos_xmit_buffer_size*2);
+	chaos_xmit_buffer_size++;
 
 	chaos_send_to_chaosd((char *)chaos_xmit_buffer,
 			     chaos_xmit_buffer_size*2);
@@ -237,7 +244,7 @@ chaos_get_rcv_buffer(void)
 	return v;
 }
 
-int
+void
 chaos_put_xmit_buffer(int v)
 {
 	if (chaos_xmit_buffer_ptr < sizeof(chaos_xmit_buffer)/2)
@@ -310,7 +317,7 @@ print_csr_bits(int csr)
 int
 chaos_set_csr(int v)
 {
-	int mask, old_csr;
+	int mask;
 
 	v &= 0xffff;
 
@@ -393,6 +400,7 @@ chaos_set_csr(int v)
 	print_csr_bits(chaos_csr);
 	printf("\n");
 #endif
+	return 0;
 }
 
 #define UNIX_SOCKET_PATH	"/var/tmp/"
@@ -454,7 +462,7 @@ chaos_poll(void)
 		{
 #ifndef CHAOS_TOSS_IF_RXBUFF_FULL
 			printf("chaos: polling, but unread data exists\n");
-			return;
+			return 0;
 #else
 			/*
 			 * Toss packets arriving when buffer is already in use

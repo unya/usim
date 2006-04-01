@@ -14,6 +14,10 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
+#if defined(LINUX) || defined(OSX)
+#include <unistd.h>
+#endif
+
 #include "ucode.h"
 
 u_char prom[6][512];
@@ -80,7 +84,7 @@ show_prom(void)
 	}
 
 	for (i = 0100; i < 0110; i++) {
-		printf("%03o %016Lo", i, prom_ucode[i], prom_ucode[i]);
+		printf("%03o %016Lo", i, prom_ucode[i]);
 		printf(" %02x %02x %02x %02x %02x %02x",
 		       prom[0][i], 
 		       prom[1][i], 
@@ -137,7 +141,7 @@ char *alu_arith_op[] = {
 	"M+M"
 };
 
-int
+void
 disassemble_m_src(ucw_t u, int m_src)
 {
 	if (m_src & 040) {
@@ -148,17 +152,17 @@ disassemble_m_src(ucw_t u, int m_src)
 			printf("SPC-ptr, spc-data ");
 			break;
 		case 2:
-			printf("PDL-ptr %o ", u & 01777);
+			printf("PDL-ptr %o ", (int)u & 01777);
 			break;
 		case 3:
-			printf("PDL-index %o ", u & 01777);
+			printf("PDL-index %o ", (int)u & 01777);
 			break;
 		case 5:
 			printf("PDL-buffer ");
 			break;
 		case 6:
 			printf("OPC register %o ",
-			       u & 017777);
+			       (int)u & 017777);
 			break;
 		case 7:
 			printf("Q ");
@@ -190,7 +194,7 @@ disassemble_m_src(ucw_t u, int m_src)
 	}
 }
 
-int
+void
 disassemble_dest(int dest)
 {
 	if (dest & 04000) {
@@ -226,7 +230,7 @@ disassemble_dest(int dest)
 	}
 }
 
-int
+void
 disassemble_ucode_loc(int loc, ucw_t u)
 {
 	int a_src, m_src, new_pc, dest, alu_op;
@@ -337,7 +341,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 				printf("jump-always "); break;
 			}
 		} else {
-			printf("m-rot<< %o", u & 037);
+			printf("m-rot<< %o", (int)u & 037);
 		}
 
 /*
@@ -362,7 +366,7 @@ disassemble_ucode_loc(int loc, ucw_t u)
 		len = (u >> 5) & 07;
 		rot = u & 037;
 
-		printf("m=", a_src);
+		printf("m=%o ", m_src);
 		disassemble_m_src(u, m_src);
 
 		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
@@ -407,10 +411,10 @@ disassemble_ucode_loc(int loc, ucw_t u)
 	printf("\n");
 }
 
+void
 disassemble_prom(void)
 {
 	int i, start, finish; 
-	int jump_op;
 
 #if 0
 	start = 0100;
@@ -475,7 +479,7 @@ find_disk_partition_table(int fd)
 	if (0) printf("count %d, nw %d\n", count, nw);
 
 	for (i = 0; i < count; i++) {
-		if (0) printf("%d %08x %08x\n", i, buf[p], str4("LOD1"));
+		if (0) printf("%d %08x %08x\n", i, buf[p], (int)str4("LOD1"));
 		if (buf[p] == str4("LOD1")) {
 			partoff = buf[p+1];
 			if (0) printf("found lod1 %o\n", partoff);
@@ -485,6 +489,7 @@ find_disk_partition_table(int fd)
 	}
 
 	bnum = -1;
+	return 0;
 }
 
 
@@ -526,7 +531,6 @@ read_string(unsigned int loc)
 {
 	unsigned int v;
 	int t, i, j;
-	unsigned int n;
 	static char s[256];
 
 	if (read_virt(disk_fd, loc, &v) == 0) {
@@ -540,7 +544,7 @@ read_string(unsigned int loc)
 
 			l = loc+1+(i/4);
 			if (read_virt(disk_fd, l, &v))
-				return;
+				return "<read-failed>";
 
 			if (0) printf("%o %o %08x\n", l, v, v);
 
@@ -574,7 +578,7 @@ show_string(unsigned int loc)
 char *
 find_function_name(int the_lc)
 {
-	int i, tag;
+	int i, tag = 0;
 	unsigned int loc = the_lc >> 2;
 	unsigned int v;
 
@@ -598,10 +602,6 @@ find_function_name(int the_lc)
 	if (0) printf("%o found header, back %d\n", loc, i);
 
 	if (tag == 7) {
-		int t, i, j;
-		unsigned int n;
-		static char s[256];
-
 		/* find function symbol ptr */
 		if (read_virt(disk_fd, loc+2, &v) == 0) {
 
@@ -611,18 +611,19 @@ find_function_name(int the_lc)
 			tag = (v >> 24) & 077;
 
 			if (read_virt(disk_fd, loc, &v))
-				return;
+				return "<read-failed>";
 
 			/* hack - it's a list */
 			if (tag == 016) {
 				if (read_virt(disk_fd, v, &v))
-					return;
+					return "<read-failed>";
 			}
 
 			return read_string(v);
 		}
 	}
 
+	return "<no-function>";
 }
 
 void

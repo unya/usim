@@ -52,7 +52,7 @@ endif
 ifeq ($(OS), LINUX)
 #CFLAGS = -g
 #CFLAGS = -O -pg -g -fprofile-arcs
-CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES)
+CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 endif
 

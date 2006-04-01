@@ -61,3 +61,13 @@ extern unsigned long max_trace_cycles;
 extern char *sym_find_by_val(int mcr, int v);
 extern char *sym_find_last(int mcr, int v, int *poffset);
 extern char *sym_find_by_type_val(int mcr, int t, int v);
+
+extern int breakpoint_set_mcr(char *arg);
+extern int breakpoint_set_prom(char *arg);
+extern int breakpoint_set_count(int count);
+
+extern int tracelabel_set_mcr(char *arg);
+
+extern int read_phy_mem(int paddr, unsigned int *pv);
+extern int write_phy_mem(int paddr, unsigned int v);
+

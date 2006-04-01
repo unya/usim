@@ -16,11 +16,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "ucode.h"
 
-//#define STAT_PC_HISTORY
+#define STAT_PC_HISTORY
 //#define STAT_ALU_USE
+//#define TRACE
 
 extern ucw_t prom_ucode[512];
 ucw_t ucode[16*1024];
@@ -106,11 +108,30 @@ int macro_pc_incrs;
 
 int phys_ram_pages;
 
-unsigned int alu_stat0[16], alu_stat1[16];
+unsigned int alu_stat0[16], alu_stat1[16], alu_stat2[16];
 
 void show_label_closest(unsigned int upc);
 void show_label_closest_padded(unsigned int upc);
 char *find_function_name(int the_lc);
+
+extern void video_read(int offset, unsigned int *pv);
+extern void video_write(int offset, unsigned int bits);
+extern void iob_unibus_read(int offset, int *pv);
+extern void iob_unibus_write(int offset, int v);
+extern int disk_xbus_read(int offset, unsigned int *pv);
+extern int disk_xbus_write(int offset, unsigned int v);
+extern int tv_xbus_read(int offset, unsigned int *pv);
+extern int tv_xbus_write(int offset, unsigned int v);
+
+extern void disassemble_ucode_loc(int loc, ucw_t u);
+extern int sym_find(int mcr, char *name, int *pval);
+
+extern void timing_start();
+extern void timing_stop();
+extern void iob_poll();
+extern void disk_poll();
+extern void display_poll();
+extern void chaos_poll();
 
 void
 set_interrupt_status_reg(int new)
@@ -279,8 +300,11 @@ add_new_page_no(int pn)
 			phy_pages[pn] = page;
 
 			tracef("add_new_page_no(pn=%o)\n", pn);
+			return 0;
 		}
 	}
+
+	return -1;
 }
 
 /*
@@ -435,7 +459,7 @@ if ((vaddr & 077700000) == 077200000) {
 
 	/* disk & tv controller on xbus */
 	if (pn == 036777) {
-		int paddr = pn << 10;
+		/*int paddr = pn << 10;*/
 
 		/*
 		 * 77377774 disk
@@ -549,7 +573,7 @@ if ((vaddr & 077700000) == 077200000) {
 
 	if (pn == 037766) {
 		/* unibus */
-		int paddr = pn << 12;
+		/*int paddr = pn << 12;*/
 
 		offset <<= 1;
 
@@ -773,7 +797,6 @@ advance_lc(int *ppc)
 {
 	/* lc is 26 bits */
 	int old_lc = lc & 0377777777;
-	unsigned int v;
 
 	tracef("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
 	       lc_byte_mode_flag, lc,
@@ -1419,14 +1442,6 @@ dump_state(void)
 
 	printf("\n");
 
-#ifdef STAT_ALU_USE
-	printf("ALU op-code usage:\n");
-	for (i = 0; i < 16; i++) {
-		printf("%2i %2o %08u %08u\n",
-		       i, i, alu_stat0[i], alu_stat1[i]);
-	}
-#endif
-
 	printf("trace: %s\n", trace ? "on" : "off");
 }
 
@@ -1595,7 +1610,7 @@ show_label_closest(unsigned int upc)
 	int offset;
 	char *sym;
 
-	if (sym = sym_find_last(!prom_enabled_flag, upc, &offset)) {
+	if ((sym = sym_find_last(!prom_enabled_flag, upc, &offset))) {
 		if (offset == 0)
 			printf("%s", sym);
 		else
@@ -1609,13 +1624,41 @@ show_label_closest_padded(unsigned int upc)
 	int offset;
 	char *sym;
 
-	if (sym = sym_find_last(!prom_enabled_flag, upc, &offset)) {
+	if ((sym = sym_find_last(!prom_enabled_flag, upc, &offset))) {
 		if (offset == 0)
 			printf("%-16s  ", sym);
 		else
 			printf("%-16s+%o", sym, offset);
 	}
 }
+
+/*
+For 32-bit integers, (A + B) & (1 << 32)
+will always be zero. Without resorting to 64-bit arithmetic,
+you can find the carry by B > ~A.
+How does it work? ~A (the complement of A) is the largest possible
+number you can add to A without a carry:
+A + ~A = (1 << 32) - 1.
+If B is any larger, then a carry will be generated from the top bit.
+*/
+
+#define add32(a, b, ci, out, co) \
+		out = (a) + (b) + ((ci) ? 1 : 0); \
+		co = (ci) ? (((b) >= ~(a)) ? 0:1) : (((b) >  ~(a)) ? 0:1) ;
+
+#define sub32(a, b, ci, out, co) \
+		out = (a) - (b) - ((ci) ? 0 : 1); \
+		co = (unsigned)(out) < (unsigned)(a) ? 1 : 0;
+
+//#define add32(a, b, ci, out, co) \
+//		lv = (long long)(a) + (b) + ((ci) ? 1 : 0); \
+//		out = lv; co = (lv >> 32) ? 1 : 0;
+//
+//
+//#define sub32(a, b, ci, out, co) \
+//		lv = (long long)(a) - (b) - ((ci) ? 0 : 1); \
+//		out = lv; co = (lv >> 32) ? 1 : 0;
+
 
 /*
  * 'The time has come,' the Walrus said,
@@ -1629,6 +1672,15 @@ show_label_closest_padded(unsigned int upc)
  * (and then, they ate all the clams :-)
  *
  */
+
+//char no_exec_next;
+//int m_src_value, a_src_value;
+
+//unsigned int out_bus;
+//ucw_t u, w;
+//ucw_t p1;
+//int p0_pc, p1_pc;
+//int64 lv;
 
 int
 run(void)
@@ -1658,7 +1710,8 @@ run(void)
 	timing_start();
 
 	while (run_ucode_flag) {
-		char op_code, no_exec_next;
+		char op_code;
+		char no_exec_next;
 		char invert_sense, take_jump;
 		int a_src, m_src, new_pc, dest, alu_op;
 		int r_bit, p_bit, n_bit, ir8, ir7;
@@ -1671,11 +1724,10 @@ run(void)
 
 		int disp_const, disp_addr;
 		int map, len, rot;
-		unsigned int out_bus;
 		int carry_in, do_add, do_sub;
 
+		unsigned int out_bus;
 		int64 lv;
-
 		ucw_t u, w;
 		ucw_t p1;
 		int p0_pc, p1_pc;
@@ -1756,21 +1808,27 @@ run(void)
 		record_pc_history(p0_pc, vma, md);
 #endif
 
+#ifdef TRACE
 		if (trace_late_set) {
 			set_late_breakpoint(&trace_pt, &trace_pt_count);
 			trace_late_set = 0;
 		}
 
 		/* see if we hit a label trace point */
-		if (trace_label_pt && p0_pc == trace_label_pt) {
+		if (trace_label_pt &&
+		    p0_pc == trace_label_pt)
+		{
 //			show_pc_history();
 //			trace = 1;
 			trace_mcr_labels_flag = 1;
 		}
 
 		/* see if we hit a trace point */
-		if (trace_pt_prom && p0_pc == trace_pt_prom && trace == 0 && prom_enabled_flag == 1) {
-
+		if (trace_pt_prom &&
+		    p0_pc == trace_pt_prom &&
+		    trace == 0 &&
+		    prom_enabled_flag == 1)
+		{
 			if (trace_pt_count) {
 				if (--trace_pt_count == 0)
 					trace = 1;
@@ -1782,8 +1840,11 @@ run(void)
 				printf("trace on\n");
 		}
 
-		if (trace_pt && p0_pc == trace_pt && trace == 0 && prom_enabled_flag == 0) {
-
+		if (trace_pt &&
+		    p0_pc == trace_pt &&
+		    trace == 0 &&
+		    prom_enabled_flag == 0)
+		{
 			if (trace_pt_count) {
 				if (--trace_pt_count == 0)
 					trace = 1;
@@ -1807,15 +1868,19 @@ run(void)
 			if (prom_enabled_flag == 0) trace = 1;
 		}
 
-		/* ----------- end trace ------------- */
-
 		/* enforce max trace count */
 		if (trace) {
-			if (max_trace_cycles && trace_cycles++ > max_trace_cycles) {
-				printf("trace cycle count exceeded, pc %o\n", u_pc);
+			if (max_trace_cycles &&
+			    trace_cycles++ > max_trace_cycles)
+			{
+				printf("trace cycle count exceeded, pc %o\n",
+				       u_pc);
 				break;
 			}
 		}
+#endif
+
+		/* ----------- end trace ------------- */
 
 		/* enforce max cycles */
 		cycles++;
@@ -1823,7 +1888,9 @@ run(void)
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
 
-			if (sym = sym_find_last(!prom_enabled_flag, u_pc, &offset)) {
+			if ((sym = sym_find_last(!prom_enabled_flag,
+						 u_pc, &offset)))
+			{
 				if (offset == 0)
 					printf("%s:\n", sym);
 				else
@@ -1837,12 +1904,11 @@ run(void)
 		popj = (u >> 42) & 1;
 
 		if (trace) {
-			int offset;
-
 			printf("------\n");
 
 #if 1
-			if (sym = sym_find_by_val(!prom_enabled_flag, p0_pc)) {
+			if ((sym = sym_find_by_val(!prom_enabled_flag, p0_pc)))
+			{
 				printf("%s:\n", sym);
 			}
 #else
@@ -1866,11 +1932,12 @@ run(void)
 		if (trace_mcr_labels_flag && !trace) {
 			if (!prom_enabled_flag) {
 				int offset;
-				if (sym = sym_find_last(1, p0_pc, &offset)) {
+				if ((sym = sym_find_last(1, p0_pc, &offset)))
+				{
 					if (offset == 0 && sym != last_sym) {
-						printf("%s: (lc=%011o %011o)\n",
-						       sym, lc, lc>>2);
-						last_sym = sym;
+					     printf("%s: (lc=%011o %011o)\n",
+						    sym, lc, lc>>2);
+					     last_sym = sym;
 					}
 				}
 			}
@@ -2108,10 +2175,10 @@ run(void)
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 6: /* M-A-1 [SUB] */
-					lv = (long long)m_src_value - a_src_value -
-						(carry_in ? 0 : 1);
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
+					sub32(m_src_value,
+					      a_src_value,
+					      carry_in,
+					      alu_out, alu_carry);
 					break;
 				case 7: /* (M|~A)+M */
 					lv = (long long)(m_src_value | ~a_src_value) +
@@ -2122,16 +2189,15 @@ run(void)
 					break;
 				case 010: /* M|A */
 //?? is this right? check 74181
-					lv = (long long)(m_src_value | a_src_value) +
+					lv = (long long)(m_src_value |
+							 a_src_value) +
 						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 011: /* M+A [ADD] */
-					lv = (long long)a_src_value + m_src_value +
-						(carry_in ? 1 : 0);
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
+					add32(m_src_value, a_src_value,
+					      carry_in, alu_out, alu_carry);
 					break;
 				case 012: /* (M|A)+(M&~A) */
 					lv = (long long)(m_src_value | a_src_value) +
@@ -2148,9 +2214,21 @@ run(void)
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 014: /* M */
-					lv = (long long)m_src_value + (carry_in ? 1 : 0);
+#if 1
+					/* faster */
+					alu_out = m_src_value +
+						(carry_in ? 1 : 0);
+					alu_carry = 0;
+					if (m_src_value == 0xffffffff &&
+					    carry_in)
+						alu_carry = 1;
+#else
+					lv = (long long)
+						m_src_value +
+						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
+#endif
 					break;
 				case 015: /* M+(M&A) */
 					lv = (long long)m_src_value +
@@ -2167,10 +2245,8 @@ run(void)
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 017: /* M+M */
-					lv = (long long)m_src_value + m_src_value +
-						(carry_in ? 1 : 0);
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
+					add32(m_src_value, m_src_value,
+					      carry_in, alu_out, alu_carry);
 //new - better?
 //					alu_out = (m_src_value << 1) | 
 //						(carry_in ? 1 : 0);
@@ -2181,30 +2257,25 @@ run(void)
 			}
 
 			if (ir8 == 1) {
+#ifdef STAT_ALU_USE
+				alu_stat2[alu_op]++;
+#endif
+
 				/* conditional alu op code */
 				switch (alu_op) {
 				case 0: /* multiply step */
 					/* ADD if Q<0>=1, else SETM */
 					do_add = q & 1;
 					if (do_add) {
-#if 0
-						lv = (long long)a_src_value +
-							m_src_value +
-							(carry_in ? 1 : 0);
-						alu_out = lv;
-						alu_carry = (lv >> 32) ? 1 : 0;
-#else
-						/* this is faster */
-						alu_out = a_src_value +
-							m_src_value +
-							(carry_in ? 1 : 0);
-						alu_carry = carry_in ?
-						  (a_src_value >= ~m_src_value ? 0:1) :
-						  (a_src_value > ~m_src_value ? 0:1);
-#endif
+						add32(a_src_value,
+						      m_src_value, 
+						      carry_in,
+						      alu_out, alu_carry);
 					} else {
 						alu_out = m_src_value;
-						alu_carry = alu_out & 0x80000000 ? 1 : 0;
+						alu_carry =
+							alu_out & 0x80000000 ?
+							1 : 0;
 					}
 					break;
 				case 1: /* divide step */
@@ -2212,19 +2283,31 @@ run(void)
 					do_sub = q & 1;
 					tracef("do_sub %d\n", do_sub);
 
+#if 0
 					if (do_sub) {
-						lv =
+						sub32(m_src_value, a_src_value,
+						      !carry_in,
+						      alu_out, alu_carry);
+					} else {
+						add32(m_src_value, a_src_value,
+						      carry_in,
+						      alu_out, alu_carry);
+					}
+#else
+					if (do_sub) {
+						lv = (long long)
 							m_src_value -
 							a_src_value -
 							(carry_in ? 1 : 0);
 					} else {
-						lv =
+						lv = (long long)
 							m_src_value +
 							a_src_value +
 							(carry_in ? 1 : 0);
 					}
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
+#endif
 					break;
 				case 5: /* remainder correction */
 					tracef("remainder correction\n");
@@ -2235,12 +2318,18 @@ run(void)
 						/* setm */
 						alu_carry = 0;
 					} else {
+#if 0
+						add32(alu_out, a_src_value,
+						      carry_in,
+						      alu_out, alu_carry);
+#else
 						lv =
-							alu_out +
+							(long long)alu_out +
 							a_src_value +
 							(carry_in ? 1 : 0);
 						alu_out = lv;
 						alu_carry = (lv >> 32) ? 1 : 0;
+#endif
 					}
 
 					break;
@@ -2250,14 +2339,15 @@ run(void)
 					tracef("divide: %o / %o \n",
 					       q, a_src_value);
 
-					lv = m_src_value -
-						a_src_value -
-						(carry_in ? 1 : 0);
-
-					alu_out = lv;
+					sub32(m_src_value, a_src_value,
+					      !carry_in, alu_out, alu_carry);
+//					lv = (long long)m_src_value -
+//						a_src_value -
+//						(carry_in ? 1 : 0);
+//					alu_out = lv;
+//					alu_carry = (lv >> 32) ? 1 : 0;
 					tracef("alu_out %08x %o %d\n",
 					       alu_out, alu_out, alu_out);
-					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 
 				default:
@@ -2320,7 +2410,7 @@ run(void)
 
 			tracef("alu_out 0x%08x, alu_carry %d, q 0x%08x\n",
 			       alu_out, alu_carry, q);
-		alu_done:
+//		alu_done:
 			break;
 
 		case 1: /* jump */
@@ -2468,7 +2558,7 @@ run(void)
 					char ir4, ir3, lc1, lc0;
 
 					ir4 = (u >> 4) & 1;
-					ir4 = (u >> 3) & 1;
+					ir3 = (u >> 3) & 1;
 					lc1 = (lc >> 1) & 1;
 					lc0 = (lc >> 0) & 1;
 
@@ -2602,7 +2692,6 @@ run(void)
 			widthm1 = (u >> 5) & 037;
 			pos = u & 037;
 
-#if 1
 			/* misc function 3 */
 			if (((u >> 10) & 3) == 3) {
 				if (lc_byte_mode_flag) {
@@ -2610,7 +2699,7 @@ run(void)
 					char ir4, ir3, lc1, lc0;
 
 					ir4 = (u >> 4) & 1;
-					ir4 = (u >> 3) & 1;
+					ir3 = (u >> 3) & 1;
 					lc1 = (lc >> 1) & 1;
 					lc0 = (lc >> 0) & 1;
 
@@ -2634,7 +2723,6 @@ run(void)
 					tracef("16b-mode, pos %o\n", pos);
 				}
 			}
-#endif
 
 			if (mr_sr_bits & 2)
 				right_mask_index = pos;
@@ -2726,4 +2814,17 @@ run(void)
 	if (dump_state_flag) {
 		dump_state();
 	}
+
+#ifdef STAT_ALU_USE
+	{
+		int i;
+		printf("ALU op-code usage:\n");
+		for (i = 0; i < 16; i++) {
+			printf("%2i %2o %08u %08u %08u\n",
+			       i, i, alu_stat0[i], alu_stat1[i], alu_stat2[i]);
+		}
+	}
+#endif
+
+	return 0;
 }

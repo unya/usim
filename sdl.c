@@ -54,7 +54,7 @@ static int old_run_state;
 
 static void sdl_send_mouse_event(void)
 {
-	int x, y, dx, dy, dz, state, buttons;
+	int x, y, dx, dy, state, buttons;
 
 	state = SDL_GetRelativeMouseState(&dx, &dy);
 
@@ -119,8 +119,6 @@ void
 sdl_refresh(void)
 {
 	SDL_Event ev1, *ev = &ev1;
-	int mod_state;
-	int keysym;
 
 
 	send_accumulated_updates();
@@ -150,7 +148,7 @@ sdl_refresh(void)
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		{
-			SDL_MouseButtonEvent *bev = &ev->button;
+			/*SDL_MouseButtonEvent *bev = &ev->button;*/
 			sdl_send_mouse_event();
 		}
 		break;
@@ -238,7 +236,9 @@ sdl_set_bow_mode(char new_mode)
 void
 sdl_setup_display(void)
 {
+#if 0
 	SDL_Surface *logo;
+#endif
 	unsigned char *p = screen->pixels;
 	int i, j;
 
@@ -283,7 +283,7 @@ video_write(int offset, unsigned int bits)
 {
 	if (screen) {
 		unsigned char *ps = screen->pixels;
-		int i, h, v, n;
+		int i, h, v;
 
 		tv_bitmap[offset] = bits;
 

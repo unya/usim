@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "ucode.h"
 
@@ -85,6 +86,8 @@ read_i_mem(int fd, int start, int size)
 		ucode[loc] = ll;
 		loc++;
 	}
+
+	return 0;
 }
 
 int
@@ -97,6 +100,8 @@ read_d_mem(int fd, int start, int size)
 		v1 = read16(fd);
 		v2 = read16(fd);
 	}
+
+	return 0;
 }
 
 int
@@ -117,15 +122,16 @@ read_a_mem(int fd, int start, int size)
 			printf("%o <- %o\n", i, v);
 		}
 	}
+
+	return 0;
 }
 
 int
 read_main_mem(int fd, int start, int size)
 {
-	int i, j;
-	unsigned int v1, v2;
+	unsigned int v1;
 	off_t o;
-	unsigned int b[256];
+	/*unsigned int b[256]; */
 
 	v1 = read32(fd);
 	printf("start %d, size %d\n", start, size);
@@ -149,6 +155,8 @@ read_main_mem(int fd, int start, int size)
 		}
 	}
 #endif
+
+	return 0;
 }
 
 void
@@ -161,6 +169,7 @@ usage(void)
 extern char *optarg;
 extern int optind;
 
+int
 main(int argc, char *argv[])
 {
 	int c, fd, done, skip;
@@ -190,7 +199,6 @@ main(int argc, char *argv[])
 	fd = open(argv[optind], O_RDONLY);
 	if (fd) {
 		int code, start, size;
-		int i, loc;
 
 		if (skip) {
 			while (skip--)
@@ -227,5 +235,7 @@ main(int argc, char *argv[])
 			}
 		}
 	}
+
+	exit(0);
 }
 

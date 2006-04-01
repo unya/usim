@@ -177,6 +177,10 @@ make_labl(int fd)
 #define LABEL_PAD_CHAR '\0'
 	/* pack brand text - offset 010, 32 bytes */
 	memset((char *)&buffer[010], LABEL_PAD_CHAR, 32);
+	if (brand) {
+		memcpy((char *)&buffer[010], brand, strlen(brand)+1);
+		printf("brand: '%s'\n", brand);
+	}
 
 	/* pack text label - offset 020, 32 bytes */
 	memset((char *)&buffer[020], ' ', 32);
@@ -194,7 +198,10 @@ make_labl(int fd)
 	_swaplongbytes(&buffer[0200], 128);
 #endif
 
-	write(fd, buffer, 256*4);
+	if (write(fd, buffer, 256*4) != 256*4)
+		return -1;
+
+	return 0;
 }
 
 int
@@ -217,7 +224,8 @@ write_block(int fd, int block_no, unsigned char *buf)
 	size = 256*4;
 	ret = write(fd, buf, size);
 	if (ret != size) {
-		printf("disk write error; ret %d, size %d\n", ret, size);
+		printf("disk write error; ret %d, size %d\n",
+		       (int)ret, size);
 		perror("write");
 		return -1;
 	}
@@ -228,7 +236,7 @@ write_block(int fd, int block_no, unsigned char *buf)
 int
 make_one_partition(int fd, int index)
 {
-	int ret, count, i, fd1, offset;
+	int ret, count, fd1, offset;
 	unsigned char b[256*4];
 
 	printf("making %s... ", parts[index].name);
@@ -310,6 +318,7 @@ parse_template(char *template)
 	}
 
 	part_count = 0;
+	mode = 0;
 
 	while (fgets(line, sizeof(line), f)) {
 		if (line[0]) {
@@ -339,6 +348,8 @@ parse_template(char *template)
 			break;
 		case 2:
 			sscanf(line, "%s\t%s", what, str);
+			if (0) printf("what '%s', str '%s'\n", what, str);
+
 			if (strcmp(what, "cyls") == 0)
 				cyls = atoi(str);
 			if (strcmp(what, "heads") == 0)
@@ -350,11 +361,11 @@ parse_template(char *template)
 			if (strcmp(what, "lod") == 0)
 				lod_name = strdup(str);
 			if (strcmp(what, "brand") == 0)
-				;
+				brand = strdup(str);
 			if (strcmp(what, "text") == 0)
-				;
+				text = strdup(str);
 			if (strcmp(what, "comment") == 0)
-				;
+				comment = strdup(str);
 			break;
 		case 3:
 			start = size = 0;
@@ -388,8 +399,8 @@ fillout_image_file(int fd)
 	}
 
 	offset = (last_block_no + 1) * (256*4);
-	if (0) printf("last block %d (0%o), expanding file to %lld\n",
-		      last_block_no, last_block_no, offset-1);
+	//if (0) printf("last block %d (0%o), expanding file to %lld\n",
+	//	      last_block_no, last_block_no, offset-1);
 
 	ret = ftruncate(fd, offset-1);
 	if (0) printf("ret %d\n", ret);
@@ -418,16 +429,18 @@ fillout_image_file(int fd)
 }
 
 int
-create_disk(char *template, char *image)
+create_disk(char *template)
 {
 	int fd;
 
 	if (parse_template(template))
 		return -1;
 
-	fd = open(image, O_RDWR | O_CREAT, 0666);
+	printf("creating %s\n", img_filename);
+
+	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
 	if (fd < 0) {
-		perror(image);
+		perror(img_filename);
 		return -1;
 	}
 
@@ -579,9 +592,10 @@ usage(void)
 
 extern char *optarg;
 
+int
 main(int argc, char *argv[])
 {
-	int c, fd;
+	int c;
 
 	if (argc <= 1)
 		usage();
@@ -616,7 +630,7 @@ main(int argc, char *argv[])
 	}
 
 	if (create) {
-		create_disk(template_filename, img_filename);
+		create_disk(template_filename);
 		exit(0);
 	}
 

@@ -19,9 +19,14 @@
 #endif
 
 #include "ucode.h"
+#include "config.h"
+
+extern void deassert_xbus_interrupt(void);
+extern void assert_xbus_interrupt(void);
 
 #define DELAY_DISK_INTERRUPT
 #define ALLOW_DISK_WRITE
+
 
 /*
 	disk controller registers:
@@ -156,7 +161,7 @@ int disk_da;
 
 int disk_byteswap;
 
-int
+void
 disk_set_byteswap(int on)
 {
 	disk_byteswap = on;
@@ -168,19 +173,19 @@ disk_get_status(void)
 	return disk_status;
 }
 
-int
+void
 disk_set_da(int v)
 {
 	disk_da = v;
 }
 
-int
+void
 disk_set_clp(int v)
 {
 	disk_clp = v;
 }
 
-int
+void
 disk_set_cmd(int v)
 {
 	disk_cmd = v;
@@ -250,7 +255,7 @@ _disk_read(int block_no, unsigned int *buffer)
 	ret = read(disk_fd, buffer, size);
 	if (ret != size) {
 		printf("disk read error; ret %d, offset %lu, size %d\n",
-		       ret, offset, size);
+		       (int)ret, (long)offset, size);
 		perror("read");
 
 		memset((char *)buffer, 0, size);
@@ -291,7 +296,8 @@ _disk_write(int block_no, unsigned int *buffer)
 
 	ret = write(disk_fd, buffer, size);
 	if (ret != size) {
-		printf("disk write error; ret %d, size %d\n", ret, size);
+		printf("disk write error; ret %d, size %d\n",
+		       (int)ret, size);
 		perror("write");
 		return -1;
 	}
@@ -342,6 +348,8 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 		/* pack text label - offset 020, 32 bytes */
 		return 0;
 	}
+
+	return -1;
 }
 
 int
@@ -387,6 +395,7 @@ void
 disk_future_interrupt()
 {
 	disk_interrupt_delay = 100;
+disk_interrupt_delay = 2500;
 }
 
 void
@@ -497,6 +506,7 @@ disk_start_read(void)
 void
 disk_start_read_compare(void)
 {
+printf("disk_start_read_compare!\n");
 	disk_decode_addr();
 	disk_show_cur_addr();
 }
@@ -586,7 +596,10 @@ disk_start(void)
 		break;
 	default:
 		tracedio("unknown\n");
+		return -1;
 	}
+
+	return 0;
 }
 
 int
@@ -680,6 +693,8 @@ disk_init(char *filename)
 #ifdef __BIG_ENDIAN__
 	disk_set_byteswap(1);
 #endif
+
+	printf("disk: opening %s\n", filename);
 
 	disk_fd = open(filename, O_RDWR | O_BINARY);
 	if (disk_fd < 0) {

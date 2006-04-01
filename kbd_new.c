@@ -22,50 +22,52 @@
 # define BUFSIZE 512
 #endif
 
+extern void assert_unibus_interrupt(int v);
+
 /* Map of keys generating shifts */
 #define SHIFTPRESS_MAP_LEN 20
 static int shiftpress_map[SHIFTPRESS_MAP_LEN][2] = {
-  SDLK_LSHIFT, KB_SH_LEFT_SHIFT,
-  SDLK_RSHIFT, KB_SH_RIGHT_SHIFT,
-  SDLK_LCTRL, KB_SH_LEFT_CONTROL,
-  SDLK_RCTRL, KB_SH_RIGHT_CONTROL,
-  SDLK_LALT, KB_SH_LEFT_META,
-  SDLK_LMETA, KB_SH_LEFT_META,
-  SDLK_RALT, KB_SH_RIGHT_META,
-  SDLK_RMETA, KB_SH_RIGHT_META,
-  SDLK_LSUPER, KB_SH_LEFT_SUPER,
-  SDLK_RSUPER, KB_SH_RIGHT_SUPER,
-  SDLK_MODE, KB_SH_LEFT_GREEK,		/* AltGr = Left Greek */
-  SDLK_MENU, KB_SH_LEFT_TOP,
-  SDLK_COMPOSE, KB_SH_LEFT_TOP,		/* Multi-key compose = Left Top */
-  SDLK_CAPSLOCK, KB_SH_CAPSLOCK,
-  -1, -1
+  { SDLK_LSHIFT, KB_SH_LEFT_SHIFT },
+  { SDLK_RSHIFT, KB_SH_RIGHT_SHIFT },
+  { SDLK_LCTRL, KB_SH_LEFT_CONTROL },
+  { SDLK_RCTRL, KB_SH_RIGHT_CONTROL },
+  { SDLK_LALT, KB_SH_LEFT_META },
+  { SDLK_LMETA, KB_SH_LEFT_META },
+  { SDLK_RALT, KB_SH_RIGHT_META },
+  { SDLK_RMETA, KB_SH_RIGHT_META },
+  { SDLK_LSUPER, KB_SH_LEFT_SUPER },
+  { SDLK_RSUPER, KB_SH_RIGHT_SUPER },
+  { SDLK_MODE, KB_SH_LEFT_GREEK },	/* AltGr = Left Greek */
+  { SDLK_MENU, KB_SH_LEFT_TOP },
+  { SDLK_COMPOSE, KB_SH_LEFT_TOP },	/* Multi-key compose = Left Top */
+  { SDLK_CAPSLOCK, KB_SH_CAPSLOCK },
+  { -1, -1 }
 };
 
 /* Map of keypresses to lispm chars */
 #define KEYPRESS_MAP_LEN SDLK_LAST
 static int keypress_map[KEYPRESS_MAP_LEN][2] = {
-  SDLK_F1, LM_K_NETWORK,
-  SDLK_F2, LM_K_SYSTEM,
-  SDLK_F3, LM_K_ABORT,
-  SDLK_F4, LM_K_CLEAR_INPUT,
-  SDLK_F5, LM_K_HELP,
-  SDLK_HELP, LM_K_HELP,
-  SDLK_F6, LM_K_END, 
-  SDLK_END, LM_K_END,
-  SDLK_F7, LM_K_CALL,
-  SDLK_BREAK, LM_K_BREAK,
-  SDLK_INSERT, LM_K_RESUME,
-  SDLK_BACKSPACE, LM_K_OVERSTRIKE,
-  SDLK_RETURN, LM_K_RETURN,
-  SDLK_TAB, LM_K_TAB,
-  SDLK_DELETE, LM_K_RUBOUT,
-  SDLK_ESCAPE, LM_K_TERMINAL,
-  SDLK_UP, LM_K_HAND_UP,
-  SDLK_DOWN, LM_K_HAND_DOWN,
-  SDLK_LEFT, LM_K_HAND_LEFT,
-  SDLK_RIGHT, LM_K_HAND_RIGHT,
-  -1, -1
+  { SDLK_F1, LM_K_NETWORK },
+  { SDLK_F2, LM_K_SYSTEM },
+  { SDLK_F3, LM_K_ABORT },
+  { SDLK_F4, LM_K_CLEAR_INPUT },
+  { SDLK_F5, LM_K_HELP },
+  { SDLK_HELP, LM_K_HELP },
+  { SDLK_F6, LM_K_END },
+  { SDLK_END, LM_K_END },
+  { SDLK_F7, LM_K_CALL },
+  { SDLK_BREAK, LM_K_BREAK },
+  { SDLK_INSERT, LM_K_RESUME },
+  { SDLK_BACKSPACE, LM_K_OVERSTRIKE },
+  { SDLK_RETURN, LM_K_RETURN },
+  { SDLK_TAB, LM_K_TAB },
+  { SDLK_DELETE, LM_K_RUBOUT },
+  { SDLK_ESCAPE, LM_K_TERMINAL },
+  { SDLK_UP, LM_K_HAND_UP },
+  { SDLK_DOWN, LM_K_HAND_DOWN },
+  { SDLK_LEFT, LM_K_HAND_LEFT },
+  { SDLK_RIGHT, LM_K_HAND_RIGHT },
+  { -1, -1 }
 };
 
 /* Starting at space, give the shifted chars (on host keyboard) */
@@ -118,7 +120,8 @@ void iob_queue_key_event(int ev)
 #endif
     iob_key_queue_free--;
     iob_key_queue[iob_key_queue_optr] = v;
-    iob_key_queue_optr = (iob_key_queue_optr++)%IOB_KEY_QUEUE_LEN;
+//    iob_key_queue_optr = (iob_key_queue_optr++)%IOB_KEY_QUEUE_LEN;
+    iob_key_queue_optr = (iob_key_queue_optr + 1)%IOB_KEY_QUEUE_LEN;
   } else {
     fprintf(stderr,"IOB key queue full!\n");
     if (!(iob_kbd_csr & (1<<5)) && (iob_kbd_csr & (1<<2))) {
@@ -141,7 +144,8 @@ void iob_dequeue_key_event()
     printf("iob_dequeue_key_event() - dequeuing 0%o, q len before %d\n", v,
 	   IOB_KEY_QUEUE_LEN - iob_key_queue_free);
 #endif
-    iob_key_queue_iptr = (iob_key_queue_iptr++)%IOB_KEY_QUEUE_LEN;
+//    iob_key_queue_iptr = (iob_key_queue_iptr++)%IOB_KEY_QUEUE_LEN;
+    iob_key_queue_iptr = (iob_key_queue_iptr + 1)%IOB_KEY_QUEUE_LEN;
     iob_key_queue_free++;
     iob_key_scan = (1<<16) | v;
     if (iob_kbd_csr & (1<<2)) {	/* kbd interrupt enabled? */
@@ -301,7 +305,6 @@ read_kbd_keypress_config(FILE *cf, char *buf, int buflen) {
 
 static void
 read_kbd_keyshift_config(FILE *cf, char *buf, int buflen) {
-  char *eq;
   unsigned char sk, lk;
   int i, max = 0;
   memset(&kbd_shift_map, 0, KBD_SHIFT_MAP_LEN);
@@ -420,7 +423,6 @@ void sdl_queue_all_keys_up(void)
  */
 void sdl_process_key(SDL_KeyboardEvent *ev, int keydown)
 {
-  int ms = -1;
   int lmkey = -1;
   int lmcode = -1;
   unsigned char wantshift = 0;
