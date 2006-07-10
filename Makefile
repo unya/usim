@@ -52,8 +52,12 @@ endif
 ifeq ($(OS), LINUX)
 #CFLAGS = -g
 #CFLAGS = -O -pg -g -fprofile-arcs
-CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
+#CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
+#CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
+#CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle -m32 -g
+CFLAGS = -O3 $(DEFINES) -Walle -m32 -g
+LFLAGS = -m32 -L/usr/lib
 endif
 
 
@@ -63,7 +67,7 @@ USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 
 SRC = $(USIM_SRC) $(DISPLAY_SRC) $(KEYBOARD_SRC)
 
-all: usim readmcr diskmaker lod
+all: usim readmcr diskmaker lod lmfs
 
 usim: $(USIM_OBJ)
 	$(CC) -o usim $(LFLAGS) $(USIM_OBJ) $(USIM_LIBS)
@@ -79,6 +83,9 @@ readmcr: readmcr.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 diskmaker: diskmaker.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+lmfs: lmfs.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 lod: lod.c macro.c

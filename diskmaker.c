@@ -39,6 +39,7 @@ char *img_filename;
 int cyls, heads, blocks_per_track;
 char *mcr_name;
 char *lod_name;
+char *part_name;
 char *brand;
 char *text;
 char *comment;
@@ -46,6 +47,8 @@ char *comment;
 int debug;
 int create;
 int show;
+int extract;
+int modify;
 
 unsigned int buffer[256];
 
@@ -200,6 +203,32 @@ make_labl(int fd)
 
 	if (write(fd, buffer, 256*4) != 256*4)
 		return -1;
+
+	return 0;
+}
+
+int
+read_block(int fd, int block_no, unsigned char *buf)
+{
+	off_t offset, ret;
+	int size;
+
+	offset = block_no * (256*4);
+	ret = lseek(fd, offset, SEEK_SET);
+
+	if (ret != offset) {
+		perror("lseek");
+		return -1;
+	}
+
+	size = 256*4;
+	ret = read(fd, buf, size);
+	if (ret != size) {
+		printf("disk read error; ret %d, size %d\n",
+		       (int)ret, size);
+		perror("read");
+		return -1;
+	}
 
 	return 0;
 }
@@ -456,6 +485,66 @@ create_disk(char *template)
 	return 0;
 }
 
+/*
+ * this is dangerous, and generally will only work if you
+ * modify the last partition.
+ *
+ * but it can be useful if you want to change the size of a partition
+ * and not loose some existing info.
+ */
+
+int
+modify_disk(char *template, char *img_filename, char *part_name)
+{
+	int i, fd, part_index;
+
+	if (template == NULL) {
+	  fprintf(stderr, "missing template filename\n");
+	  return -1;
+	}
+
+	if (img_filename == NULL) {
+	  fprintf(stderr, "missing image filename\n");
+	  return -1;
+	}
+
+	if (parse_template(template))
+		return -1;
+
+	part_index = -1;
+	for (i = 0; i < part_count; i++) {
+	  if (strcmp(parts[i].name, part_name) == 0) {
+	    part_index = i;
+	    break;
+	  }
+	}
+
+	if (i == part_count) {
+	  fprintf(stderr, "can't find partition '%s'\n", part_name);
+	  return -1;
+	}
+
+	printf("modifying %s\n", img_filename);
+
+	fd = open(img_filename, O_RDWR);
+	if (fd < 0) {
+		perror(img_filename);
+		return -1;
+	}
+
+	printf("re-write label\n");
+	make_labl(fd);
+
+	printf("modify partition %d, '%s'\n",
+	       part_index, parts[part_index].name);
+
+	make_one_partition(fd, part_index);
+
+	close(fd);
+
+	return 0;
+}
+
 
 void
 default_template(void)
@@ -577,6 +666,109 @@ show_partition_info(char *filename)
 	return 0;
 }
 
+int
+extract_partition(char *filename, char *extract_filename, char *part_name)
+{
+	int fd, fd_out, ret, p, i, result;
+	int count, offset, size;
+
+	fd = 0;
+	fd_out = 0;
+	result = -1;
+
+	fd = open(filename, O_RDONLY, 0666);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+
+	ret = read(fd, buffer, 256*4);
+	if (ret != 256*4) {
+		perror(filename);
+		close(fd);
+		return -1;
+	}
+
+#ifdef NEED_SWAP
+	/* don't swap the text */
+	_swaplongbytes(&buffer[0], 8);
+	_swaplongbytes(&buffer[0200], 128);
+#endif
+
+	if (buffer[0] != str4("LABL")) {
+		fprintf(stderr, "%s: no valid disk label found\n", filename);
+		close(fd);
+		return -1;
+	}
+
+	if (buffer[1] != 1) {
+		fprintf(stderr, "%s: label version not 1\n", filename);
+		close(fd);
+		return -1;
+	}
+
+	cyls = buffer[2];		/* # cyls */
+	heads = buffer[3];		/* # heads */
+	blocks_per_track = buffer[4];	/* # blocks */
+	mcr_name = strdup(unstr4(buffer[6]));	/* name of micr part */
+	lod_name = strdup(unstr4(buffer[7]));	/* name of load part */
+
+	count = buffer[0200];
+	size = buffer[0201];
+	p = 0202;
+
+	part_count = 0;
+	for (i = 0; i < count; i++) {
+		add_partition(strdup(unstr4(buffer[p+0])),
+			      buffer[p+1], buffer[p+2], 0, NULL);
+		
+		p += size;
+	}
+
+	brand = strdup((char *)&buffer[010]);
+	text = strdup((char *)&buffer[020]);
+	comment = strdup((char *)&buffer[030]);
+
+	offset = 0;
+
+	for (i = 0; i < part_count; i++) {
+	  if (strcmp(parts[i].name, part_name) == 0) {
+	    offset = parts[i].start;
+	    size = parts[i].size;
+	    break;
+	  }
+	}
+
+	if (i == part_count) {
+	  fprintf(stderr, "can't find partition '%s'\n", part_name);
+	  result = -1;
+	} else {
+	  unsigned char b[256*4];
+
+	  printf("extracting partition '%s' from %s\n",
+		 part_name, filename);
+
+	  fd_out = open(extract_filename, O_RDWR|O_CREAT, 0666);
+	  if (fd_out < 0) {
+	    perror(filename);
+	    close(fd);
+	    return -1;
+	  }
+
+	  for (count = 0; count < size; count++) {
+	    if (read_block(fd, offset+count, b))
+	      break;
+	    if (write_block(fd_out, count, b))
+	      break;
+	  }
+
+	  close(fd_out);
+	}
+
+	close(fd);
+	return result;
+}
+
 void
 usage(void)
 {
@@ -586,6 +778,8 @@ usage(void)
 	fprintf(stderr, "-c	create new disk image\n");
 	fprintf(stderr, "-t <template-filename>\n");
 	fprintf(stderr, "-f <disk-image-filename>\n");
+	fprintf(stderr, "-x <partition-name>\n");
+	fprintf(stderr, "-m <partition-name>\n");
 
 	exit(1);
 }
@@ -600,7 +794,7 @@ main(int argc, char *argv[])
 	if (argc <= 1)
 		usage();
 
-	while ((c = getopt(argc, argv, "cdt:f:p")) != -1) {
+	while ((c = getopt(argc, argv, "cdt:f:pm:x:")) != -1) {
 		switch (c) {
 		case 'c':
 			create++;
@@ -617,6 +811,14 @@ main(int argc, char *argv[])
 		case 't':
 			template_filename = strdup(optarg);
 			break;
+		case 'm':
+			part_name = strdup(optarg);
+			modify++;
+			break;
+		case 'x':
+			part_name = strdup(optarg);
+			extract++;
+			break;
 		default:
 			usage();
 		}
@@ -632,6 +834,14 @@ main(int argc, char *argv[])
 	if (create) {
 		create_disk(template_filename);
 		exit(0);
+	}
+
+	if (modify) {
+		modify_disk(template_filename, img_filename, part_name);
+	}
+
+	if (extract) {
+		extract_partition(img_filename, part_name, part_name);
 	}
 
 	exit(0);

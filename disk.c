@@ -719,7 +719,7 @@ disk_init(char *filename)
 	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
 
 	/* hack to find mcr symbol file from disk pack label */
-	if (label[030] != 0 && label[030] != 0200200200200) {
+	if (label[030] != 0 && label[030] != 020020020020) {
 		char fn[1024], *s;
 		strcpy(fn, (char *)&label[030]);
 		printf("disk: pack label comment '%s'\n", fn);

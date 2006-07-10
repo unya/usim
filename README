@@ -136,9 +136,32 @@ f2	system
 f3	network
 f4	abort
 f5	clear_input
+esc	Alt Mode
+f1	Terminal
+f2	System
+f3	Network
+f4	Abort
+f5	Clear Input
+f6	Help
+f7	Page
+f8	
+f9	
+f10	
+f11	
+f12
+pgup	Break
+pgdn	{appears to crash usim}
 home	Call
 end	End
 backspace rubout
+backspace Rub Out
+
+Terminal-M	Toggle **MORE** processing.
+Terminal-0-M	Disable **MORE** processing.
+
+	http://world.std.com/~jdostale/kbd/Knight1.jpeg
+	http://world.std.com/~jdostale/kbd/SpaceCadet1.jpeg
+	http://world.std.com/~jdostale/kbd/SpaceCadet2.jpeg
 
 The mouse emulation works but doesn't track exactly.
 
