@@ -39,6 +39,9 @@ extern int trace_io_flag;
 extern int trace_disk_flag;
 #define tracedio if (trace_disk_flag) printf
 
+extern int trace_net_flag;
+#define tracedio if (trace_net_flag) printf
+
 extern int trace_int_flag;
 #define traceint if (trace_int_flag) printf
 

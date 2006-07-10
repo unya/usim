@@ -20,7 +20,7 @@
 
 #include "ucode.h"
 
-#define STAT_PC_HISTORY
+//#define STAT_PC_HISTORY
 //#define STAT_ALU_USE
 //#define TRACE
 
@@ -101,6 +101,7 @@ int trace_mcr_flag;
 int trace_io_flag;
 int trace_vm_flag;
 int trace_disk_flag;
+int trace_net_flag;
 int trace_int_flag;
 int trace_late_set;
 
@@ -401,8 +402,8 @@ read_mem(int vaddr, unsigned int *pv)
 	/* 14 bit page # */
 	pn = map & 037777;
 
-	tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
-	       vaddr, pn, offset, map, 1 << 23);
+	//tracef("read_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
+	//vaddr, pn, offset, map, 1 << 23);
 
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
@@ -435,7 +436,7 @@ if ((vaddr & 077700000) == 077200000) {
 
 	if (pn == 037764) {
 		offset <<= 1;
-		iob_unibus_read(offset, pv);
+		iob_unibus_read(offset, (int *)pv);
 		return 0;
 	}
 
@@ -480,7 +481,7 @@ if ((vaddr & 077700000) == 077200000) {
 		return -1;
 	}
 
-	tracef("read_mem(vaddr=%o) -> %o\n", vaddr, page->w[offset]);
+	//tracef("read_mem(vaddr=%o) -> %o\n", vaddr, page->w[offset]);
 
 	*pv = page->w[offset];
 	return 0;
@@ -519,13 +520,13 @@ write_mem(int vaddr, unsigned int v)
 
 	map = map_vtop(vaddr, (int *)0, &offset);
 
-	tracef("write_mem(vaddr=%o,v=%o)\n", vaddr, v);
+	//tracef("write_mem(vaddr=%o,v=%o)\n", vaddr, v);
 
 	/* 14 bit page # */
 	pn = map & 037777;
 
-	tracef("write_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
-	       vaddr, pn, offset, map, 1 << 22);
+	//tracef("write_mem(vaddr=%o) -> pn %o, offset %o, map %o (%o)\n",
+	//	       vaddr, pn, offset, map, 1 << 22);
 
 	if ((map & (1 << 23)) == 0) {
 		/* no access perm */
@@ -650,7 +651,7 @@ if ((vaddr & 077700000) == 077200000) {
 		/* page fault */
 		page_fault_flag = 1;
 		opc = pn;
-		tracef("write_mem(vaddr=%o) page fault\n", vaddr);
+		//tracef("write_mem(vaddr=%o) page fault\n", vaddr);
 		return -1;
 	}
 
@@ -676,7 +677,7 @@ note_location(char *s, unsigned int v)
 inline void
 write_a_mem(int loc, unsigned int v)
 {
-	tracef("a_memory[%o] <- %o\n", loc, v);
+	//tracef("a_memory[%o] <- %o\n", loc, v);
 	a_memory[loc] = v;
 }
 
@@ -701,7 +702,7 @@ write_m_mem(int loc, unsigned int v)
 {
 	m_memory[loc] = v;
 	a_memory[loc] = v;
-	tracef("a,m_memory[%o] <- %o\n", loc, v);
+	//tracef("a,m_memory[%o] <- %o\n", loc, v);
 }
 
 #define USE_PDL_PTR 1
@@ -770,7 +771,7 @@ push_spc(int pc)
 {
 	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
 
-	tracef("writing spc[%o] <- %o\n", spc_stack_ptr, pc);
+	//tracef("writing spc[%o] <- %o\n", spc_stack_ptr, pc);
 	spc_stack[spc_stack_ptr] = pc;
 }
 
@@ -779,8 +780,8 @@ pop_spc(void)
 {
 	unsigned int v;
 
-	tracef("reading spc[%o] -> %o\n",
-	       spc_stack_ptr, spc_stack[spc_stack_ptr]);
+	//tracef("reading spc[%o] -> %o\n",
+	//     spc_stack_ptr, spc_stack[spc_stack_ptr]);
 
 	v = spc_stack[spc_stack_ptr];
 	spc_stack_ptr = (spc_stack_ptr - 1) & 037;
@@ -798,9 +799,9 @@ advance_lc(int *ppc)
 	/* lc is 26 bits */
 	int old_lc = lc & 0377777777;
 
-	tracef("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
-	       lc_byte_mode_flag, lc,
-	       ((lc >> 31) & 1) ? 1 : 0);
+	//tracef("advance_lc() byte-mode %d, lc %o, need-fetch %d\n",
+	//     lc_byte_mode_flag, lc,
+	//     ((lc >> 31) & 1) ? 1 : 0);
 
 	if (lc_byte_mode_flag) {
 		/* byte mode */
@@ -1653,8 +1654,7 @@ If B is any larger, then a carry will be generated from the top bit.
 //#define add32(a, b, ci, out, co) \
 //		lv = (long long)(a) + (b) + ((ci) ? 1 : 0); \
 //		out = lv; co = (lv >> 32) ? 1 : 0;
-//
-//
+
 //#define sub32(a, b, ci, out, co) \
 //		lv = (long long)(a) - (b) - ((ci) ? 0 : 1); \
 //		out = lv; co = (lv >> 32) ? 1 : 0;
@@ -1884,6 +1884,8 @@ run(void)
 
 		/* enforce max cycles */
 		cycles++;
+// glug. overflow
+if (cycles == 0) cycles = 1;
 		if (max_cycles && cycles > max_cycles) {
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
@@ -1985,7 +1987,7 @@ run(void)
 				break;
 			case 011: /* MAP[MD] */
 				/* memory-map-data, or "map[MD]" */
-				l2_data = map_vtop(md, &l1_data, (int *)0);
+				l2_data = map_vtop(md, (int *)&l1_data, (int *)0);
 				
 				m_src_value = 
 					(write_fault_bit << 31) |
@@ -2339,13 +2341,16 @@ run(void)
 					tracef("divide: %o / %o \n",
 					       q, a_src_value);
 
+#if 1
 					sub32(m_src_value, a_src_value,
 					      !carry_in, alu_out, alu_carry);
-//					lv = (long long)m_src_value -
-//						a_src_value -
-//						(carry_in ? 1 : 0);
-//					alu_out = lv;
-//					alu_carry = (lv >> 32) ? 1 : 0;
+#else
+					lv = (long long)m_src_value -
+						a_src_value -
+						(carry_in ? 1 : 0);
+					alu_out = lv;
+					alu_carry = (lv >> 32) ? 1 : 0;
+#endif
 					tracef("alu_out %08x %o %d\n",
 					       alu_out, alu_out, alu_out);
 					break;
@@ -2384,6 +2389,7 @@ run(void)
 			switch (out_bus) {
 			case 0:
 				printf("out_bus == 0!\n");
+out_bus = rotate_left(m_src_value, u & 037);
 				break;
 			case 1: out_bus = alu_out;
 				break;
@@ -2752,6 +2758,7 @@ run(void)
 
 			switch (mr_sr_bits) {
 			case 0:
+				printf("mr_sr_bits == 0!\n");
 				break;
 			case 1: /* ldb */
 				tracef("ldb; m %o\n", m_src_value);
