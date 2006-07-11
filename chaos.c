@@ -658,7 +658,8 @@ chaos_connect_to_server(void)
 		UNIX_SOCKET_PATH, UNIX_SOCKET_CLIENT_NAME, getpid());
 
 	unix_addr.sun_family = AF_UNIX;
-	len = strlen(unix_addr.sun_path) + sizeof(unix_addr.sun_family);
+//	len = strlen(unix_addr.sun_path) + sizeof(unix_addr.sun_family);
+	len = strlen(unix_addr.sun_path) + sizeof unix_addr - sizeof unix_addr.sun_path;
 
 	unlink(unix_addr.sun_path);
 
@@ -678,7 +679,8 @@ chaos_connect_to_server(void)
 	sprintf(unix_addr.sun_path, "%s%s",
 		UNIX_SOCKET_PATH, UNIX_SOCKET_SERVER_NAME);
 	unix_addr.sun_family = AF_UNIX;
-	len = strlen(unix_addr.sun_path) + sizeof(unix_addr.sun_family);
+//	len = strlen(unix_addr.sun_path) + sizeof(unix_addr.sun_family);
+	len = strlen(unix_addr.sun_path) + sizeof unix_addr - sizeof unix_addr.sun_path;
 
 	if (connect(chaos_fd, (struct sockaddr *)&unix_addr, len) < 0) {
 		printf("chaos: no chaosd server\n");
