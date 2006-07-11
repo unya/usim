@@ -1651,13 +1651,16 @@ If B is any larger, then a carry will be generated from the top bit.
 		out = (a) - (b) - ((ci) ? 0 : 1); \
 		co = (unsigned)(out) < (unsigned)(a) ? 1 : 0;
 
-//#define add32(a, b, ci, out, co) \
-//		lv = (long long)(a) + (b) + ((ci) ? 1 : 0); \
-//		out = lv; co = (lv >> 32) ? 1 : 0;
+#if 0
+/* old, slow, realible version */
+#define add32(a, b, ci, out, co) \
+		lv = (long long)(a) + (b) + ((ci) ? 1 : 0); \
+		out = lv; co = (lv >> 32) ? 1 : 0;
 
-//#define sub32(a, b, ci, out, co) \
-//		lv = (long long)(a) - (b) - ((ci) ? 0 : 1); \
-//		out = lv; co = (lv >> 32) ? 1 : 0;
+#define sub32(a, b, ci, out, co) \
+		lv = (long long)(a) - (b) - ((ci) ? 0 : 1); \
+		out = lv; co = (lv >> 32) ? 1 : 0;
+#endif
 
 
 /*

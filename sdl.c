@@ -16,6 +16,7 @@
 #include <SDL/SDL.h>
 #endif
 
+#include "usim.h"
 #include "logo.h"
 
 extern int run_ucode_flag;
@@ -48,6 +49,8 @@ static DisplayState *ds = &display_state;
 #define MOUSE_EVENT_LBUTTON 1
 #define MOUSE_EVENT_MBUTTON 2
 #define MOUSE_EVENT_RBUTTON 4
+
+extern void sdl_process_key(SDL_KeyboardEvent *ev, int keydown);
 
 static int old_run_state;
 

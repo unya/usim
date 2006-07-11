@@ -171,6 +171,7 @@ _sym_read_file(struct symtab_s *tab, const char *filename)
 	}
 
 	fclose(f);
+	return 0;
 }
 
 static int

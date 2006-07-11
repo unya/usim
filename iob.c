@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "ucode.h"
 #include <signal.h>
 
 #if defined(LINUX) || defined(OSX)
@@ -25,6 +24,9 @@
 #include "SDL/SDL_keysym.h"
 #endif
 #endif /* DISPLAY_SDL */
+
+#include "ucode.h"
+#include "chaos.h"
 
 unsigned int iob_key_scan;
 unsigned int iob_kbd_csr;
