@@ -105,7 +105,7 @@ lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o usim lod readmcr diskmaker xx
+	rm -f *.o usim lod readmcr diskmaker lmfs xx
 	rm -f *~
 
 

@@ -1,5 +1,5 @@
 CADR simulator
-12/11/05
+07/11/06
 Brad Parker
 brad@heeltoe.com
 
@@ -26,9 +26,13 @@ provide a reasonaly functional lisp machine experience.
 Recent Changes
 --------------
 
+v0.8 - speedups and bug fixes;  chaosd/FILE server supports rebuilding
+       sources from server.  can now resize screen.
+
 v0.7 - added raw X11 support.  Bjorn's new keyboard configuration code.
        diskmaker now takes a template file and will show info on existing
        disk images.
+
 v0.6 - better network support
 
 
@@ -113,7 +117,7 @@ mapping support.  The two machine lash-up/debug interface is not (yet)
 supported.  I want to add this, however.
 
 I have fixed several ALU bugs and the emulation now seems much more
-stable.
+stable.  I fixed a long standing bug
 
 There's still a long delay when booting the distributed world.  The
 system is available right away, however, try "F2-p".
@@ -168,11 +172,11 @@ The mouse emulation works but doesn't track exactly.
 What programs are here?
 -----------------------
 
-usim		- the emulator
+usim		- the CADR emulator
 diskmaker	- program to make CADR disk images from .mcr files and
 		  .lod files
 lod		- utiltity to pick apart load bands and show their insides
-
+lmfs		- raw hack to read files from LMFS paritition
 
 Standing on the Shoulders of Giants
 -----------------------------------
