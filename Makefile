@@ -87,11 +87,7 @@ SRC = $(USIM_SRC) $(DISPLAY_SRC) $(KEYBOARD_SRC)
 all: usim readmcr diskmaker lod lmfs
 
 usim: $(USIM_OBJ)
-	echo mmm $(MACH_NAME)
 	$(CC) -o usim $(LFLAGS) $(USIM_OBJ) $(USIM_LIBS)
-
-#usim: $(SRC) $(USIM_HDR)
-#	$(CC) -o usim $(CFLAGS) $(SRC) $(USIM_LIBS)
 
 run:
 	./usim >xx
