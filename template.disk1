@@ -1,5 +1,6 @@
 #
 # Trident T-300
+# with very small FILE dir
 #
 output:
 disk.img

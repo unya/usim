@@ -2285,7 +2285,7 @@ if (cycles == 0) cycles = 1;
 					do_sub = q & 1;
 					tracef("do_sub %d\n", do_sub);
 
-#if 0
+#if 1
 					if (do_sub) {
 						sub32(m_src_value, a_src_value,
 						      !carry_in,
@@ -2320,7 +2320,7 @@ if (cycles == 0) cycles = 1;
 						/* setm */
 						alu_carry = 0;
 					} else {
-#if 0
+#if 1
 						add32(alu_out, a_src_value,
 						      carry_in,
 						      alu_out, alu_carry);
