@@ -41,6 +41,7 @@
 //#define CHAOS_TOSS_IF_RXBUFF_FULL
 
 #define CHAOS_BUF_SIZE_BYTES 4096
+
 int chaos_csr;
 int chaos_addr = CHAOS_MY_ADDRESS;
 int chaos_bit_count;
@@ -536,10 +537,11 @@ chaos_poll(void)
 		  }
 #endif		  
 
-		  dest_addr = chaos_rcv_buffer[chaos_rcv_buffer_size-3];
-
 		  chaos_rcv_buffer_size = (ret+1)/2;
 		  chaos_rcv_buffer_empty = 0;
+
+		  dest_addr = chaos_rcv_buffer[chaos_rcv_buffer_size-3];
+
 #if CHAOS_DEBUG
 		  printf("rx to %o, my %o\n",
 			 dest_addr,
