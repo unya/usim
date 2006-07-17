@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include <sys/types.h>
@@ -26,6 +27,7 @@
 #include <sys/uio.h>
 
 #include "ucode.h"
+#include "endian.h"
 
 #ifndef CHAOS_MY_ADDRESS
 # define CHAOS_MY_ADDRESS 0401
@@ -524,16 +526,24 @@ chaos_poll(void)
 #endif
 
 		if (ret > 0) {
+		  int dest_addr;
+
+#if __BIG_ENDIAN__
+		  /* flip shorts to host order */
+		  int w;
+		  for (w = 0; w < chaos_rcv_buffer_size; w++) {
+		    chaos_rcv_buffer[w] = SWAP_SHORT(chaos_rcv_buffer[w]);
+		  }
+#endif		  
+
+		  dest_addr = chaos_rcv_buffer[chaos_rcv_buffer_size-3];
+
 		  chaos_rcv_buffer_size = (ret+1)/2;
 		  chaos_rcv_buffer_empty = 0;
 #if CHAOS_DEBUG
 		  printf("rx to %o, my %o\n",
-			 chaos_rcv_buffer[chaos_rcv_buffer_size-3],
+			 dest_addr,
 			 chaos_addr);
-
-//		printf("   from %o, crc %o\n",
-//		       chaos_rcv_buffer[chaos_rcv_buffer_size-2],
-//		       chaos_rcv_buffer[chaos_rcv_buffer_size-1]);
 #endif
 
 #if CHAOS_DEBUG_PKT
@@ -560,7 +570,7 @@ chaos_poll(void)
 #endif
 
 		  /* if not to us, ignore */
-		  if (chaos_rcv_buffer[chaos_rcv_buffer_size-3] != chaos_addr) {
+		  if (dest_addr != chaos_addr) {
 		    chaos_rcv_buffer_size = 0;
 		    chaos_rcv_buffer_empty = 1;
 		    return 0;
@@ -576,7 +586,7 @@ chaos_poll(void)
 int
 chaos_send_to_chaosd(char *buffer, int size)
 {
-	int ret, wcount;
+	int ret, wcount, dest_addr;
 
 	/* local loopback */
 	if (chaos_csr & CHAOS_CSR_LOOP_BACK) {
@@ -593,14 +603,24 @@ chaos_send_to_chaosd(char *buffer, int size)
 	}
 
 	wcount = (size+1)/2;
+	dest_addr = ((u_short *)buffer)[wcount-3];
+
+#if __BIG_ENDIAN__
+	/* flip host order to network order */
+	int w;
+	for (w = 0; w < wcount; w++) {
+		u_short *ps = &((u_short *)buffer)[w];
+		*ps = SWAP_SHORT(*ps);
+	}
+#endif
 
 #if CHAOS_DEBUG
 	printf("chaos: -3 = %o, chaos_addr=%o, size %d, wcount %d\n", 
-	       ((u_short *)buffer)[wcount-3], chaos_addr, size, wcount);
+	       dest_addr, chaos_addr, size, wcount);
 #endif
 
 	/* recieve packets address to ourselves */
-	if ( ((u_short *)buffer)[wcount-3] == chaos_addr) {
+	if (dest_addr == chaos_addr) {
 		memcpy(chaos_rcv_buffer, buffer, size);
 
 		chaos_rcv_buffer_size = (size+1)/2;

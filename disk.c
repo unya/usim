@@ -16,10 +16,13 @@
 
 #if defined(LINUX) || defined(OSX)
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #endif
 
 #include "ucode.h"
 #include "config.h"
+#include "endian.h"
 
 extern void deassert_xbus_interrupt(void);
 extern void assert_xbus_interrupt(void);
@@ -29,6 +32,8 @@ extern void assert_xbus_interrupt(void);
 
 
 /*
+  Note: original CADR disk controller wrote LS bit first, LS byte first.
+
 	disk controller registers:
 	  0 read status
 	  1 read ma
@@ -198,40 +203,30 @@ int cyls, heads, blocks_per_track;
 int cur_unit, cur_cyl, cur_head, cur_block;
 
 void
-_swaplongbytes(unsigned int *buf)
+_swaplongbytes(unsigned int *buf, int word_count)
 {
-	int i;
-#if 1
-	unsigned char *p = (unsigned char *)buf;
-
-	for (i = 0; i < 256*4; i += 4) {
-		unsigned char t, u, v;
-		t = p[i];
-		u = p[i+1];
-		v = p[i+2];
-		p[i] = p[i+3];
-		p[i+1] = v;
-		p[i+2] = u;
-		p[i+3] = t;
-	}
-#endif
-#if 0
-	for (i = 0; i < 256; i++) {
-		buf[i] = ntohl(buf[i]);
-	}
-#endif
-#if 0
-	unsigned short *p = (unsigned short *)buf;
-
-	for (i = 0; i < 256*2; i += 2) {
-		unsigned short t;
-		t = p[i];
-		p[i] = p[i+1];
-		p[i+1] = t;
-	}
-#endif
+  /* buf contains bytes from the file. Words in that file were written
+   *   as little endian. The macintosh will interpret the word values
+   *   as big-endian, however. This routine will swap bytes around so
+   *   that the DISK_word values in the array will match what would
+   *   have been read on a little-endian machine
+   */
+  int i;
+  unsigned char *wordptr;
+  
+  wordptr = (unsigned char *) buf;
+  for (i = 0; i < word_count; i++) {
+    buf[i] = SWAP_LONG(buf[i]);
+  }
 }
 
+/*
+ * Disk Structure
+ *
+ * Each disk block contains one Lisp machine page worth of data,
+ * i.e. 256. words or 1024. bytes.
+ */
+   
 int
 _disk_read(int block_no, unsigned int *buffer)
 {
@@ -241,7 +236,7 @@ _disk_read(int block_no, unsigned int *buffer)
 	offset = block_no * (256*4);
 
 	tracedio("disk: file image block %d(10), offset %ld(10)\n",
-		 block_no, offset);
+		 block_no, (long)offset);
 
 	ret = lseek(disk_fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -264,7 +259,7 @@ _disk_read(int block_no, unsigned int *buffer)
 
 	/* byte order fixups? */
 	if (disk_byteswap) {
-		_swaplongbytes((unsigned int *)buffer);
+		_swaplongbytes((unsigned int *)buffer, 256);
 	}
 
 	return 0;
@@ -278,7 +273,8 @@ _disk_write(int block_no, unsigned int *buffer)
 
 	offset = block_no * (256*4);
 
-	tracedio("disk: file image block %d, offset %ld\n", block_no, offset);
+	tracedio("disk: file image block %d, offset %ld\n",
+		 block_no, (long)offset);
 
 	ret = lseek(disk_fd, offset, SEEK_SET);
 	if (ret != offset) {
@@ -291,13 +287,13 @@ _disk_write(int block_no, unsigned int *buffer)
 
 	/* byte order fixups? */
 	if (disk_byteswap) {
-		_swaplongbytes((unsigned int *)buffer);
+		_swaplongbytes((unsigned int *)buffer, 256);
 	}
 
 	ret = write(disk_fd, buffer, size);
 	if (ret != size) {
-		printf("disk write error; ret %d, size %d\n",
-		       (int)ret, size);
+		printf("disk write error; ret %d, offset %lu, size %d\n",
+		       (int)ret, (long)offset, size);
 		perror("write");
 		return -1;
 	}
@@ -330,9 +326,12 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 		return 0;
 	}
 
+#define LABEL_LABL 	011420440514ULL
+#define LABEL_BLANK	020020020020ULL
+
 	/* hack to fake a disk label when no image is present */
 	if (unit == 0 && cyl == 0 && head == 0 && block == 0) {
-		write_phy_mem(vma + 0, 011420440514); /* label LABL */
+		write_phy_mem(vma + 0, LABEL_LABL); /* label LABL */
 		write_phy_mem(vma + 1, 000000000001); /* version = 1 */
 		write_phy_mem(vma + 2, 000000001000); /* # cyls */
 		write_phy_mem(vma + 3, 000000000004); /* # heads */
@@ -705,7 +704,7 @@ disk_init(char *filename)
 
 	_disk_read(0, label);
 
-	if (label[0] != 011420440514) {
+	if (label[0] != LABEL_LABL) {
 		printf("disk: invalid pack label - disk image ignored\n");
 		printf("label %o\n", label[0]);
 		close(disk_fd);
@@ -719,7 +718,7 @@ disk_init(char *filename)
 	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
 
 	/* hack to find mcr symbol file from disk pack label */
-	if (label[030] != 0 && label[030] != 020020020020) {
+	if (label[030] != 0 && label[030] != LABEL_BLANK) {
 		char fn[1024], *s;
 		strcpy(fn, (char *)&label[030]);
 		printf("disk: pack label comment '%s'\n", fn);

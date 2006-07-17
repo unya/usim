@@ -1922,7 +1922,7 @@ if (cycles == 0) cycles = 1;
 			printf(":\n");
 #endif
 
-			printf("%03o %016Lo%s",
+			printf("%03o %016llo%s",
 			       p0_pc, u, i_long ? " (i-long)" : "");
 
 			if (lc != 0) {
