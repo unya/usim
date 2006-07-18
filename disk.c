@@ -212,9 +212,7 @@ _swaplongbytes(unsigned int *buf, int word_count)
    *   have been read on a little-endian machine
    */
   int i;
-  unsigned char *wordptr;
-  
-  wordptr = (unsigned char *) buf;
+
   for (i = 0; i < word_count; i++) {
     buf[i] = SWAP_LONG(buf[i]);
   }

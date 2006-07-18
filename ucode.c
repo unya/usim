@@ -69,7 +69,7 @@ int prom_enabled_flag;
 int run_ucode_flag;
 int stop_after_prom_flag;
 int warm_boot_flag;
-int dump_state_flag;
+extern int dump_state_flag;
 
 unsigned int md;
 unsigned int vma;

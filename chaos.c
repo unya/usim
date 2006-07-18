@@ -529,6 +529,9 @@ chaos_poll(void)
 		if (ret > 0) {
 		  int dest_addr;
 
+		  chaos_rcv_buffer_size = (ret+1)/2;
+		  chaos_rcv_buffer_empty = 0;
+
 #if __BIG_ENDIAN__
 		  /* flip shorts to host order */
 		  int w;
@@ -537,15 +540,10 @@ chaos_poll(void)
 		  }
 #endif		  
 
-		  chaos_rcv_buffer_size = (ret+1)/2;
-		  chaos_rcv_buffer_empty = 0;
-
 		  dest_addr = chaos_rcv_buffer[chaos_rcv_buffer_size-3];
 
 #if CHAOS_DEBUG
-		  printf("rx to %o, my %o\n",
-			 dest_addr,
-			 chaos_addr);
+		  printf("chaos rx: to %o, my %o\n", dest_addr, chaos_addr);
 #endif
 
 #if CHAOS_DEBUG_PKT
@@ -617,7 +615,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
 
 #if CHAOS_DEBUG
-	printf("chaos: -3 = %o, chaos_addr=%o, size %d, wcount %d\n", 
+	printf("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n", 
 	       dest_addr, chaos_addr, size, wcount);
 #endif
 

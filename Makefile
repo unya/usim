@@ -54,6 +54,8 @@ ifeq ($(OS), OSX)
 LFLAGS = -framework Cocoa
 USIM_LIBS = -lSDLmain -lSDL -lpthread -lobjc
 CFLAGS = -O $(DEFINES)
+# good for G5
+#CFLAGS = -fast $(DEFINES)
 endif
 
 ifeq ($(DISPLAY), X11)

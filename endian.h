@@ -13,7 +13,7 @@
 #define __LITTLE_ENDIAN__  1
 #endif
 
-#ifdef OSX
+#ifdef OSX_X
 #include <CoreFoundation/CFByteOrder.h>
 #define SWAP_SHORT(x) CFSwapInt16LittleToHost(x)
 #define SWAP_LONG(x) CFSwapInt32LittleToHost(x)
