@@ -1618,6 +1618,9 @@ restore_state(void)
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
 	  add_new_page_no(i);
 	  ret = read(fd, (char *)phy_pages[i], sizeof(struct page_s));
+#ifdef __BIG_ENDIAN__
+	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
+#endif
 	}
 
 	printf("memory state restored\n");
@@ -1642,6 +1645,9 @@ save_state(void)
 	ret = write(fd, version, 2);
 
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
+#ifdef __BIG_ENDIAN__
+	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
+#endif
 	  ret = write(fd, (char *)phy_pages[i], sizeof(struct page_s));
 	}
 
