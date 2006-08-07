@@ -672,9 +672,9 @@ disk_xbus_read(int offset, unsigned int *pv)
 		if (offset != 0)
 		{
 			extern int trace_mcr_labels_flag;
-			extern int u_pc;
+			extern int get_u_pc();
 			trace_mcr_labels_flag = 1;
-			printf("u_pc %011o\n", u_pc);
+			printf("u_pc %011o\n", get_u_pc());
 		}
 		break;
 	}

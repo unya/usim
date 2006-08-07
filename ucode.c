@@ -17,81 +17,85 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "ucode.h"
 
 //#define STAT_PC_HISTORY
 //#define STAT_ALU_USE
+//#define STAT_PC_HISTOGRAM
 //#define TRACE
 
 extern ucw_t prom_ucode[512];
-ucw_t ucode[16*1024];
+static ucw_t ucode[16*1024];
 
-unsigned int a_memory[1024];
-unsigned int m_memory[32];
-unsigned int dispatch_memory[2048];
+static unsigned int a_memory[1024];
+static unsigned int m_memory[32];
+static unsigned int dispatch_memory[2048];
 
-unsigned int pdl_memory[1024];
-int pdl_ptr;
-int pdl_index;
+static unsigned int pdl_memory[1024];
+static int pdl_ptr;
+static int pdl_index;
 
-int lc;
-int lc_mode_flag;
+static int lc;
+//static int lc_mode_flag;
 
-int spc_stack[32];
-int spc_stack_ptr;
+static int spc_stack[32];
+static int spc_stack_ptr;
 
 struct page_s {
 	unsigned int w[256];
 };
 
-struct page_s *phy_pages[16*1024];
+static struct page_s *phy_pages[16*1024];
 
-int l1_map[2048];
-int l2_map[1024];
+static int l1_map[2048];
+static int l2_map[1024];
 
 unsigned long cycles;
 unsigned long trace_cycles;
 unsigned long max_cycles;
 unsigned long max_trace_cycles;
 
-int u_pc;
-int page_fault_flag;
-int interrupt_pending_flag;
-int interrupt_status_reg;
+static int u_pc;
+static int page_fault_flag;
+static int interrupt_pending_flag;
+static int interrupt_status_reg;
 
-int sequence_break_flag;
-int interrupt_enable_flag;
-int lc_byte_mode_flag;
-int bus_reset_flag;
+static int sequence_break_flag;
+static int interrupt_enable_flag;
+static int lc_byte_mode_flag;
+static int bus_reset_flag;
 
-int prom_enabled_flag;
-int run_ucode_flag;
+static int prom_enabled_flag;
 int stop_after_prom_flag;
+int run_ucode_flag;
 int warm_boot_flag;
+extern int save_state_flag;
 extern int dump_state_flag;
 
-unsigned int md;
-unsigned int vma;
-unsigned int q;
-unsigned int opc;
+static unsigned int md;
+static unsigned int vma;
+static unsigned int q;
+static unsigned int opc;
 
-unsigned int new_md;
-int new_md_delay;
+static unsigned int new_md;
+static int new_md_delay;
 
-int write_fault_bit;
-int access_fault_bit;
+static int write_fault_bit;
+static int access_fault_bit;
 
-int alu_carry;
-unsigned int alu_out;
+static int alu_carry;
+static unsigned int alu_out;
 
-unsigned int oa_reg_lo;
-unsigned int oa_reg_hi;
-int oa_reg_lo_set;
-int oa_reg_hi_set;
+static unsigned int oa_reg_lo;
+static unsigned int oa_reg_hi;
+static int oa_reg_lo_set;
+static int oa_reg_hi_set;
 
-int interrupt_control;
-unsigned int dispatch_constant;
+static int interrupt_control;
+static unsigned int dispatch_constant;
 
 int trace;
 int trace_mcr_labels_flag;
@@ -105,11 +109,13 @@ int trace_net_flag;
 int trace_int_flag;
 int trace_late_set;
 
-int macro_pc_incrs;
+static int macro_pc_incrs;
 
-int phys_ram_pages;
+static int phys_ram_pages;
 
-unsigned int alu_stat0[16], alu_stat1[16], alu_stat2[16];
+#ifdef STAT_ALU_USE
+static unsigned int alu_stat0[16], alu_stat1[16], alu_stat2[16];
+#endif
 
 void show_label_closest(unsigned int upc);
 void show_label_closest_padded(unsigned int upc);
@@ -126,6 +132,7 @@ extern int tv_xbus_write(int offset, unsigned int v);
 
 extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
+void reset_pc_histogram(void);
 
 extern void timing_start();
 extern void timing_stop();
@@ -133,6 +140,12 @@ extern void iob_poll();
 extern void disk_poll();
 extern void display_poll();
 extern void chaos_poll();
+
+int
+get_u_pc(void)
+{
+  return u_pc;
+}
 
 void
 set_interrupt_status_reg(int new)
@@ -278,6 +291,28 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 	return l2;
 }
 
+char *page_block;
+int page_block_count;
+
+struct page_s *
+new_page(void)
+{
+  struct page_s *page;
+
+  if (page_block == 0) {
+    page_block = malloc(sizeof(struct page_s) * 1024);
+    page_block_count = 1024;
+  }
+
+  page = (struct page_s *)page_block;
+  page_block += sizeof(struct page_s);
+  page_block_count--;
+  if (page_block_count == 0)
+    page_block = 0;
+
+  return page;
+}
+
 /*
  * add a new physical memory page,
  * generally in response to l2 mapping
@@ -286,6 +321,7 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 int
 add_new_page_no(int pn)
 {
+#if 0
 	struct page_s *page;
 
 	if (0) printf("new_page %o\n", pn);
@@ -294,7 +330,7 @@ add_new_page_no(int pn)
 
 		page = (struct page_s *)malloc(sizeof(struct page_s));
 		if (page) {
-#define ZERO_NEW_PAGES
+//#define ZERO_NEW_PAGES
 #ifdef ZERO_NEW_PAGES
 			memset(page, 0, sizeof(struct page_s));
 #endif
@@ -306,6 +342,20 @@ add_new_page_no(int pn)
 	}
 
 	return -1;
+#else
+	struct page_s *page;
+
+	if ((page = phy_pages[pn]) == 0) {
+
+		page = new_page();
+		if (page) {
+			phy_pages[pn] = page;
+			return 0;
+		}
+	}
+
+	return -1;
+#endif
 }
 
 /*
@@ -384,7 +434,7 @@ read_mem(int vaddr, unsigned int *pv)
 
 
 #if 1
-	tracef("read_mem(vaddr=%o)\n", vaddr);
+	//tracef("read_mem(vaddr=%o)\n", vaddr);
 	map = map_vtop(vaddr, (int *)0, &offset);
 #else
 	{
@@ -415,6 +465,13 @@ read_mem(int vaddr, unsigned int *pv)
 		return -1;
 	}
 
+#if 1 //speedup
+	if (pn < 020000 && (page = phy_pages[pn])) {
+		*pv = page->w[offset];
+		return 0;
+	}
+#endif
+
 	/* simulate fixed number of ram pages (< 2mw?) */
 	if (pn >= phys_ram_pages && pn <= 035777)
 	{
@@ -423,12 +480,13 @@ read_mem(int vaddr, unsigned int *pv)
 	}
 
 	if (pn == 036000) {
-/* thwart the color probe */
-if ((vaddr & 077700000) == 077200000) {
-	if (0) printf("read from %o\n", vaddr);
-	*pv = 0x0;
-	return 0;
-}
+		/* thwart the color probe */
+		if ((vaddr & 077700000) == 077200000) {
+		  if (0) printf("read from %o\n", vaddr);
+		  *pv = 0x0;
+		  return 0;
+		}
+
 		offset = vaddr & 077777;
 		video_read(offset, pv);
 		return 0;
@@ -481,8 +539,6 @@ if ((vaddr & 077700000) == 077200000) {
 		return -1;
 	}
 
-	//tracef("read_mem(vaddr=%o) -> %o\n", vaddr, page->w[offset]);
-
 	*pv = page->w[offset];
 	return 0;
 }
@@ -520,7 +576,10 @@ write_mem(int vaddr, unsigned int v)
 
 	map = map_vtop(vaddr, (int *)0, &offset);
 
+#if 0
 	//tracef("write_mem(vaddr=%o,v=%o)\n", vaddr, v);
+	printf("write_mem(vaddr=%o,v=%o)\n", vaddr, v);
+#endif
 
 	/* 14 bit page # */
 	pn = map & 037777;
@@ -545,6 +604,13 @@ write_mem(int vaddr, unsigned int v)
 		tracef("write_mem(vaddr=%o) write fault\n", vaddr);
 		return -1;
 	}
+
+#if 1 //speedup
+	if (pn < 020000 && (page = phy_pages[pn])) {
+		page->w[offset] = v;
+		return 0;
+	}
+#endif
 
 	if (pn == 036000) {
 /* thwart the color probe */
@@ -588,6 +654,15 @@ if ((vaddr & 077700000) == 077200000) {
 					traceio("unibus: "
 					       "disabling prom enable flag\n");
 					prom_enabled_flag = 0;
+
+					if (warm_boot_flag) {
+						restore_state();
+					}
+
+
+#ifdef STAT_PC_HISTOGRAM
+					reset_pc_histogram();
+#endif
 				}
 				if (v & 2) {
 					traceio("unibus: normal speed\n");
@@ -1229,6 +1304,73 @@ show_pc_history(void)
 	printf("\n");
 }
 
+struct pc_histogram_s {
+  unsigned int pc;
+  unsigned long long count;
+} pc_histogram[16*1024];
+
+
+void
+record_pc_histogram(unsigned int pc)
+{
+  pc_histogram[pc].count++;
+}
+
+void
+reset_pc_histogram(void)
+{
+  unsigned int pc;
+  for (pc = 0; pc < 16*1024; pc++)
+    pc_histogram[pc].count = 0;
+}
+
+int pc_histogram_cmp(const void *n1, const void *n2)
+{
+  struct pc_histogram_s *e1 = (struct pc_histogram_s *)n1;
+  struct pc_histogram_s *e2 = (struct pc_histogram_s *)n2;
+  return e2->count - e1->count;
+}
+
+void
+show_pc_histogram(void)
+{
+  unsigned int pc, i, perc;
+  unsigned long long count;
+  unsigned long long total;
+
+  printf("microcode pc histogram:\n");
+
+  total = 0;
+  for (i = 0; i < 16*1024; i++) {
+    pc_histogram[i].pc = i;
+    total += pc_histogram[i].count;
+  }
+
+  printf("total %lld %016llx\n", total, total);
+
+  qsort(pc_histogram, 16*1024,
+	sizeof(struct pc_histogram_s), pc_histogram_cmp);
+
+  for (i = 0; i < 16*1024; i++) {
+    pc = pc_histogram[i].pc;
+    count = pc_histogram[i].count;
+    if (count) {
+      char *sym;
+      int offset;
+
+      perc = (unsigned int)( (count * 100ULL) / total );
+      if (count < 100)
+	continue;
+
+      sym = sym_find_last(!prom_enabled_flag, pc, &offset);
+      if (offset == 0)
+	printf("%05o %s: %lld %d%%\n", pc, sym, count, perc);
+      else
+	printf("%05o %s+%d: %lld %d%%\n", pc, sym, offset, count, perc);
+    }
+  }
+}
+
 void
 dump_l1_map()
 {
@@ -1354,6 +1496,9 @@ dump_state(void)
 #ifdef STAT_PC_HISTORY
 	show_pc_history();
 #endif
+#ifdef STAT_PC_HISTOGRAM
+	show_pc_histogram();
+#endif
 
 	for (i = 0; i < 32; i += 4) {
 		printf(" spc[%02o] %c%011o %c%011o %c%011o %c%011o\n",
@@ -1444,6 +1589,67 @@ dump_state(void)
 	printf("\n");
 
 	printf("trace: %s\n", trace ? "on" : "off");
+}
+
+#define PAGES_TO_SAVE	8192
+
+int restored;
+
+int
+restore_state(void)
+{
+	int fd, ret, i;
+	u_char version[2];
+
+	if (restored)
+	  return;
+	restored = 1;
+
+	fd = open("usim.state", O_RDONLY);
+	if (fd < 0)
+	  return -1;
+
+	ret = read(fd, version, 2);
+	if (version[0] != 0 || version[1] != 1) {
+	  close(fd);
+	  return -1;
+	}
+	  
+	for (i = 0; i < PAGES_TO_SAVE; i++) {
+	  add_new_page_no(i);
+	  ret = read(fd, (char *)phy_pages[i], sizeof(struct page_s));
+	}
+
+	printf("memory state restored\n");
+
+	close(fd);
+
+	return 0;
+}
+
+int
+save_state(void)
+{
+	int fd, ret, i;
+	u_char version[2];
+
+	fd = open("usim.state", O_RDWR | O_CREAT, 0666);
+	if (fd < 0)
+	  return -1;
+
+	version[0] = 0;
+	version[1] = 1;
+	ret = write(fd, version, 2);
+
+	for (i = 0; i < PAGES_TO_SAVE; i++) {
+	  ret = write(fd, (char *)phy_pages[i], sizeof(struct page_s));
+	}
+
+	close(fd);
+
+	printf("memory state saved\n");
+
+	return 0;
 }
 
 void
@@ -1810,6 +2016,9 @@ run(void)
 #ifdef STAT_PC_HISTORY
 		record_pc_history(p0_pc, vma, md);
 #endif
+#ifdef STAT_PC_HISTOGRAM
+		record_pc_histogram(p0_pc);
+#endif
 
 #ifdef TRACE
 		if (trace_late_set) {
@@ -1887,8 +2096,9 @@ run(void)
 
 		/* enforce max cycles */
 		cycles++;
-// glug. overflow
-if (cycles == 0) cycles = 1;
+		/* glug. overflow */
+		if (cycles == 0) cycles = 1;
+
 		if (max_cycles && cycles > max_cycles) {
 			int offset;
 			printf("cycle count exceeded, pc %o\n", u_pc);
@@ -2821,9 +3031,17 @@ out_bus = rotate_left(m_src_value, u & 037);
 
 	timing_stop();
 
+	if (save_state_flag) {
+		save_state();
+	}
+
 	if (dump_state_flag) {
 		dump_state();
 	}
+
+#ifdef STAT_PC_HISTOGRAM
+	show_pc_histogram();
+#endif
 
 #ifdef STAT_ALU_USE
 	{

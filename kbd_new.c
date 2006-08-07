@@ -602,6 +602,13 @@ void sdl_process_key(SDL_KeyboardEvent *ev, int keydown)
 void
 iob_warm_boot_key()
 {
+#if 0
+	iob_sdl_key_event(LM_K_RETURN, 1);
+#else
+	iob_key_scan = (1<<16) | ((0)<<8) | LM_K_TAB/*RETURN*/;
+	iob_kbd_csr |= 1 << 5;
+//	assert_unibus_interrupt(0260);
+#endif
 }
 
 void

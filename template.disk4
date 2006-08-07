@@ -13,7 +13,7 @@ mcr		MCR1
 lod		LOD1
 #brand		""
 #text		""
-comment		ucadr.mcr.979
+comment		ucadr.mcr.841
 #
 partitions:
 MCR1	021	0224	ucadr.mcr.841

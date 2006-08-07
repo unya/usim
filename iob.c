@@ -35,7 +35,7 @@ int mouse_x, mouse_y;
 int mouse_head, mouse_middle, mouse_tail;
 int mouse_rawx, mouse_rawy;
 
-extern int u_pc;
+extern int get_u_pc();
 
 void tv_post_60hz_interrupt(void);
 void chaos_xmit_pkt(void);
@@ -244,24 +244,24 @@ iob_unibus_read(int offset, int *pv)
 		*pv = get_60hz_clock();
 		break;
 	case 0140:
-		traceio("unibus: chaos read\n");
+		//tracenet("unibus: chaos read\n");
 		*pv = chaos_get_csr();
 		break;
 	case 0142:
-		traceio("unibus: chaos read my-number\n");
+		tracenet("unibus: chaos read my-number\n");
 		*pv = chaos_get_addr();
 		break;
 	case 0144:
 		*pv = chaos_get_rcv_buffer();
-		traceio("unibus: chaos read rcv buffer %06o\n", *pv);
+		tracenet("unibus: chaos read rcv buffer %06o\n", *pv);
 		break;
 	case 0146:
 		*pv = chaos_get_bit_count();
-		traceio("unibus: chaos read bit-count 0%o\n", *pv);
+		tracenet("unibus: chaos read bit-count 0%o\n", *pv);
 		break;
 	case 0152:
 		*pv = chaos_get_addr();
-		traceio("unibus: chaos read xmt => %o\n", *pv);
+		tracenet("unibus: chaos read xmt => %o\n", *pv);
 		chaos_xmit_pkt();
 		break;
 	default:
@@ -308,16 +308,16 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0140:
 		traceio("unibus: chaos write %011o, u_pc %011o ",
-				  v, u_pc);
+				  v, get_u_pc());
 #ifdef CHAOS_DEBUG
-		show_label_closest(u_pc);
+		show_label_closest(get_u_pc());
 		printf("\n");
 #endif
 		chaos_set_csr(v);
 		break;
 	case 0142:
 		traceio("unibus: chaos write-buffer write %011o, u_pc %011o\n",
-			v, u_pc);
+			v, get_u_pc());
 		chaos_put_xmit_buffer(v);
 		break;
 	default:

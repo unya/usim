@@ -32,6 +32,7 @@
 int show_video_flag;
 int alt_prom_flag;
 int dump_state_flag;
+int save_state_flag;
 
 /* */
 extern int display_init(void);
@@ -162,7 +163,7 @@ main(int argc, char *argv[])
 
 	show_video_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:c:dC:i:l:np:q:tT:sw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:c:dC:i:l:np:q:tT:sSw")) != -1) {
 		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
@@ -193,6 +194,9 @@ main(int argc, char *argv[])
 			break;
 		case 'q':
 			breakpoint_set_count(atoi(optarg));
+			break;
+		case 'S':
+			save_state_flag = 1;
 			break;
 		case 't':
 			trace = 1;
