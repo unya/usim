@@ -34,7 +34,13 @@ unsigned int iob_kbd_csr;
 int mouse_x, mouse_y;
 int mouse_head, mouse_middle, mouse_tail;
 int mouse_rawx, mouse_rawy;
+int mouse_poll_delay;
 
+/* location in A memory of micrcode mouse state */
+static int mouse_sync_amem_x;
+static int mouse_sync_amem_y;
+
+extern int mouse_sync_flag;
 extern int get_u_pc();
 
 void tv_post_60hz_interrupt(void);
@@ -343,18 +349,86 @@ iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
 	if (0)
 		printf("iob_sdl_mouse_event(x=%x,y=%x,buttons=%x)\n",
 		       x, y, buttons);
-//	mouse_x = (x*3)/2;
-//	mouse_y = (y*3)/2;
-	mouse_x = (x*5)/3;
-	mouse_y = (y*5)/3;
 
-	if (buttons & 1)
+	if (mouse_sync_flag) {
+		int mcx, mcy, dx, dy;
+
+		/* move mouse closer to where microcode thinks it is */
+		mcx = read_a_mem(mouse_sync_amem_x);
+		mcy = read_a_mem(mouse_sync_amem_y);
+
+		dx = x - mcx;
+		dy = y - mcy;
+
+		//printf("m %d,%d mc %d,%d  c %d,%d  d %d,%d\n",
+		//mouse_x, mouse_y, mcx, mcy, x, y, dx, dy);
+
+		mouse_x += dx;
+		mouse_y += dy;
+	} else {
+		/* convert SDL coods in to mouse loc */
+		mouse_x = (x*4)/3;
+		mouse_y = (y*5)/3;
+	}
+
+	if (buttons & 4)
 		mouse_head = 1;
 	if (buttons & 2)
 		mouse_middle = 1;
-	if (buttons & 4)
+	if (buttons & 1)
 		mouse_tail = 1;
 }
+
+/*
+ * create simulated mouse motion to keep SDL cursor
+ * and microcode cursor in sync
+ */
+void
+iob_sdl_mouse_poll(int x, int y)
+{
+	int mcx, mcy, dx, dy;
+
+	if (iob_kbd_csr & (1 << 4))
+		return;
+
+	mcx = read_a_mem(mouse_sync_amem_x);
+	mcy = read_a_mem(mouse_sync_amem_y);
+
+	if (mcx == 0 && mcy == 0)
+		return;
+
+	dx = x - mcx;
+	dy = y - mcy;
+
+#define MAX_MOTION 5
+#define POLL_DELAY 20
+
+	if (dx || dy) {
+
+		if (mouse_poll_delay) {
+			mouse_poll_delay--;
+			if (mouse_poll_delay > 0)
+				return;
+		}
+
+		if (dx > MAX_MOTION)
+			dx = MAX_MOTION;
+		if (dy > MAX_MOTION)
+			dy = MAX_MOTION;
+
+		mouse_x += dx;
+		mouse_y += dy;
+
+		//printf("P: m %d,%d mc %d,%d  c %d,%d  d %d,%d\n",
+		//mouse_x, mouse_y, mcx, mcy, x, y, dx, dy);
+
+		iob_kbd_csr |= 1 << 4;
+		assert_unibus_interrupt(0264);
+
+		mouse_poll_delay = POLL_DELAY;
+	}
+}
+
 
 int tv_csr;
 
@@ -418,10 +492,40 @@ iob_poll(unsigned long cycles)
 #endif
 }
 
+void
+mouse_sync_init(void)
+{
+	int val;
+
+	//A-MOUSE-CURSOR-X A-MEM 516
+	//A-MOUSE-CURSOR-Y A-MEM 517 
+
+	mouse_sync_amem_x = 334;
+	mouse_sync_amem_y = 335;
+
+	if (sym_find(1, "A-MOUSE-CURSOR-X", &val)) {
+		printf("can't find A-MOUSE-CURSOR-X in microcode symbols\n");
+	} else
+		mouse_sync_amem_x = val;
+
+	if (sym_find(1, "A-MOUSE-CURSOR-Y", &val)) {
+		printf("can't find A-MOUSE-CURSOR-Y in microcode symbols\n");
+	} else
+		mouse_sync_amem_y = val;
+
+	if (0)
+		printf("mouse_sync_amem_x %o, mouse_sync_amem_y %o\n",
+		       mouse_sync_amem_x, mouse_sync_amem_y);
+}
+
 int
 iob_init(void)
 {
 	kbd_init();
+
+	if (mouse_sync_flag) {
+		mouse_sync_init();
+	}
 
 #ifdef USE_SIGVTARLM_FOR_60HZ
 	{

@@ -30,6 +30,7 @@
 #endif /* DISPLAY_SDL */
 
 int show_video_flag;
+int mouse_sync_flag;
 int alt_prom_flag;
 int dump_state_flag;
 int save_state_flag;
@@ -159,11 +160,12 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	printf("CADR emulator v0.8\n");
+	printf("CADR emulator v0.9\n");
 
 	show_video_flag = 1;
+	mouse_sync_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:c:dC:i:l:np:q:tT:sSw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:c:dC:i:l:nmp:q:tT:sSw")) != -1) {
 		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
@@ -188,6 +190,9 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			show_video_flag = 0;
+			break;
+		case 'm':
+			mouse_sync_flag = 0;
 			break;
 		case 'p':
 			breakpoint_set_prom(optarg);

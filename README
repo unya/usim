@@ -1,5 +1,5 @@
 CADR simulator
-07/11/06
+08/07/06
 Brad Parker
 brad@heeltoe.com
 
@@ -22,9 +22,23 @@ disk and then boots the load band.
 There is sufficient hardware support for the disk and network to
 provide a reasonaly functional lisp machine experience.
 
+Quickstart
+----------
+
+Grab the pre-made disk image with a warm start file (disk-with-state.tgz) and
+run as "./usim -w". Enter the data and time and press "F1" and "F7" to
+clean up the display. You're up!
+
+If you want to use the network download and run chaosd.  Read the
+"README" in the disks subdirectory on the http server.
 
 Recent Changes
 --------------
+
+v0.9 - minor speedups.
+       Mac OSX (little endian) fixes.
+       Warm start support (usim.state)
+       Mouse/microcode synchronization (thanks to Devon for the idea)
 
 v0.8 - speedups and bug fixes;  chaosd/FILE server supports rebuilding
        sources from server.  can now resize screen.
@@ -42,8 +56,7 @@ Building
 Unix, Linus, OS X:
 
 There are three defines at the top of the Makefile you should check.
-They are OS, DISPLAY and KEYBOARD.  For the most part you should only
-have to change OS and set it to LINUX, OSX or WIN32.
+They are OS, DISPLAY and KEYBOARD.  OS should be set automagically.
 
 The X11 display works but the keyboard mapping is not correct yet.  Both
 the OLD and NEW keyboard code works, I would recomment using NEW.
@@ -67,8 +80,8 @@ basically feeds all the parameters to diskmaker to build a valid disk
 image an populate it with microcode and a load band.
 
 
-What state is this in?
-----------------------
+Running
+-------
 
 Everything basically works.  The simulator will boot a load band and talk
 on the (simulated) network.
@@ -87,6 +100,8 @@ the mouse and keyboard.  The simplest way to run it is
 
 	./usim
 
+You can turn off the mouse synchronization with the "-m" option.
+
 If you want to see a trace of macrocode function names try:
 
 	./usim -n -Tl >output
@@ -95,6 +110,20 @@ If you want to see a voluminous trace of every microcode instruction
 try:
 
 	./usim -n -t >output
+
+You can make a warm start state file with
+
+	./usim -S
+
+Run the emulator, enter the date and time.  The ^C twice.  The memory state
+will be saved in "usim.state".  You can then warm start to come up
+quickly
+
+	./usim -w
+
+Note that the warm start state file is intimately connected to the
+disk image.  If the two are mismatched bad things will happen.  The two
+files should be portable across X86, Win32 and Macintosh.
 
 The disk emulation reads from a 'disk image' file which is constructed
 with 'diskmaker'.  The disk image looks like a Trident T-300 disk
@@ -116,11 +145,11 @@ There are some hacks for noticing unibus access but no xbus/unibus
 mapping support.  The two machine lash-up/debug interface is not (yet)
 supported.  I want to add this, however.
 
-I have fixed several ALU bugs and the emulation now seems much more
-stable.  I fixed a long standing bug
-
 There's still a long delay when booting the distributed world.  The
-system is available right away, however, try "F2-p".
+system is available right away, however, try "F2-p".  If you are
+impatient try the warm start state file, but be sure to use it with
+it's matching disk.img.
+
 
 What needs to be done?
 ----------------------
@@ -194,6 +223,7 @@ Steve Krueger
 Alastair Bridgewater
 John Wroclawski
 Bjorn Victor
+Devon Sean McCullough
 
 Without their support or encouragement I would probably not have done
 this.  Certainly if Al had not sent me the prom images I would never

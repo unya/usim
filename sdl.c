@@ -51,6 +51,7 @@ static DisplayState *ds = &display_state;
 #define MOUSE_EVENT_RBUTTON 4
 
 extern void sdl_process_key(SDL_KeyboardEvent *ev, int keydown);
+extern int mouse_sync_flag;
 
 static int old_run_state;
 
@@ -74,6 +75,15 @@ static void sdl_send_mouse_event(void)
 	state = SDL_GetMouseState(&x, &y);
 
 	iob_sdl_mouse_event(x, y, dx, dy, buttons);
+}
+
+void
+sdl_mouse_poll(void)
+{
+  int state, x, y;
+
+  state = SDL_GetMouseState(&x, &y);
+  iob_sdl_mouse_poll(x, y);
 }
 
 static void sdl_update(DisplayState *ds, int x, int y, int w, int h)
@@ -350,6 +360,10 @@ display_init(void)
 void
 display_poll(void)
 {
+	if (mouse_sync_flag) {
+		sdl_mouse_poll();
+	}
+
 	sdl_refresh();
 
 	if (old_run_state != run_ucode_flag) {
