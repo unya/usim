@@ -718,7 +718,12 @@ disk_init(char *filename)
 	/* hack to find mcr symbol file from disk pack label */
 	if (label[030] != 0 && label[030] != LABEL_BLANK) {
 		char fn[1024], *s;
+		memset(fn, 0, sizeof(fn));
 		strcpy(fn, (char *)&label[030]);
+#ifdef __BIG_ENDIAN__
+		memcpy(fn, (char *)&label[030], 32);
+		_swaplongbytes((unsigned int *)fn, 8);
+#endif
 		printf("disk: pack label comment '%s'\n", fn);
 		s = strstr(fn, ".mcr.");
 		if (s)
