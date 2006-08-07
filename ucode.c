@@ -120,6 +120,7 @@ static unsigned int alu_stat0[16], alu_stat1[16], alu_stat2[16];
 void show_label_closest(unsigned int upc);
 void show_label_closest_padded(unsigned int upc);
 char *find_function_name(int the_lc);
+int restore_state(void);
 
 extern void video_read(int offset, unsigned int *pv);
 extern void video_write(int offset, unsigned int bits);
@@ -1602,7 +1603,7 @@ restore_state(void)
 	u_char version[2];
 
 	if (restored)
-	  return;
+	  return 0;
 	restored = 1;
 
 	fd = open("usim.state", O_RDONLY);
@@ -1893,9 +1894,9 @@ If B is any larger, then a carry will be generated from the top bit.
 
 //unsigned int out_bus;
 //ucw_t u, w;
-//ucw_t p1;
-//int p0_pc, p1_pc;
 //int64 lv;
+//static ucw_t p1;
+//static int p0_pc, p1_pc;
 
 int
 run(void)
