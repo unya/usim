@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #endif
 
@@ -49,6 +49,7 @@ int create;
 int show;
 int extract;
 int modify;
+int label;
 
 unsigned int buffer[256];
 
@@ -302,8 +303,14 @@ make_one_partition(int fd, int index)
 			if (ret < 256*4)
 				break;
 		}
-
 		close(fd1);
+
+		memset(b, 0, sizeof(b));
+		while (count < parts[index].size) {
+			if (write_block(fd, offset+count, b))
+				break;
+			count++;
+		}
 	} else {
 		/* zero blocks */
 		memset(b, 0, sizeof(b));
@@ -545,6 +552,39 @@ modify_disk(char *template, char *img_filename, char *part_name)
 	return 0;
 }
 
+int
+modify_labl(char *template, char *img_filename)
+{
+	int fd;
+
+	if (template == NULL) {
+	  fprintf(stderr, "missing template filename\n");
+	  return -1;
+	}
+
+	if (img_filename == NULL) {
+	  fprintf(stderr, "missing image filename\n");
+	  return -1;
+	}
+
+	if (parse_template(template))
+		return -1;
+
+	printf("modifying %s\n", img_filename);
+
+	fd = open(img_filename, O_RDWR);
+	if (fd < 0) {
+		perror(img_filename);
+		return -1;
+	}
+
+	printf("re-write label\n");
+	make_labl(fd);
+
+	close(fd);
+
+	return 0;
+}
 
 void
 default_template(void)
@@ -745,8 +785,8 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 	} else {
 	  unsigned char b[256*4];
 
-	  printf("extracting partition '%s' from %s\n",
-		 part_name, filename);
+	  printf("extracting partition '%s' at %o from %s\n",
+		 part_name, offset, filename);
 
 	  fd_out = open(extract_filename, O_RDWR|O_CREAT, 0666);
 	  if (fd_out < 0) {
@@ -776,6 +816,7 @@ usage(void)
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "-p	show existing disk image\n");
 	fprintf(stderr, "-c	create new disk image\n");
+	fprintf(stderr, "-l	rewrite label\n");
 	fprintf(stderr, "-t <template-filename>\n");
 	fprintf(stderr, "-f <disk-image-filename>\n");
 	fprintf(stderr, "-x <partition-name>\n");
@@ -794,7 +835,7 @@ main(int argc, char *argv[])
 	if (argc <= 1)
 		usage();
 
-	while ((c = getopt(argc, argv, "cdt:f:pm:x:")) != -1) {
+	while ((c = getopt(argc, argv, "cdlt:f:pm:x:")) != -1) {
 		switch (c) {
 		case 'c':
 			create++;
@@ -814,6 +855,10 @@ main(int argc, char *argv[])
 		case 'm':
 			part_name = strdup(optarg);
 			modify++;
+			break;
+
+		case 'l':
+			label++;
 			break;
 		case 'x':
 			part_name = strdup(optarg);
@@ -842,6 +887,10 @@ main(int argc, char *argv[])
 
 	if (extract) {
 		extract_partition(img_filename, part_name, part_name);
+	}
+
+	if (label) {
+		modify_labl(template_filename, img_filename);
 	}
 
 	exit(0);

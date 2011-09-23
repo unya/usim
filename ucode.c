@@ -57,6 +57,7 @@ unsigned long cycles;
 unsigned long trace_cycles;
 unsigned long max_cycles;
 unsigned long max_trace_cycles;
+unsigned long begin_trace_cycle;
 
 static int u_pc;
 static int page_fault_flag;
@@ -108,6 +109,7 @@ int trace_disk_flag;
 int trace_net_flag;
 int trace_int_flag;
 int trace_late_set;
+int trace_after_flag;
 
 static int macro_pc_incrs;
 
@@ -130,6 +132,15 @@ extern int disk_xbus_read(int offset, unsigned int *pv);
 extern int disk_xbus_write(int offset, unsigned int v);
 extern int tv_xbus_read(int offset, unsigned int *pv);
 extern int tv_xbus_write(int offset, unsigned int v);
+#ifdef CADR2
+extern int ether_xbus_reg_read(int, unsigned int *);
+extern int ether_xbus_reg_write(int, unsigned int);
+extern int ether_xbus_desc_read(int, unsigned int *);
+extern int ether_xbus_desc_write(int, unsigned int);
+extern void ether_poll();
+extern int uart_xbus_read(int, unsigned int *);
+extern int uart_xbus_write(int, unsigned int);
+#endif
 
 extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
@@ -492,6 +503,7 @@ read_mem(int vaddr, unsigned int *pv)
 		video_read(offset, pv);
 		return 0;
 	}
+	/* Extra xbus devices */
 
 	if (pn == 037764) {
 		offset <<= 1;
@@ -522,15 +534,39 @@ read_mem(int vaddr, unsigned int *pv)
 		/*int paddr = pn << 10;*/
 
 		/*
-		 * 77377774 disk
-		 * 77377760 tv
+		 * 17377774 disk
+		 * 17377760 tv
 		 */
 		if (offset >= 0370)
 			return disk_xbus_read(offset, pv);
 
 		if (offset == 0360)
 			return tv_xbus_read(offset, pv);
+
+		printf("xbus read %o %o\n", offset, vaddr);
+		*pv = 0;
+		return 0;
 	}
+
+#ifdef CADR2
+	if (pn == 036774) {
+		/*
+		 * 17376000 ethernet registers
+		 */
+		return ether_xbus_reg_read(offset, pv);
+	}
+
+	if (pn == 036775) {
+		/*
+		 * 17376400 ethernet descriptors
+		 */
+		return ether_xbus_desc_read(offset, pv);
+	}
+
+	if (pn == 036776) {
+		return uart_xbus_read(offset, pv);
+	}
+#endif
 
 	if ((page = phy_pages[pn]) == 0) {
 		/* page fault */
@@ -713,7 +749,28 @@ if ((vaddr & 077700000) == 077200000) {
 
 		if (offset == 0360)
 			return tv_xbus_write(offset, v);
+
 	}
+
+#ifdef CADR2
+	if (pn == 036774) {
+		/*
+		 * 17377000 ethernet
+		 */
+		return ether_xbus_reg_write(offset, v);
+	}
+
+	if (pn == 036775) {
+		/*
+		 * 17376000 ethernet descs
+		 */
+		return ether_xbus_desc_write(offset, v);
+	}
+
+	if (pn == 036776) {
+		return uart_xbus_write(offset, v);
+	}
+#endif
 
 #if 1
 	/* catch questionable accesses */
@@ -1969,6 +2026,9 @@ run(void)
 		if ((cycles & 0x0ffff) == 0) {
 			display_poll();
 			chaos_poll();
+#ifdef CADR2
+			ether_poll();
+#endif
 		}
 
 #define FETCH()	(prom_enabled_flag ? prom_ucode[u_pc] : ucode[u_pc])
@@ -2121,6 +2181,9 @@ run(void)
 
 			break;
 		}
+
+		if (trace_after_flag && (cycles > begin_trace_cycle))
+			trace = 1;
 
 		i_long = (u >> 45) & 1;
 		popj = (u >> 42) & 1;

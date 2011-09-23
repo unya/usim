@@ -3,7 +3,7 @@
  * $Id$
  */
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 typedef long long int64;
 typedef unsigned long long uint64;
 
@@ -56,10 +56,12 @@ extern int trace_prom_flag;
 extern int trace_mcr_flag;
 extern int stop_after_prom_flag;
 extern int alt_prom_flag;
+extern int trace_after_flag;
 
 extern unsigned long cycles;
 extern unsigned long max_cycles;
 extern unsigned long max_trace_cycles;
+extern unsigned long begin_trace_cycle;
 
 extern char *sym_find_by_val(int mcr, int v);
 extern char *sym_find_last(int mcr, int v, int *poffset);

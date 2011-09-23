@@ -16,6 +16,10 @@ ifeq ($(OS_NAME), Linux)
 OS = LINUX
 endif
 
+ifeq ($(OS_NAME), NetBSD)
+OS = NETBSD
+endif
+
 #--------- options ---------
 
 DISPLAY = SDL
@@ -26,12 +30,12 @@ KEYBOARD = NEW
 
 #----------- code ------------
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c
 USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
 DISPLAY_SRC = sdl.c
-USIM_LIBS = -lSDL -lpthread
+USIM_LIBS = -lSDL
 DEFINES = -DDISPLAY_SDL
 endif
 
@@ -74,6 +78,12 @@ CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle $(M32) -g
 LFLAGS = $(M32) -L/usr/lib
 endif
 
+# NetBSD
+ifeq ($(OS), NETBSD)
+CFLAGS = -O2 -g -mfpmath=sse -msse -march=athlon-4 $(DEFINES) -I/usr/pkg/include
+LFLAGS = -L/usr/pkg/lib
+endif
+
 # override above if 64 bit
 ifeq ($(MACH_NAME), x86_64)
 M32 = -m32
@@ -81,6 +91,7 @@ USIM_LIBS = /usr/lib/libSDL-1.2.so.0.7.0 -lpthread
 endif
 
 #DEFINES=-DLASHUP
+DEFINES=-DCADR2
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 

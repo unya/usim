@@ -13,7 +13,7 @@
 #include <string.h>
 #include <signal.h>
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <sys/time.h>
 #endif
 

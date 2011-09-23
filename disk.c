@@ -14,7 +14,7 @@
 #include <string.h>
 #include <fcntl.h>
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #include <sys/time.h>
 #endif
@@ -43,6 +43,7 @@ extern int read_prom_files(void);
 extern int read_sym_files(void);
 extern int iob_init(void);
 extern int chaos_init(void);
+extern int ether_init(void);
 extern void iob_warm_boot_key(void);
 extern void run(void);
 
@@ -165,13 +166,16 @@ main(int argc, char *argv[])
 	show_video_flag = 1;
 	mouse_sync_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:c:dC:i:l:nmp:q:tT:sSw")) != -1) {
+	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:tT:sSw")) != -1) {
 		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
 			break;
 		case 'b':
 			breakpoint_set_mcr(optarg);
+			break;
+		case 'B':
+			begin_trace_cycle = atol(optarg);
 			break;
 		case 'c':
 			max_cycles = atol(optarg);
@@ -208,6 +212,7 @@ main(int argc, char *argv[])
 			break;
 		case 'T':
 			switch (optarg[0]) {
+			case 'a': trace_after_flag = 1; break;
 			case 'd': trace_disk_flag = 1; break;
 			case 'i': trace_int_flag = 1; break;
 			case 'o': trace_io_flag = 1; break;
@@ -216,6 +221,7 @@ main(int argc, char *argv[])
 			case 'm': trace_mcr_labels_flag = 1; break;
 			case 'n': trace_net_flag = 1; break;
 			case 'l': trace_lod_labels_flag = 1; break;
+			case 'v': trace_vm_flag = 1; break;
 			}
 			break;
 		case 's':
@@ -242,6 +248,7 @@ main(int argc, char *argv[])
 
 	iob_init();
 	chaos_init();
+	ether_init();
 
 #if 0
 	show_prom();

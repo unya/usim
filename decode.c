@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #endif
 
