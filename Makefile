@@ -74,7 +74,7 @@ ifeq ($(OS), LINUX)
 #CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 #CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
-CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle $(M32) -g
+CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
 LFLAGS = $(M32) -L/usr/lib
 endif
 

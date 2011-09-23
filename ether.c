@@ -20,6 +20,9 @@
 
 #if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <sys/time.h>
+#define uint8_t __uint8_t
+#define uint16_t __uint16_t
+#define uint32_t __uint32_t
 #endif
 
 #if defined(BSD)
@@ -177,10 +180,12 @@ ether_poll(void)
 			if (status & ETHER_DESC_TX_PAD)
 			    len = MAX(len, 60);
 
+#ifdef BSD
 			ret = write(tap_fd, packet, len);
 			if (ret != len) {
 			    perror("write"); 
 			}
+#endif
 
 			status &= ~ETHER_DESC_TX_READY;
 			descs.desc_structs[i].status = status;
@@ -197,7 +202,11 @@ ether_poll(void)
 		for (i = tx_bd_num; i < 0x80; i++) {
 		    status = descs.desc_structs[i].status;
 		    if (status & ETHER_DESC_RX_EMPTY) {
+#ifdef BSD
 			len = read(tap_fd, packet, sizeof(packet));
+#else
+			len = -1;
+#endif
 			if (len == -1) break;
 
 			ptr = descs.desc_structs[i].ptr;
