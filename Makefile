@@ -80,8 +80,8 @@ endif
 
 # NetBSD
 ifeq ($(OS), NETBSD)
-CFLAGS = -O2 -g -mfpmath=sse -msse -march=athlon-4 $(DEFINES) -I/usr/pkg/include
-LFLAGS = -L/usr/pkg/lib
+CFLAGS = -O2 -g $(DEFINES) -I/usr/pkg/include
+LFLAGS = -R/usr/pkg/lib -L/usr/pkg/lib
 endif
 
 # override above if 64 bit
