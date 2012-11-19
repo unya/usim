@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <signal.h>
 
 #include "logo.h"
@@ -86,7 +87,7 @@ static void x11_process_key(XEvent *e, int updown)
 	if (updown) {
 		ret = XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
 				    &status);
-#if 1
+#if 0
 		printf("keysym %d, scancode %x, sym %s, state %x\n",
 		       keysym, e->xkey.keycode, buffer, e->xkey.state);
 #endif

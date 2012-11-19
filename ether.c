@@ -25,7 +25,13 @@
 #define uint32_t __uint32_t
 #endif
 
-#if defined(BSD)
+#if defined(OSX)
+#include <sys/socket.h>
+#include <net/if.h>
+#include <net/bpf.h>
+#endif
+
+#if defined(BSD) && !defined(OSX)
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_tap.h>
@@ -118,7 +124,7 @@ ether_init(void)
 	miimoder = 0x64;
 	enabled = 0;
 
-#ifdef BSD
+#if defined(BSD) && !defined(OSX)
 	if (geteuid() != 0) {
 		printf("Not root, ethernet disabled\n");
 		return -1;
@@ -180,7 +186,7 @@ ether_poll(void)
 			if (status & ETHER_DESC_TX_PAD)
 			    len = MAX(len, 60);
 
-#ifdef BSD
+#if defined(BSD) && !defined(OSX)
 			ret = write(tap_fd, packet, len);
 			if (ret != len) {
 			    perror("write"); 
@@ -202,7 +208,7 @@ ether_poll(void)
 		for (i = tx_bd_num; i < 0x80; i++) {
 		    status = descs.desc_structs[i].status;
 		    if (status & ETHER_DESC_RX_EMPTY) {
-#ifdef BSD
+#if defined(BSD) && !defined(OSX)
 			len = read(tap_fd, packet, sizeof(packet));
 #else
 			len = -1;

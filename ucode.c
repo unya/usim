@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
@@ -814,7 +815,7 @@ write_a_mem(int loc, unsigned int v)
 	a_memory[loc] = v;
 }
 
-inline unsigned int
+unsigned int
 read_a_mem(int loc)
 {
 	return a_memory[loc];
@@ -926,7 +927,7 @@ pop_spc(void)
  * advance the LC register,
  * following the rules; will read next vma if needed
  */
-inline void
+void
 advance_lc(int *ppc)
 {
 	/* lc is 26 bits */
@@ -1657,7 +1658,7 @@ int
 restore_state(void)
 {
 	int fd, ret, i;
-	u_char version[2];
+	unsigned char version[2];
 
 	if (restored)
 	  return 0;
@@ -1692,7 +1693,7 @@ int
 save_state(void)
 {
 	int fd, ret, i;
-	u_char version[2];
+	unsigned char version[2];
 
 	fd = open("usim.state", O_RDWR | O_CREAT, 0666);
 	if (fd < 0)

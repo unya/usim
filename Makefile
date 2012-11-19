@@ -28,6 +28,11 @@ DISPLAY = SDL
 #KEYBOARD = OLD
 KEYBOARD = NEW
 
+ifeq ($(OS_NAME), Darwin)
+DISPLAY = X11
+KEYBOARD = OLD
+endif
+
 #----------- code ------------
 
 USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c
@@ -55,15 +60,15 @@ endif
 
 # Mac OSX
 ifeq ($(OS), OSX)
-LFLAGS = -framework Cocoa
+LFLAGS = -m32 -framework Cocoa
 USIM_LIBS = -lSDLmain -lSDL -lpthread -lobjc
-CFLAGS = -O $(DEFINES)
+CFLAGS = -O -m32 -I/usr/X11/include -DDISPLAY_X11 $(DEFINES)
 # good for G5
 #CFLAGS = -fast $(DEFINES)
 endif
 
 ifeq ($(DISPLAY), X11)
-LFLAGS =
+LFLAGS = -m32
 USIM_LIBS = -L/usr/X11R6/lib -lX11
 endif
 
@@ -87,7 +92,11 @@ endif
 # override above if 64 bit
 ifeq ($(MACH_NAME), x86_64)
 M32 = -m32
+
+ifeq ($(DISPLAY), SDL)
 USIM_LIBS = /usr/lib/libSDL-1.2.so.0.7.0 -lpthread
+endif
+
 endif
 
 #DEFINES=-DLASHUP

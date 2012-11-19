@@ -612,7 +612,7 @@ int
 lmfs_open(char *img_filename, int offset)
 {
   int fd, ret;
-  u_char buffer[256*4];
+  unsigned char buffer[256*4];
   struct partition_label_s *pl;
   baccess b;
 

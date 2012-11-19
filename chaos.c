@@ -551,7 +551,7 @@ chaos_poll(void)
 			  int i, c = 0, o = 0;
 			  unsigned char cc, cb[9];
 			  cb[8] = 0;
-			  for (i = 0; i < ret; i++) {
+			  for (i = 0; i < ret; i++, o++) {
 				  if (c == 8) { printf("%s\n", cb); c = 0; }
 				  if (c++ == 0) printf("%04d ", o);
 				  cc = ((unsigned char *)chaos_rcv_buffer)[i];
