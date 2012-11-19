@@ -160,6 +160,99 @@ char_xmit_done_intr(void)
 	  assert_unibus_interrupt(0400);
 }
 
+#if CHAOS_DEBUG_PKT
+static char *opcodetable[256] = {
+    "UNKNOWN",                                      // 0
+    "RFC - Request for Connection",                 // 1
+    "OPN - Open Connection",                        // 2
+    "CLS - Close Connection",                       // 3
+    "FWD - Forward a Request for Connection",       // 4
+    "ANS - Answer a Simple Transaction",            // 5
+    "SNS - Sense Status",                           // 6
+    "STS - Status",                                 // 7
+    "RUT - Routing Information",                    // 8
+    "LOS - Lossage",                                // 9
+    "LSN - Listen",                                 // 10
+    "MNT - Maintenance",                            // 11
+    "EOF",                                          // 12
+    "UNC - Uncontrolled Data",                      // 13
+    "BRD - Broadcast",                              // 14
+    "UNKNOWN",                                      // 15
+};
+
+static void
+dumpbuffer(unsigned short *buffer, int size)
+{
+    int j, offset, skipping;
+    char cbuf[17];
+    char line[80];
+    unsigned char *buf = (unsigned char *)&buffer[8];
+    int cnt = (buffer[1] & 0x0fff);
+    int opcode = (buffer[0] & 0xff00) >> 8;
+    
+    size = size - (int)(8 * sizeof(short)); // subtract off the size of packet header
+    if (size < cnt)
+        printf("ERROR: packet size mismatch: size %d < cnt %d\n", size, cnt);
+    else if (size > cnt)
+    {
+        printf("extra data: %d bytes\n", size - cnt);
+        cnt = size;
+    }
+    
+    printf("opcode: %d %s\n", opcode, opcode == 128 ? "DAT" : opcode == 129 ? "SYN" : opcode == 192 ? "DWD" : opcodetable[opcode]);
+    if ((buffer[0] & 0x00ff) > 0)
+        printf("version: %d\n", (buffer[0] & 0x00ff));
+    if (((buffer[1] & 0xf000) >> 12) > 0)
+        printf("forwarding count: %d\n", (buffer[1] & 0xf000) >> 12);
+    printf("data length: %d\n", (buffer[1] & 0x0fff));
+    printf("destination address: %o  index: %04x\n", buffer[2], buffer[3]);
+    printf("source address: %o  index: %04x\n", buffer[4], buffer[5]);
+    printf("packet number: %d\n", buffer[6]);
+    printf("acknowledgement: %d\n", buffer[7]);
+    
+    offset = 0;
+    skipping = 0;
+    while (cnt > 0) {
+        if (offset > 0 && memcmp(buf, buf-16, 16) == 0) {
+            skipping = 1;
+        } else {
+            if (skipping) {
+                skipping = 0;
+                printf("...\n");
+            }
+        }
+        
+        if (!skipping) {
+            for (j = 0; j < 16; j++) {
+                char *pl = line+j*3;
+				
+                if (j >= cnt) {
+                    strcpy(pl, "xx ");
+                    cbuf[j] = 'x';
+                } else {
+                    sprintf(pl, "%02x ", buf[j]);
+                    cbuf[j] = buf[j] < ' ' ||
+                    buf[j] > '~' ? '.' : (char)buf[j];
+                }
+                pl[3] = 0;
+            }
+            cbuf[16] = 0;
+            
+            printf("%08x %s %s\n", offset, line, cbuf);
+        }
+        
+        buf += 16;
+        cnt -= 16;
+        offset += 16;
+    }
+    
+    if (skipping) {
+        printf("%08x ...\n", offset-16);
+    }
+    
+}
+#endif // CHAOS_DEBUG_PKT
+
 void
 chaos_xmit_pkt(void)
 {
@@ -173,23 +266,11 @@ chaos_xmit_pkt(void)
 	       (chaos_xmit_buffer_ptr > 0 ? chaos_xmit_buffer[1]&0x3f : -1));
 #endif
 
-#if CHAOS_DEBUG_PKT
-	n = 0;
-	for (i = 0; i < chaos_xmit_buffer_ptr; i++) {
-		printf("%02x %02x ",
-		       chaos_xmit_buffer[i] & 0xff,
-		       (chaos_xmit_buffer[i] >> 8) & 0xff);
-		n += 2;
-		if (n > 16) {
-			n = 0;
-			printf("\n");
-		}
-	}
-	if (n)
-		printf("\n");
-#endif
-
 	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
+
+#if CHAOS_DEBUG_PKT
+    dumpbuffer(chaos_xmit_buffer, chaos_xmit_buffer_size * 2);
+#endif
 
 	/* Dest is already in the buffer */
 //	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0;/* dest */
@@ -507,7 +588,7 @@ chaos_poll(void)
 
 		if (len > sizeof(chaos_rcv_buffer)) {
 			printf("chaos: packet too big: "
-			       "pkt size %d, buffer size %d\n",
+			       "pkt size %d, buffer size %ld\n",
 			       len, sizeof(chaos_rcv_buffer));
 
 			/* When we get out of synch break socket conn */
@@ -546,29 +627,6 @@ chaos_poll(void)
 		  printf("chaos rx: to %o, my %o\n", dest_addr, chaos_addr);
 #endif
 
-#if CHAOS_DEBUG_PKT
-		  {
-			  int i, c = 0, o = 0;
-			  unsigned char cc, cb[9];
-			  cb[8] = 0;
-			  for (i = 0; i < ret; i++, o++) {
-				  if (c == 8) { printf("%s\n", cb); c = 0; }
-				  if (c++ == 0) printf("%04d ", o);
-				  cc = ((unsigned char *)chaos_rcv_buffer)[i];
-				  printf("%02x ", cc);
-				  cb[c-1] = (cc >= ' ' && cc <= '~') ?
-					  cc : '.';
-				  if (i == ret-1 && c > 0) {
-					  for (; c < 8; c++) {
-						  printf("xx "); cb[c]=' ';
-					  }
-					  printf("%s\n", cb);
-					  break;
-				  }
-			  }
-		  }
-#endif
-
 		  /* if not to us, ignore */
 		  if (dest_addr != chaos_addr) {
 		    chaos_rcv_buffer_size = 0;
@@ -576,6 +634,9 @@ chaos_poll(void)
 		    return 0;
 		  }
 
+#if CHAOS_DEBUG_PKT
+          dumpbuffer(chaos_rcv_buffer, chaos_rcv_buffer_size * 2);
+#endif
 		  chaos_rx_pkt();
 		}
 	}
