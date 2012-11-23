@@ -174,10 +174,10 @@ make_labl(int fd)
 			buffer[p++] = n;
 			buffer[p++] = parts[i].start;
 			buffer[p++] = parts[i].size;
-			buffer[p++] = str4("    ");
-			buffer[p++] = str4("    ");
-			buffer[p++] = str4("    ");
-			buffer[p++] = str4("    ");
+			buffer[p++] = str4(&parts[i].label[0]);
+			buffer[p++] = str4(&parts[i].label[4]);
+			buffer[p++] = str4(&parts[i].label[8]);
+			buffer[p++] = str4(&parts[i].label[12]);
 
 		}
 	}
