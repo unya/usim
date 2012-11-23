@@ -903,11 +903,12 @@ set_current_band(const char *filename, const char *partition_name)
 {
     int fd;
     int found = 0;
+    unsigned int i;
 
     if (read_labl(filename) < 0)
         return -1;
 
-    for (unsigned int i = 0; i < part_count; i++)
+    for (i = 0; i < part_count; i++)
     {
         if (strcasecmp(partition_name, parts[i].name) == 0)
         {
