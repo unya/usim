@@ -43,7 +43,9 @@ char *part_name;
 char *brand;
 char *text;
 char *comment;
+char *boot_name;
 
+int boot;
 int debug;
 int create;
 int show;
@@ -60,6 +62,7 @@ struct part_s {
 	int start;
 	int size;
 	int ptype;
+	char label[17];
 	char *filename;
 
 } parts[MAX_PARTITIONS];
@@ -99,7 +102,7 @@ swapwords(unsigned int *buf)
 }
 
 int
-add_partition(char *name, int start, int size, int ptype, char *filename)
+add_partition(char *name, int start, int size, int ptype, char *label, char *filename)
 {
 	struct part_s *p = &parts[part_count++];
 	if (part_count > MAX_PARTITIONS) {
@@ -110,6 +113,8 @@ add_partition(char *name, int start, int size, int ptype, char *filename)
 	p->start = start;
 	p->size = size;
 	p->ptype = ptype;
+	strncpy(p->label, label, 16);
+	p->label[16] = '\0';
 	p->filename = filename;
 	return 0;
 }
@@ -410,7 +415,7 @@ parse_template(char *template)
 			       what, &start, &size, str);
 			if (what[0] && start > 0 && size > 0) {
 				add_partition(strdup(what), start, size,
-					      0, strdup(str));
+					      0, "", strdup(str));
 			}
 			break;
 		}
@@ -601,12 +606,12 @@ default_template(void)
 #define DEFAULT_LOD_FILE	"partition-78.48.lod1"
 
 	part_count = 0;
-	add_partition("MCR1", 021,	0224,	0, DEFAULT_MCR_FILE);
-	add_partition("MCR2", 0245,	0224,	0, NULL);
-	add_partition("PAGE", 0524,	0100000,0, NULL);
-	add_partition("LOD1", 0100524,  061400,	0, DEFAULT_LOD_FILE);
-	add_partition("LOD2", 0162124,  061400,	0, NULL);
-	add_partition("FILE", 0243524,  070000,	0, NULL);
+	add_partition("MCR1", 021,	0224,	0, DEFAULT_MCR_FILE, DEFAULT_MCR_FILE);
+	add_partition("MCR2", 0245,	0224,	0, "", NULL);
+	add_partition("PAGE", 0524,	0100000,0, "", NULL);
+	add_partition("LOD1", 0100524,  061400,	0, DEFAULT_LOD_FILE, DEFAULT_LOD_FILE);
+	add_partition("LOD2", 0162124,  061400,	0, "", NULL);
+	add_partition("FILE", 0243524,  070000,	0, "", NULL);
 
 	mcr_name = "MCR1";
 	lod_name = "LOD1";
@@ -665,8 +670,16 @@ show_partition_info(char *filename)
 
 	part_count = 0;
 	for (i = 0; i < count; i++) {
+	        char label[17];
+        
+	        memcpy(&label[0], unstr4(buffer[p+3]), 4);
+	        memcpy(&label[4], unstr4(buffer[p+4]), 4);
+	        memcpy(&label[8], unstr4(buffer[p+5]), 4);
+	        memcpy(&label[12], unstr4(buffer[p+6]), 4);
+	        label[16] = '\0';
+
 		add_partition(strdup(unstr4(buffer[p+0])),
-			      buffer[p+1], buffer[p+2], 0, NULL);
+	   		      buffer[p+1], buffer[p+2], 0, label, NULL);
 		
 		p += size;
 	}
@@ -759,8 +772,16 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 
 	part_count = 0;
 	for (i = 0; i < count; i++) {
+	        char label[17];
+        
+	        memcpy(&label[0], unstr4(buffer[p+3]), 4);
+	        memcpy(&label[4], unstr4(buffer[p+4]), 4);
+	        memcpy(&label[8], unstr4(buffer[p+5]), 4);
+	        memcpy(&label[12], unstr4(buffer[p+6]), 4);
+	        label[16] = '\0';
+
 		add_partition(strdup(unstr4(buffer[p+0])),
-			      buffer[p+1], buffer[p+2], 0, NULL);
+			      buffer[p+1], buffer[p+2], 0, label, NULL);
 		
 		p += size;
 	}
@@ -809,6 +830,115 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 	return result;
 }
 
+int
+read_labl(const char *filename)
+{
+    ssize_t ret;
+	int fd, p;
+	unsigned int i, count, size;
+    
+	fd = open(filename, O_RDONLY, 0666);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+    
+	ret = read(fd, buffer, 256*4);
+	if (ret != 256*4) {
+		perror(filename);
+		return -1;
+	}
+    
+#ifdef NEED_SWAP
+	/* don't swap the text */
+	_swaplongbytes(&buffer[0], 8);
+	_swaplongbytes(&buffer[0200], 128);
+#endif
+    
+	if (buffer[0] != str4("LABL")) {
+		fprintf(stderr, "%s: no valid disk label found\n", filename);
+		return -1;
+	}
+    
+	if (buffer[1] != 1) {
+		fprintf(stderr, "%s: label version not 1\n", filename);
+		return -1;
+	}
+    
+	cyls = buffer[2];		/* # cyls */
+	heads = buffer[3];		/* # heads */
+	blocks_per_track = buffer[4];	/* # blocks */
+	mcr_name = strdup(unstr4(buffer[6]));	/* name of micr part */
+	lod_name = strdup(unstr4(buffer[7]));	/* name of load part */
+    
+	count = buffer[0200];
+	size = buffer[0201];
+	p = 0202;
+    
+	part_count = 0;
+	for (i = 0; i < count; i++) {
+        char label[17];
+
+        memcpy(&label[0], unstr4(buffer[p+3]), 4);
+        memcpy(&label[4], unstr4(buffer[p+4]), 4);
+        memcpy(&label[8], unstr4(buffer[p+5]), 4);
+        memcpy(&label[12], unstr4(buffer[p+6]), 4);
+        label[16] = '\0';
+		add_partition(strdup(unstr4(buffer[p+0])),
+                      buffer[p+1], buffer[p+2], 0, label, NULL);
+		
+		p += size;
+	}
+    
+	brand = strdup((char *)&buffer[010]);
+	text = strdup((char *)&buffer[020]);
+	comment = strdup((char *)&buffer[030]);
+
+	close(fd);
+    return 0;
+}
+
+int
+set_current_band(const char *filename, const char *partition_name)
+{
+    int fd;
+    int found = 0;
+
+    if (read_labl(filename) < 0)
+        return -1;
+
+    for (unsigned int i = 0; i < part_count; i++)
+    {
+        if (strcasecmp(partition_name, parts[i].name) == 0)
+        {
+            if (lod_name)
+                free((void *)lod_name);
+            lod_name = strdup(parts[i].name);
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found)
+    {
+        printf("can't find band %s\n", partition_name);
+        return -1;
+    }
+
+ 	fd = open(filename, O_RDWR);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+    
+	printf("re-write label\n");
+	make_labl(fd);
+    
+	close(fd);
+
+    return 0;
+}
+
 void
 usage(void)
 {
@@ -821,6 +951,7 @@ usage(void)
 	fprintf(stderr, "-f <disk-image-filename>\n");
 	fprintf(stderr, "-x <partition-name>\n");
 	fprintf(stderr, "-m <partition-name>\n");
+	fprintf(stderr, "-b <partition-name>\n");
 
 	exit(1);
 }
@@ -835,8 +966,12 @@ main(int argc, char *argv[])
 	if (argc <= 1)
 		usage();
 
-	while ((c = getopt(argc, argv, "cdlt:f:pm:x:")) != -1) {
+	while ((c = getopt(argc, argv, "b:cdlt:f:pm:x:")) != -1) {
 		switch (c) {
+		case 'b':
+			boot++;
+			boot_name = strdup(optarg);
+			break;
 		case 'c':
 			create++;
 			break;
@@ -870,6 +1005,11 @@ main(int argc, char *argv[])
 	}
 
 	default_template();
+
+	if (boot) {
+		set_current_band(img_filename, boot_name);
+		exit(0);
+	}
 
 	if (show) {
 		show_partition_info(img_filename);
