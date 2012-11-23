@@ -105,6 +105,8 @@ int
 add_partition(char *name, int start, int size, int ptype, char *label, char *filename)
 {
 	struct part_s *p = &parts[part_count++];
+	size_t i;
+
 	if (part_count > MAX_PARTITIONS) {
 		part_count--;
 		return -1;
@@ -117,7 +119,7 @@ add_partition(char *name, int start, int size, int ptype, char *label, char *fil
 	p->label[16] = '\0';
 
 	// make sure the label is padded out with spaces
-	for (size_t i = strlen(p->label); i < 16; i++)
+	for (i = strlen(p->label); i < 16; i++)
         	p->label[i] = ' ';
 
 	p->filename = filename;
