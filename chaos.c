@@ -10,7 +10,7 @@
 #include "usim.h"
 
  /* until I split out the unix socket code */
-#if defined(LINUX) || defined(OSX)
+#if defined(LINUX) || defined(OSX) || defined(BSD)
 
 #include <stdio.h>
 #include <unistd.h>
