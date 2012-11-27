@@ -44,7 +44,9 @@
 #include <sys/timeb.h>
 #include <sys/socket.h>
 
+#if defined(OSX)
 #import <dispatch/dispatch.h>
+#endif
 
 #include <time.h>
 #include <sys/dir.h>
@@ -83,7 +85,7 @@
 /* use utimes instead of "outmoded" utime */
 #endif
 
-#if defined(__NetBSD__) || defined(OSX)
+#if defined(__NetBSD__) || defined(OSX) || defined(linux)
 #include <utime.h>
 #include <sys/statvfs.h>
 #endif
@@ -201,7 +203,12 @@ struct xfer		{
 #define x_pbuf			x_pkt.cp_data	/* Packet data buffer */
 	char			**x_glob;	/* Files for DIRECTORY */
 	char			**x_gptr;	/* Ptr into x_glob vector */
-    dispatch_semaphore_t x_hangsem;
+#if defined(OSX)
+	dispatch_semaphore_t x_hangsem;
+#else
+	pthread_mutex_t x_hangsem;
+	pthread_cond_t x_hangcond;
+#endif
 #ifdef SELECT
 	struct transaction	*x_work;	/* Queued transactions */
 #else
@@ -741,6 +748,8 @@ dumpbuffer(u_char *buf, ssize_t cnt)
     fflush(stderr);
 }
 
+#if defined(OSX)
+
 void processdata(chaos_connection *conn)
 {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
@@ -755,49 +764,29 @@ void processdata(chaos_connection *conn)
     });
 }
 
-#if 0
-/*
- * Process receipts and acknowledgements using recnum as the receipt.
- */
-static void
-receipt(struct connection *conn, unsigned short acknum, unsigned short recnum)
+#else // !defined(OSX)
+
+static void *_processdata(void *conn)
 {
-	struct packet *pkt, *pktl;
-    
-	/*
-	 * Process a receipt, freeing packets that we now know have been
-	 * received.
-	 */
-	if (cmp_gt(recnum,conn->cn_trecvd)) {
-		for (pktl = conn->cn_thead;
-		     pktl != NOPKT && cmp_le(LE_TO_SHORT(pktl->LE_pk_pkn),
-                                     recnum);
-		     pktl = pkt)
-		{
-			pkt = pktl->pk_next;
-			ch_free_pkt(pktl);
-		}
-		if ((conn->cn_thead = pktl) == NOPKT)
-			conn->cn_ttail = NOPKT;
-		conn->cn_trecvd = recnum;
+        register struct transaction *t;
+        
+        while ((t = getwork((chaos_connection *)conn))) {
+            if (t->t_command->c_flags & C_XFER)
+                xcommand(t);
+            else
+                (*t->t_command->c_func)(t);
 	}
-    
-	/*
-	 * If the acknowledgement is new, update our idea of the
-	 * latest acknowledged packet, and wakeup output that might be blocked
-	 * on a full transmit window.
-	 */
-	if (cmp_gt(acknum,conn->cn_tacked))
-		if (cmp_gt(acknum, conn->cn_tlast))
-			debugf(DBG_WARN,
-			       "receipt: Invalid acknowledgment(%d,%d)",
-			       acknum, conn->cn_tlast);
-		else {
-			conn->cn_tacked = acknum;
-			OUTPUT(conn);
-		}
+	return 0;
 }
-#endif
+
+static pthread_t processdata_thread;
+
+void processdata(chaos_connection *conn)
+{
+    pthread_create(&processdata_thread, NULL, _processdata, (void *)conn);
+}
+
+#endif // defined(OSX)
 
 /*
  00000000 00 80 18 00 04 01 00 01 01 01 45 37 01 00 01 00  ..........E7....
@@ -2427,7 +2416,13 @@ makexfer(register struct transaction *t, long foptions)
         x->x_next = xfers;
         x->x_realname = x->x_dirname = x->x_tempname = NOSTR;
         x->x_glob = (char **)0;
+#if defined(OSX)
         x->x_hangsem = dispatch_semaphore_create(0);
+#else
+	pthread_mutex_init(&x->x_hangsem, NULL);
+	pthread_cond_init(&x->x_hangcond, NULL);
+#endif
+
         xfers = x;
     }
     else
@@ -2448,8 +2443,14 @@ xcommand(register struct transaction *t)
 		errstring = "No transfer in progress on this file handle";
 		error(t, f ? f->f_name : "", BUG);
 	} else {
-        (*t->t_command->c_func)(x, t);
-        dispatch_semaphore_signal(x->x_hangsem);
+	    (*t->t_command->c_func)(x, t);
+#if defined(OSX)
+	    dispatch_semaphore_signal(x->x_hangsem);
+#else
+	    pthread_mutex_lock(&x->x_hangsem);
+	    pthread_cond_signal(&x->x_hangcond);
+	    pthread_mutex_unlock(&x->x_hangsem);
+#endif
 	}
 }
 #ifdef SELECT
@@ -2505,10 +2506,15 @@ xfree(register struct xfer *x)
         free(x->x_tempname);
     if (x->x_dirname)
         free(x->x_dirname);
-	if (x->x_glob)
-		blkfree(x->x_glob);
+    if (x->x_glob)
+	blkfree(x->x_glob);
+#if defined(OSX)
     dispatch_release(x->x_hangsem);
-	sfree(x);
+#else
+    pthread_mutex_destroy(&x->x_hangsem);
+    pthread_cond_destroy(&x->x_hangcond);
+#endif
+    sfree(x);
 }
 /*
  * Here are commands that operate on existing transfers.  There execution
@@ -2659,7 +2665,7 @@ xclose(struct xfer *ax)
             
 			log(LOG_INFO, "xclose (3c)\n");
             
-#if defined(OSX) || defined(BSD42)
+#if defined(OSX) || defined(BSD42) || defined(linux)
 			if (utimes(x->x_realname, timep)) {
                 log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
@@ -2678,14 +2684,22 @@ xclose(struct xfer *ax)
 #endif
 		if (protocol > 0)
 			(void)sprintf(response,
+#if defined(linux)
+                          "%02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
+#else
                           "%02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
+#endif
                           tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
                           sbuf.st_size, CHNL,
                           x->x_realname, CHNL);
 		else
 			(void)sprintf(response,
+#if defined(linux)
+                          "%d %02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
+#else
                           "%d %02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
+#endif
                           -1, tm->tm_mon+1, tm->tm_mday,
                           tm->tm_year, tm->tm_hour, tm->tm_min,
                           tm->tm_sec, sbuf.st_size, CHNL,
@@ -2840,7 +2854,13 @@ delete(register struct transaction *t)
 			respond(t, NOSTR);
             
             f->f_xfer->x_flags |= X_DELETE;
+#if defined(OSX)
             dispatch_semaphore_signal(x->x_hangsem);
+#else
+	    pthread_mutex_lock(&x->x_hangsem);
+	    pthread_cond_signal(&x->x_hangcond);
+	    pthread_mutex_unlock(&x->x_hangsem);
+#endif
 		}
         else if (t->t_args == ANULL ||
                  (file = t->t_args->a_strings[0]) == NOSTR) {
@@ -2988,7 +3008,13 @@ xrename(register struct transaction *t)
 				x->x_realname = real1;
 				real1 = NOSTR;
 				respond(t, NOSTR);
+#if defined(OSX)
                 dispatch_semaphore_signal(x->x_hangsem);
+#else
+	    pthread_mutex_lock(&x->x_hangsem);
+	    pthread_cond_signal(&x->x_hangcond);
+	    pthread_mutex_unlock(&x->x_hangsem);
+#endif
                 }
 		}
         else if (file2 == NOSTR) {
@@ -3666,7 +3692,11 @@ getspace(struct stat *s, char *cp)
     used = total - free;
     
     (void)
+#if defined(linux)
+    sprintf(cp, "%s (%s): %ld free, %ld/%ld used (%ld%%)", mtab.path, mtab.spec,
+#else
     sprintf(cp, "%s (%s): %lld free, %lld/%lld used (%lld%%)", mtab.path, mtab.spec,
+#endif
             free, used, total, (100L * used + total / 2) / total);
     while (*cp)
         cp++;
@@ -3678,7 +3708,11 @@ getspace(struct stat *s, char *cp)
 static char *
 xgetbsize(struct stat *s, char *cp)
 {
+#if defined(linux)
+    (void)sprintf(cp, "%ld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
+#else
     (void)sprintf(cp, "%lld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
+#endif
     
     while (*cp)
         cp++;
@@ -3697,7 +3731,11 @@ getbyte(struct stat *s, char *cp)
 char *
 getsize(register struct stat *s, register char *cp)
 {
+#if defined(linux)
+    (void)sprintf(cp, "%ld", s->st_size);
+#else
     (void)sprintf(cp, "%lld", s->st_size);
+#endif
     while (*cp)
         cp++;
     return cp;
@@ -3881,7 +3919,13 @@ putmdate(register struct stat *s, char *file, char *newtime, register struct xfe
         } else if (x) {
             x->x_mtime = mtime;
             x->x_flags |= X_MTIME;
+#if defined(OSX)
             dispatch_semaphore_signal(x->x_hangsem);
+#else
+	    pthread_mutex_lock(&x->x_hangsem);
+	    pthread_cond_signal(&x->x_hangcond);
+	    pthread_mutex_unlock(&x->x_hangsem);
+#endif
         }
     }
     return 0;
@@ -3907,7 +3951,13 @@ putrdate(register struct stat *s, char *file, char *newtime, register struct xfe
         } else if (x) {
             x->x_mtime = atime;
             x->x_flags |= X_ATIME;
+#if defined(OSX)
             dispatch_semaphore_signal(x->x_hangsem);
+#else
+	    pthread_mutex_lock(&x->x_hangsem);
+	    pthread_cond_signal(&x->x_hangcond);
+	    pthread_mutex_unlock(&x->x_hangsem);
+#endif
         }
     }
     return 0;
@@ -4755,6 +4805,9 @@ void finish(int arg)
  * Start the transfer task running.
  * Returns errcode if an error occurred, else 0
  */
+
+#if defined(OSX)
+
 int
 startxfer(struct xfer *ax)
 {
@@ -4789,6 +4842,57 @@ startxfer(struct xfer *ax)
     });
     return 0;
 }
+
+#else // !defined(OSX)
+
+void *
+_startxfer(void *ax)
+{
+    register struct xfer *x = (struct xfer *)ax;
+    
+    myxfer = x;
+    log(LOG_INFO, "startxfer: entering\n");
+    setjmp(closejmp);
+    for (;;) {
+       if (log_verbose) {
+            log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
+                tell(x->x_fd), x->x_state);
+        }
+        switch (dowork(x)) {
+            case X_SYNCMARK:
+                syncmark(x->x_fh);	/* Ignore errors */
+                break;
+            case X_FLUSH:		/* Totally done */
+                break;
+            case X_CONTINUE:	/* In process */
+                continue;
+            case X_HANG:		/* Need more instructions */
+                log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
+#if defined(OSX)
+                dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
+#else
+		pthread_mutex_lock(&x->x_hangsem);
+		pthread_cond_wait(&x->x_hangcond, &x->x_hangsem);
+		pthread_mutex_unlock(&x->x_hangsem);
+#endif
+                continue;
+        }
+        xflush(x);
+        log(LOG_INFO, "startxfer: exiting\n");
+        return 0;
+    }
+    return 0;
+}
+
+static pthread_t startxfer_thread;
+
+int
+startxfer(struct xfer *ax)
+{
+    pthread_create(&startxfer_thread, NULL, _startxfer, (void *)ax);
+}
+
+#endif // defined(OSX)
 
 /*
  * Character set conversion routines.
@@ -4825,6 +4929,8 @@ buffer_to_lispm(unsigned char *data, int length)
         data[i] = (unsigned char)c;
     }
 }
+
+#if defined(OSX)
 
 void
 processmini(chaos_connection *conn)
@@ -4900,3 +5006,84 @@ processmini(chaos_connection *conn)
     });
 }
 
+#else // !defined(OSX)
+
+void *
+_processmini(void *vconn)
+{
+    printf("processmini:\n");
+    
+        int binary = 0;
+        chaos_packet *packet;
+        chaos_packet *output;
+        int length, fd;
+        char tbuf[20];
+        struct stat sbuf;
+        struct tm *ptm;
+	chaos_connection *conn = (chaos_connection *)vconn;
+                
+        for (;;) {
+            
+            packet = chaos_connection_dequeue(conn);
+
+            switch (packet->opcode >> 8) {
+                case 0200:
+                case 0201:
+                    output = chaos_allocate_packet(conn, DWDOP, CHMAXDATA);
+
+                    packet->data[packet->length] = '\0';
+                    printf("MINI: op %o %s\n", packet->opcode, packet->data);
+                    if ((fd = open((char *)packet->data, O_RDONLY)) < 0) {
+                        output->opcode = 0203 << 8;
+                        printf("MINI: open failed %s\n", strerror(errno));
+                        chaos_connection_queue(conn, output);
+                        continue;
+                    } else {
+                        output->opcode = 0202 << 8;
+                        fstat(fd, &sbuf);
+                        ptm = localtime(&sbuf.st_mtime);
+                        strftime(tbuf, sizeof(tbuf), "%D %T", ptm);
+                        length = sprintf((char *)output->data, "%s%c%s",
+                                         packet->data, 0215, tbuf);
+                        output->length = (unsigned short)length;
+                        chaos_connection_queue(conn, output);
+                        binary = (packet->opcode >> 8) & 1;
+                        log(LOG_INFO, "MINI: binary = %d\n", binary);
+                    }
+                    free(packet);
+
+                    do {
+                        char buffer[CHMAXDATA];
+                        
+                        length = read(fd, buffer, CHMAXDATA);
+                        /*log(LOG_INFO, "MINI: read %d\n", length);*/
+                        if (length == 0)
+                            break;
+                        output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
+                        memcpy(output->data, buffer, length);
+                        if (binary == 0)
+                            buffer_to_lispm((unsigned char *)output->data, length);
+                        chaos_connection_queue(conn, output);
+                     } while (length > 0);
+                    
+                    printf("MINI: before eof\n");
+                    output = chaos_allocate_packet(conn, EOFOP, 0);
+                    chaos_connection_queue(conn, output);
+                    close(fd);
+                    break;
+                default:
+                    log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
+                    break;
+            }
+        }
+}
+
+static pthread_t processmini_thread;
+
+void
+processmini(chaos_connection *conn)
+{
+    pthread_create(&processmini_thread, NULL, _processmini, (void *)conn);
+}
+
+#endif // defined(OSX)

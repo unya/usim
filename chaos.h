@@ -24,7 +24,7 @@ int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_init(void);
 int chaos_reconnect(void);
 
-#if defined(OSX)
+#if defined(OSX) || defined(linux)
 
 #define CHAOS_SERVER_ADDRESS 0404
 #define CHAOS_SERVER_NAME    "server"
@@ -113,8 +113,15 @@ typedef struct chaos_connection
     packet_queue *queuehead;
     packet_queue *queuetail;
     pthread_mutex_t queuelock;
+#if defined(OSX)
     dispatch_semaphore_t queuesem;
     dispatch_semaphore_t twsem;
+#else
+    pthread_mutex_t queuesem;
+    pthread_cond_t queuecond;
+    pthread_mutex_t twsem;
+    pthread_cond_t twcond;
+#endif
     packet_queue *orderhead;
     packet_queue *ordertail;
 } chaos_connection;

@@ -40,7 +40,7 @@ USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
 DISPLAY_SRC = sdl.c
-USIM_LIBS = -lSDL
+USIM_LIBS = -lSDL -lpthread
 DEFINES = -DDISPLAY_SDL
 endif
 
@@ -82,7 +82,9 @@ ifeq ($(OS), LINUX)
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 #CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
-LFLAGS = $(M32) -L/usr/lib
+LFLAGS = $(M32) -ldl -L/usr/lib
+USIM_SRC += Files.c glob.c
+USIM_HDR += Files.h glob.h
 endif
 
 # NetBSD
