@@ -167,21 +167,23 @@ iob_sdl_key_event(int code, int extra)
 	*/
 	switch(code) {
 	case SDLK_F1:
-		iob_key_scan = 0 | (3 << 8);	/* network */
+		iob_key_scan = 1;		/* terminal */
 		break;
 	case SDLK_F2:
 		iob_key_scan = 1 | (3 << 8);	/* system */
 		break;
 	case SDLK_F3:
-		iob_key_scan = 16 | (3 << 8);	/* abort */
+		iob_key_scan = 0 | (3 << 8);	/* network */
 		break;
 	case SDLK_F4:
-		iob_key_scan = 17;		/* clear */
+		iob_key_scan = 16 | (3 << 8);	/* abort */
 		break;
 	case SDLK_F5:
-		iob_key_scan = 44 | (3 << 8); /* help */
+		iob_key_scan = 17;		/* clear */
 		break;
 	case SDLK_F6:
+		iob_key_scan = 44 | (3 << 8); /* help */
+		break;
 	case SDLK_END:
 		iob_key_scan = 50 | (3 << 8); /* end */
 		break;
