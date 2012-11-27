@@ -43,6 +43,8 @@ static int mouse_sync_amem_y;
 
 extern int mouse_sync_flag;
 extern int get_u_pc();
+extern unsigned int read_a_mem(int loc);
+extern int sym_find(int mcr, char *name, int *pval);
 
 void tv_post_60hz_interrupt(void);
 void chaos_xmit_pkt(void);

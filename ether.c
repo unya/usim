@@ -102,6 +102,8 @@ uint32_t packet[375];
 int enabled;
 
 extern void assert_xbus_interrupt(void);
+extern int read_phy_mem(int paddr, unsigned int *pv);
+extern int write_phy_mem(int paddr, unsigned int v);
 void set_hwaddr(void);
 
 int
