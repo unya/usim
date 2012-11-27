@@ -35,8 +35,8 @@ endif
 
 #----------- code ------------
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c Files.c glob.c
-USIM_HDR = ucode.h config.h Files.h glob.h
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c 
+USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
 DISPLAY_SRC = sdl.c
@@ -61,6 +61,8 @@ endif
 # Mac OSX
 ifeq ($(OS), OSX)
 LFLAGS = -m32 -framework Cocoa
+USIM_SRC += Files.c glob.c
+USIM_HDR += Files.h glob.h
 USIM_LIBS = -lSDLmain -lSDL -lpthread -lobjc
 CFLAGS = -O -m32 -I/usr/X11/include -DDISPLAY_X11 $(DEFINES)
 # good for G5

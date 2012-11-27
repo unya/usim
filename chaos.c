@@ -36,7 +36,9 @@
 #include "endian.h"
 #include "chaos.h"
 
+#if defined(OSX)
 #define USE_LOCAL_CHAOS     1
+#endif
 
 #ifndef CHAOS_MY_ADDRESS
 # define CHAOS_MY_ADDRESS 0401
@@ -46,7 +48,7 @@
 # define CHAOS_DEBUG 0
 #endif
 
-#define CHAOS_DEBUG_PKT 0
+#define CHAOS_DEBUG_PKT 1
 //#define CHAOS_TOSS_IF_RXBUFF_FULL
 
 #define CHAOS_BUF_SIZE_BYTES 8192
@@ -1232,6 +1234,10 @@ chaos_init(void)
 #define UNIX_SOCKET_PERM	S_IRWXU
 
 static struct sockaddr_un unix_addr;
+
+typedef struct chaos_packet chaos_packet;
+typedef struct chaos_connection chaos_connection;
+
 
 chaos_packet *
 chaos_allocate_packet(chaos_connection *conn, int opcode, int len)

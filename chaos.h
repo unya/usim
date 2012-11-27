@@ -4,7 +4,9 @@
  */
 
 #include <pthread.h>
+#if defined(OSX)
 #include <dispatch/dispatch.h>
+#endif
 
 void chaos_rx_pkt(void);
 void char_xmit_done_intr(void);
