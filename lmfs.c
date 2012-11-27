@@ -20,9 +20,9 @@ void dumpmem(/*int dbg_level, */char *ptr, int len);
 /* ---------------------------------------------------------------- */
 
 typedef struct {
-  char buffer[8192];
+  unsigned char buffer[8192];
 
-  char *base;
+  unsigned char *base;
   int offset;
   int record_no;
   int fd;
@@ -45,7 +45,7 @@ void init_access(baccess *pb, int fd)
 */
 void *ensure_access(baccess *pb, int offset, int size)
 {
-  char *ptr;
+  unsigned char *ptr;
   int blknum, boff, left, do_pad;
 
   blknum = offset / 1008;
@@ -73,7 +73,7 @@ void *ensure_access(baccess *pb, int offset, int size)
 
 void *advance_access(baccess *pb, int size)
 {
-  char *ptr;
+  unsigned char *ptr;
   int blknum, boff, left;
 
   pb->offset += size;
@@ -381,7 +381,7 @@ int
 read_record(baccess *pb, int record_no)
 {
   int i, block_no;
-  char *pbuf;
+  unsigned char *pbuf;
 
   block_no = record_no * 4;
   pbuf = pb->buffer;
@@ -600,7 +600,7 @@ show_de(int fd, int record_no)
     printf("byte_length %d\n", de->byte_length);
     printf("number_of_records %d\n", de->number_of_records);
     printf("record_0_address %d\n", de->record_0_address);
-    printf("size %d\n", sizeof(struct directory_entry_s));
+    printf("size %ld\n", sizeof(struct directory_entry_s));
 
     show_file(fd, de, de->record_0_address);
     //    show_de(fd, de->record_0_address);
@@ -715,7 +715,7 @@ lmfs_open(char *img_filename, int offset)
 		 de->author);
 	  printf("number_of_records %d\n", de->number_of_records);
 	  printf("record_0_address %d\n", de->record_0_address);
-	  printf("size %d\n", sizeof(struct directory_entry_s));
+	  printf("size %ld\n", sizeof(struct directory_entry_s));
 
 	  show_de(fd, de->record_0_address);
 	}

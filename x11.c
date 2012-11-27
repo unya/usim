@@ -19,6 +19,8 @@
 #include "logo.h"
 
 extern int run_ucode_flag;
+extern void iob_sdl_key_event(int code, int extra);
+extern void iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons);
 
 static unsigned int video_width = 768;
 static unsigned int video_height = 897 /*1024*/;
@@ -374,4 +376,5 @@ display_init(void)
     ximage = XCreateImage(display, visual, (unsigned)color_depth, ZPixmap, 0,
 			  (char *) tv_bitmap, video_width, video_height, 32, 0);
     ximage->byte_order = LSBFirst;
+    return 0;
 }

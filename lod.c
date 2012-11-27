@@ -154,7 +154,7 @@ read_virt(int fd, int addr)
 	if (b != bnum) {
 		bnum = b;
 
-		if (0) printf("fd %d, block %d(10) offset %ld\n",
+		if (0) printf("fd %d, block %d(10) offset %lld\n",
 			      fd, b, offset);
 
 		ret = lseek(fd, offset, SEEK_SET);
