@@ -36,7 +36,7 @@
 #include "endian.h"
 #include "chaos.h"
 
-#if defined(OSX) || defined(linux)
+#if defined(OSX) || defined(linux) // || defined(BSD)
 #define USE_LOCAL_CHAOS     1
 #endif
 
@@ -1338,10 +1338,6 @@ chaos_init(void)
 #define UNIX_SOCKET_PERM	S_IRWXU
 
 static struct sockaddr_un unix_addr;
-
-typedef struct chaos_packet chaos_packet;
-typedef struct chaos_connection chaos_connection;
-
 
 chaos_packet *
 chaos_allocate_packet(chaos_connection *conn, int opcode, int len)

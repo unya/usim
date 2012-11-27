@@ -24,7 +24,7 @@ int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_init(void);
 int chaos_reconnect(void);
 
-#if defined(OSX) || defined(linux)
+#if defined(OSX) || defined(linux) || defined(BSD)
 
 #define CHAOS_SERVER_ADDRESS 0404
 #define CHAOS_SERVER_NAME    "server"

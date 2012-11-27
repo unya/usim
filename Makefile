@@ -91,6 +91,8 @@ endif
 ifeq ($(OS), NETBSD)
 CFLAGS = -O2 -g $(DEFINES) -I/usr/pkg/include
 LFLAGS = -R/usr/pkg/lib -L/usr/pkg/lib
+USIM_SRC += Files.c glob.c
+USIM_HDR += Files.h glob.h
 endif
 
 # override above if 64 bit
