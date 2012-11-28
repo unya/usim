@@ -1164,8 +1164,9 @@ disassemble_address(unsigned int fef, unsigned int reg, unsigned int delta)
     }
     else if (reg == 4)
     {
-        static dispatch_once_t pred;
         static unsigned int constants_area;
+#if defined(OSX)
+        static dispatch_once_t pred;
         
         dispatch_once(&pred, ^{
             for (int i = 0; i < 1024; i++) {
@@ -1180,6 +1181,27 @@ disassemble_address(unsigned int fef, unsigned int reg, unsigned int delta)
                 }
             }
         });
+#else // !defined(OSX)
+	static int done = 0;
+
+	if (!done)
+	{
+	    int i;
+
+            for (i = 0; i < 1024; i++) {
+                char *sym;
+                extern unsigned int a_memory[1024];
+                
+                sym = sym_find_by_type_val(1, 4/*A-MEM*/, i);
+                if (sym && strcasecmp(sym, "A-V-CONSTANTS-AREA") == 0) {
+                    read_mem(a_memory[i], &constants_area);
+                    printf("found %o %-40s %o\n",
+                           i, sym, a_memory[i]);
+                }
+            }
+	    done = 1;
+	}
+#endif // defined(OSX)
 
         unsigned int value;
         
