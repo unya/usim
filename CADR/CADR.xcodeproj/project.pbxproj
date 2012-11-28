@@ -1,0 +1,705 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DD308CD11665E6A000361F6D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD308CD01665E6A000361F6D /* Cocoa.framework */; };
+		DD308CDB1665E6A000361F6D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DD308CD91665E6A000361F6D /* InfoPlist.strings */; };
+		DD308CDD1665E6A000361F6D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DD308CDC1665E6A000361F6D /* main.m */; };
+		DD308CE11665E6A000361F6D /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = DD308CDF1665E6A000361F6D /* Credits.rtf */; };
+		DD308CE71665E6A000361F6D /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD308CE51665E6A000361F6D /* MainMenu.xib */; };
+		DD308CEF1665E6A000361F6D /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD308CEE1665E6A000361F6D /* SenTestingKit.framework */; };
+		DD308CF01665E6A000361F6D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD308CD01665E6A000361F6D /* Cocoa.framework */; };
+		DD308CF81665E6A000361F6D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DD308CF61665E6A000361F6D /* InfoPlist.strings */; };
+		DD308CFB1665E6A000361F6D /* CADRTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DD308CFA1665E6A000361F6D /* CADRTests.m */; };
+		DD308D1C1665E72000361F6D /* chaos.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D041665E71F00361F6D /* chaos.c */; };
+		DD308D1D1665E72000361F6D /* ether.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D061665E71F00361F6D /* ether.c */; };
+		DD308D1E1665E72000361F6D /* Files.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D071665E71F00361F6D /* Files.c */; };
+		DD308D1F1665E72000361F6D /* iob.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D081665E71F00361F6D /* iob.c */; };
+		DD308D201665E72000361F6D /* kbd_old.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D091665E71F00361F6D /* kbd_old.c */; };
+		DD308D231665E72000361F6D /* glob.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D0C1665E71F00361F6D /* glob.c */; };
+		DD308D251665E72000361F6D /* ucode.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D101665E71F00361F6D /* ucode.c */; };
+		DD308D261665E72000361F6D /* disk.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D111665E71F00361F6D /* disk.c */; };
+		DD308D281665E72000361F6D /* config.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D141665E71F00361F6D /* config.c */; };
+		DD308D291665E72000361F6D /* decode.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D161665E71F00361F6D /* decode.c */; };
+		DD308D2B1665E72000361F6D /* syms.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D191665E71F00361F6D /* syms.c */; };
+		DD308D2C1665E72000361F6D /* uart.c in Sources */ = {isa = PBXBuildFile; fileRef = DD308D1A1665E71F00361F6D /* uart.c */; };
+		DD36582F1665EAC000755138 /* cadrAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36580B1665EAC000755138 /* cadrAppDelegate.m */; };
+		DD3658301665EAC000755138 /* CreateDisk.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD36580C1665EAC000755138 /* CreateDisk.xib */; };
+		DD3658311665EAC000755138 /* diskutil.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36580D1665EAC000755138 /* diskutil.m */; };
+		DD3658321665EAC000755138 /* DebuggerController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36580E1665EAC000755138 /* DebuggerController.m */; };
+		DD3658331665EAC000755138 /* AppController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD3658101665EAC000755138 /* AppController.m */; };
+		DD3658341665EAC000755138 /* Breakpoints.c in Sources */ = {isa = PBXBuildFile; fileRef = DD3658111665EAC000755138 /* Breakpoints.c */; };
+		DD3658351665EAC000755138 /* Breakpoints.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD3658131665EAC000755138 /* Breakpoints.xib */; };
+		DD3658361665EAC000755138 /* BreakpointsController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD3658151665EAC000755138 /* BreakpointsController.m */; };
+		DD3658371665EAC000755138 /* CreateDiskController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD3658181665EAC000755138 /* CreateDiskController.m */; };
+		DD3658381665EAC000755138 /* DataTypes.c in Sources */ = {isa = PBXBuildFile; fileRef = DD3658191665EAC000755138 /* DataTypes.c */; };
+		DD3658391665EAC000755138 /* Debugger.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD36581B1665EAC000755138 /* Debugger.xib */; };
+		DD36583A1665EAC000755138 /* DebugSettings.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD36581D1665EAC000755138 /* DebugSettings.xib */; };
+		DD36583B1665EAC000755138 /* DebugSettingsController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36581F1665EAC000755138 /* DebugSettingsController.m */; };
+		DD36583C1665EAC000755138 /* macro.png in Resources */ = {isa = PBXBuildFile; fileRef = DD3658211665EAC000755138 /* macro.png */; };
+		DD36583E1665EAC000755138 /* micro.png in Resources */ = {isa = PBXBuildFile; fileRef = DD3658231665EAC000755138 /* micro.png */; };
+		DD36583F1665EAC000755138 /* Partitions.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD3658241665EAC000755138 /* Partitions.xib */; };
+		DD3658401665EAC000755138 /* PartitionViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD3658261665EAC000755138 /* PartitionViewController.m */; };
+		DD3658411665EAC000755138 /* pause.png in Resources */ = {isa = PBXBuildFile; fileRef = DD3658271665EAC000755138 /* pause.png */; };
+		DD3658421665EAC000755138 /* play.png in Resources */ = {isa = PBXBuildFile; fileRef = DD3658281665EAC000755138 /* play.png */; };
+		DD3658431665EAC000755138 /* PreferenceController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36582A1665EAC000755138 /* PreferenceController.m */; };
+		DD3658441665EAC000755138 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD36582B1665EAC000755138 /* Preferences.xib */; };
+		DD3658451665EAC000755138 /* SimView.m in Sources */ = {isa = PBXBuildFile; fileRef = DD36582D1665EAC000755138 /* SimView.m */; };
+		DD3658461665EAC000755138 /* step.png in Resources */ = {isa = PBXBuildFile; fileRef = DD36582E1665EAC000755138 /* step.png */; };
+		DD3658541665EEC800755138 /* cadr_1.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD3658471665EEC800755138 /* cadr_1.bin */; };
+		DD3658551665EEC800755138 /* cadr_2.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD3658481665EEC800755138 /* cadr_2.bin */; };
+		DD3658561665EEC800755138 /* cadr_3.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD3658491665EEC800755138 /* cadr_3.bin */; };
+		DD3658571665EEC800755138 /* cadr_4.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD36584A1665EEC800755138 /* cadr_4.bin */; };
+		DD3658581665EEC800755138 /* cadr_5.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD36584B1665EEC800755138 /* cadr_5.bin */; };
+		DD3658591665EEC800755138 /* cadr_6.bin in Resources */ = {isa = PBXBuildFile; fileRef = DD36584C1665EEC800755138 /* cadr_6.bin */; };
+		DD36585A1665EEC800755138 /* promh.9 in Resources */ = {isa = PBXBuildFile; fileRef = DD36584D1665EEC800755138 /* promh.9 */; };
+		DD36585B1665EEC800755138 /* promh.sym.9 in Resources */ = {isa = PBXBuildFile; fileRef = DD36584E1665EEC800755138 /* promh.sym.9 */; };
+		DD36585C1665EEC800755138 /* ucadr.lisp.841 in Resources */ = {isa = PBXBuildFile; fileRef = DD36584F1665EEC800755138 /* ucadr.lisp.841 */; };
+		DD36585D1665EEC800755138 /* ucadr.mcr.841 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658501665EEC800755138 /* ucadr.mcr.841 */; };
+		DD36585E1665EEC800755138 /* ucadr.mcr.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658511665EEC800755138 /* ucadr.mcr.979 */; };
+		DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658521665EEC800755138 /* ucadr.sym.841 */; };
+		DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658531665EEC800755138 /* ucadr.sym.979 */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DD308CF11665E6A000361F6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD308CC31665E6A000361F6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD308CCB1665E6A000361F6D;
+			remoteInfo = CADR;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		DD308CCC1665E6A000361F6D /* CADR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CADR.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD308CD01665E6A000361F6D /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		DD308CD31665E6A000361F6D /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		DD308CD41665E6A000361F6D /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		DD308CD51665E6A000361F6D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		DD308CD81665E6A000361F6D /* CADR-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CADR-Info.plist"; sourceTree = "<group>"; };
+		DD308CDA1665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		DD308CDC1665E6A000361F6D /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		DD308CDE1665E6A000361F6D /* CADR-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CADR-Prefix.pch"; sourceTree = "<group>"; };
+		DD308CE01665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		DD308CE61665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		DD308CED1665E6A000361F6D /* CADRTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CADRTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD308CEE1665E6A000361F6D /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		DD308CF51665E6A000361F6D /* CADRTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CADRTests-Info.plist"; sourceTree = "<group>"; };
+		DD308CF71665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		DD308CF91665E6A000361F6D /* CADRTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CADRTests.h; sourceTree = "<group>"; };
+		DD308CFA1665E6A000361F6D /* CADRTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CADRTests.m; sourceTree = "<group>"; };
+		DD308D041665E71F00361F6D /* chaos.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = chaos.c; path = ../../chaos.c; sourceTree = "<group>"; };
+		DD308D051665E71F00361F6D /* chaos.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = chaos.h; path = ../../chaos.h; sourceTree = "<group>"; };
+		DD308D061665E71F00361F6D /* ether.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ether.c; path = ../../ether.c; sourceTree = "<group>"; };
+		DD308D071665E71F00361F6D /* Files.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Files.c; path = ../../Files.c; sourceTree = "<group>"; };
+		DD308D081665E71F00361F6D /* iob.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = iob.c; path = ../../iob.c; sourceTree = "<group>"; };
+		DD308D091665E71F00361F6D /* kbd_old.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kbd_old.c; path = ../../kbd_old.c; sourceTree = "<group>"; };
+		DD308D0C1665E71F00361F6D /* glob.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = glob.c; path = ../../glob.c; sourceTree = "<group>"; };
+		DD308D0D1665E71F00361F6D /* glob.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = glob.h; path = ../../glob.h; sourceTree = "<group>"; };
+		DD308D0E1665E71F00361F6D /* Files.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Files.h; path = ../../Files.h; sourceTree = "<group>"; };
+		DD308D101665E71F00361F6D /* ucode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ucode.c; path = ../../ucode.c; sourceTree = "<group>"; };
+		DD308D111665E71F00361F6D /* disk.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = disk.c; path = ../../disk.c; sourceTree = "<group>"; };
+		DD308D121665E71F00361F6D /* ucode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ucode.h; path = ../../ucode.h; sourceTree = "<group>"; };
+		DD308D141665E71F00361F6D /* config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = config.c; path = ../../config.c; sourceTree = "<group>"; };
+		DD308D151665E71F00361F6D /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../config.h; sourceTree = "<group>"; };
+		DD308D161665E71F00361F6D /* decode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = decode.c; path = ../../decode.c; sourceTree = "<group>"; };
+		DD308D171665E71F00361F6D /* endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = endian.h; path = ../../endian.h; sourceTree = "<group>"; };
+		DD308D191665E71F00361F6D /* syms.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = syms.c; path = ../../syms.c; sourceTree = "<group>"; };
+		DD308D1A1665E71F00361F6D /* uart.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = uart.c; path = ../../uart.c; sourceTree = "<group>"; };
+		DD308D1B1665E71F00361F6D /* usim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = usim.h; path = ../../usim.h; sourceTree = "<group>"; };
+		DD36580B1665EAC000755138 /* cadrAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = cadrAppDelegate.m; sourceTree = SOURCE_ROOT; };
+		DD36580C1665EAC000755138 /* CreateDisk.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = CreateDisk.xib; sourceTree = SOURCE_ROOT; };
+		DD36580D1665EAC000755138 /* diskutil.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = diskutil.m; sourceTree = SOURCE_ROOT; };
+		DD36580E1665EAC000755138 /* DebuggerController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DebuggerController.m; sourceTree = SOURCE_ROOT; };
+		DD36580F1665EAC000755138 /* AppController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppController.h; sourceTree = SOURCE_ROOT; };
+		DD3658101665EAC000755138 /* AppController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppController.m; sourceTree = SOURCE_ROOT; };
+		DD3658111665EAC000755138 /* Breakpoints.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Breakpoints.c; sourceTree = SOURCE_ROOT; };
+		DD3658121665EAC000755138 /* Breakpoints.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Breakpoints.h; sourceTree = SOURCE_ROOT; };
+		DD3658131665EAC000755138 /* Breakpoints.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Breakpoints.xib; sourceTree = SOURCE_ROOT; };
+		DD3658141665EAC000755138 /* BreakpointsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BreakpointsController.h; sourceTree = SOURCE_ROOT; };
+		DD3658151665EAC000755138 /* BreakpointsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BreakpointsController.m; sourceTree = SOURCE_ROOT; };
+		DD3658161665EAC000755138 /* cadrAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cadrAppDelegate.h; sourceTree = SOURCE_ROOT; };
+		DD3658171665EAC000755138 /* CreateDiskController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CreateDiskController.h; sourceTree = SOURCE_ROOT; };
+		DD3658181665EAC000755138 /* CreateDiskController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CreateDiskController.m; sourceTree = SOURCE_ROOT; };
+		DD3658191665EAC000755138 /* DataTypes.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = DataTypes.c; sourceTree = SOURCE_ROOT; };
+		DD36581A1665EAC000755138 /* DataTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataTypes.h; sourceTree = SOURCE_ROOT; };
+		DD36581B1665EAC000755138 /* Debugger.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Debugger.xib; sourceTree = SOURCE_ROOT; };
+		DD36581C1665EAC000755138 /* DebuggerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebuggerController.h; sourceTree = SOURCE_ROOT; };
+		DD36581D1665EAC000755138 /* DebugSettings.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = DebugSettings.xib; sourceTree = SOURCE_ROOT; };
+		DD36581E1665EAC000755138 /* DebugSettingsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugSettingsController.h; sourceTree = SOURCE_ROOT; };
+		DD36581F1665EAC000755138 /* DebugSettingsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DebugSettingsController.m; sourceTree = SOURCE_ROOT; };
+		DD3658201665EAC000755138 /* diskutil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = diskutil.h; sourceTree = SOURCE_ROOT; };
+		DD3658211665EAC000755138 /* macro.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = macro.png; sourceTree = SOURCE_ROOT; };
+		DD3658231665EAC000755138 /* micro.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = micro.png; sourceTree = SOURCE_ROOT; };
+		DD3658241665EAC000755138 /* Partitions.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Partitions.xib; sourceTree = SOURCE_ROOT; };
+		DD3658251665EAC000755138 /* PartitionViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartitionViewController.h; sourceTree = SOURCE_ROOT; };
+		DD3658261665EAC000755138 /* PartitionViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartitionViewController.m; sourceTree = SOURCE_ROOT; };
+		DD3658271665EAC000755138 /* pause.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = pause.png; sourceTree = SOURCE_ROOT; };
+		DD3658281665EAC000755138 /* play.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = play.png; sourceTree = SOURCE_ROOT; };
+		DD3658291665EAC000755138 /* PreferenceController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferenceController.h; sourceTree = SOURCE_ROOT; };
+		DD36582A1665EAC000755138 /* PreferenceController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferenceController.m; sourceTree = SOURCE_ROOT; };
+		DD36582B1665EAC000755138 /* Preferences.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Preferences.xib; sourceTree = SOURCE_ROOT; };
+		DD36582C1665EAC000755138 /* SimView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimView.h; sourceTree = SOURCE_ROOT; };
+		DD36582D1665EAC000755138 /* SimView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimView.m; sourceTree = SOURCE_ROOT; };
+		DD36582E1665EAC000755138 /* step.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = step.png; sourceTree = SOURCE_ROOT; };
+		DD3658471665EEC800755138 /* cadr_1.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_1.bin; path = ../cadr_1.bin; sourceTree = "<group>"; };
+		DD3658481665EEC800755138 /* cadr_2.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_2.bin; path = ../cadr_2.bin; sourceTree = "<group>"; };
+		DD3658491665EEC800755138 /* cadr_3.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_3.bin; path = ../cadr_3.bin; sourceTree = "<group>"; };
+		DD36584A1665EEC800755138 /* cadr_4.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_4.bin; path = ../cadr_4.bin; sourceTree = "<group>"; };
+		DD36584B1665EEC800755138 /* cadr_5.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_5.bin; path = ../cadr_5.bin; sourceTree = "<group>"; };
+		DD36584C1665EEC800755138 /* cadr_6.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = cadr_6.bin; path = ../cadr_6.bin; sourceTree = "<group>"; };
+		DD36584D1665EEC800755138 /* promh.9 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = promh.9; path = ../promh.9; sourceTree = "<group>"; };
+		DD36584E1665EEC800755138 /* promh.sym.9 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = promh.sym.9; path = ../promh.sym.9; sourceTree = "<group>"; };
+		DD36584F1665EEC800755138 /* ucadr.lisp.841 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ucadr.lisp.841; path = ../ucadr.lisp.841; sourceTree = "<group>"; };
+		DD3658501665EEC800755138 /* ucadr.mcr.841 */ = {isa = PBXFileReference; lastKnownFileType = file; name = ucadr.mcr.841; path = ../ucadr.mcr.841; sourceTree = "<group>"; };
+		DD3658511665EEC800755138 /* ucadr.mcr.979 */ = {isa = PBXFileReference; lastKnownFileType = file; name = ucadr.mcr.979; path = ../ucadr.mcr.979; sourceTree = "<group>"; };
+		DD3658521665EEC800755138 /* ucadr.sym.841 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ucadr.sym.841; path = ../ucadr.sym.841; sourceTree = "<group>"; };
+		DD3658531665EEC800755138 /* ucadr.sym.979 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ucadr.sym.979; path = ../ucadr.sym.979; sourceTree = "<group>"; };
+		DD3658621665F0A600755138 /* syms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = syms.h; path = ../../syms.h; sourceTree = "<group>"; };
+		DD3658631665F0A600755138 /* decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = decode.h; path = ../../decode.h; sourceTree = "<group>"; };
+		DD3658641665F0A600755138 /* keyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyboard.h; path = ../../keyboard.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DD308CC91665E6A000361F6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CD11665E6A000361F6D /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD308CE91665E6A000361F6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CEF1665E6A000361F6D /* SenTestingKit.framework in Frameworks */,
+				DD308CF01665E6A000361F6D /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DD308CC11665E6A000361F6D = {
+			isa = PBXGroup;
+			children = (
+				DD3658611665EED400755138 /* proms */,
+				DD308CD61665E6A000361F6D /* CADR */,
+				DD308CF31665E6A000361F6D /* CADRTests */,
+				DD308CCF1665E6A000361F6D /* Frameworks */,
+				DD308CCD1665E6A000361F6D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DD308CCD1665E6A000361F6D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CCC1665E6A000361F6D /* CADR.app */,
+				DD308CED1665E6A000361F6D /* CADRTests.octest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DD308CCF1665E6A000361F6D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CD01665E6A000361F6D /* Cocoa.framework */,
+				DD308CEE1665E6A000361F6D /* SenTestingKit.framework */,
+				DD308CD21665E6A000361F6D /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		DD308CD21665E6A000361F6D /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CD31665E6A000361F6D /* AppKit.framework */,
+				DD308CD41665E6A000361F6D /* CoreData.framework */,
+				DD308CD51665E6A000361F6D /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		DD308CD61665E6A000361F6D /* CADR */ = {
+			isa = PBXGroup;
+			children = (
+				DD36580B1665EAC000755138 /* cadrAppDelegate.m */,
+				DD36580C1665EAC000755138 /* CreateDisk.xib */,
+				DD36580D1665EAC000755138 /* diskutil.m */,
+				DD36580E1665EAC000755138 /* DebuggerController.m */,
+				DD36580F1665EAC000755138 /* AppController.h */,
+				DD3658101665EAC000755138 /* AppController.m */,
+				DD3658111665EAC000755138 /* Breakpoints.c */,
+				DD3658121665EAC000755138 /* Breakpoints.h */,
+				DD3658131665EAC000755138 /* Breakpoints.xib */,
+				DD3658141665EAC000755138 /* BreakpointsController.h */,
+				DD3658151665EAC000755138 /* BreakpointsController.m */,
+				DD3658161665EAC000755138 /* cadrAppDelegate.h */,
+				DD3658171665EAC000755138 /* CreateDiskController.h */,
+				DD3658181665EAC000755138 /* CreateDiskController.m */,
+				DD3658191665EAC000755138 /* DataTypes.c */,
+				DD36581A1665EAC000755138 /* DataTypes.h */,
+				DD36581B1665EAC000755138 /* Debugger.xib */,
+				DD36581C1665EAC000755138 /* DebuggerController.h */,
+				DD36581D1665EAC000755138 /* DebugSettings.xib */,
+				DD36581E1665EAC000755138 /* DebugSettingsController.h */,
+				DD36581F1665EAC000755138 /* DebugSettingsController.m */,
+				DD3658201665EAC000755138 /* diskutil.h */,
+				DD3658211665EAC000755138 /* macro.png */,
+				DD3658231665EAC000755138 /* micro.png */,
+				DD3658241665EAC000755138 /* Partitions.xib */,
+				DD3658251665EAC000755138 /* PartitionViewController.h */,
+				DD3658261665EAC000755138 /* PartitionViewController.m */,
+				DD3658271665EAC000755138 /* pause.png */,
+				DD3658281665EAC000755138 /* play.png */,
+				DD3658291665EAC000755138 /* PreferenceController.h */,
+				DD36582A1665EAC000755138 /* PreferenceController.m */,
+				DD36582B1665EAC000755138 /* Preferences.xib */,
+				DD36582C1665EAC000755138 /* SimView.h */,
+				DD36582D1665EAC000755138 /* SimView.m */,
+				DD36582E1665EAC000755138 /* step.png */,
+				DD308D041665E71F00361F6D /* chaos.c */,
+				DD308D051665E71F00361F6D /* chaos.h */,
+				DD308D061665E71F00361F6D /* ether.c */,
+				DD308D071665E71F00361F6D /* Files.c */,
+				DD308D081665E71F00361F6D /* iob.c */,
+				DD308D091665E71F00361F6D /* kbd_old.c */,
+				DD308D0C1665E71F00361F6D /* glob.c */,
+				DD308D0D1665E71F00361F6D /* glob.h */,
+				DD308D0E1665E71F00361F6D /* Files.h */,
+				DD308D101665E71F00361F6D /* ucode.c */,
+				DD308D121665E71F00361F6D /* ucode.h */,
+				DD308D111665E71F00361F6D /* disk.c */,
+				DD308D141665E71F00361F6D /* config.c */,
+				DD308D151665E71F00361F6D /* config.h */,
+				DD308D161665E71F00361F6D /* decode.c */,
+				DD3658631665F0A600755138 /* decode.h */,
+				DD308D171665E71F00361F6D /* endian.h */,
+				DD308D191665E71F00361F6D /* syms.c */,
+				DD3658621665F0A600755138 /* syms.h */,
+				DD3658641665F0A600755138 /* keyboard.h */,
+				DD308D1A1665E71F00361F6D /* uart.c */,
+				DD308D1B1665E71F00361F6D /* usim.h */,
+				DD308CE51665E6A000361F6D /* MainMenu.xib */,
+				DD308CD71665E6A000361F6D /* Supporting Files */,
+			);
+			path = CADR;
+			sourceTree = "<group>";
+		};
+		DD308CD71665E6A000361F6D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CD81665E6A000361F6D /* CADR-Info.plist */,
+				DD308CD91665E6A000361F6D /* InfoPlist.strings */,
+				DD308CDC1665E6A000361F6D /* main.m */,
+				DD308CDE1665E6A000361F6D /* CADR-Prefix.pch */,
+				DD308CDF1665E6A000361F6D /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		DD308CF31665E6A000361F6D /* CADRTests */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CF91665E6A000361F6D /* CADRTests.h */,
+				DD308CFA1665E6A000361F6D /* CADRTests.m */,
+				DD308CF41665E6A000361F6D /* Supporting Files */,
+			);
+			path = CADRTests;
+			sourceTree = "<group>";
+		};
+		DD308CF41665E6A000361F6D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				DD308CF51665E6A000361F6D /* CADRTests-Info.plist */,
+				DD308CF61665E6A000361F6D /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		DD3658611665EED400755138 /* proms */ = {
+			isa = PBXGroup;
+			children = (
+				DD3658471665EEC800755138 /* cadr_1.bin */,
+				DD3658481665EEC800755138 /* cadr_2.bin */,
+				DD3658491665EEC800755138 /* cadr_3.bin */,
+				DD36584A1665EEC800755138 /* cadr_4.bin */,
+				DD36584B1665EEC800755138 /* cadr_5.bin */,
+				DD36584C1665EEC800755138 /* cadr_6.bin */,
+				DD36584D1665EEC800755138 /* promh.9 */,
+				DD36584E1665EEC800755138 /* promh.sym.9 */,
+				DD36584F1665EEC800755138 /* ucadr.lisp.841 */,
+				DD3658501665EEC800755138 /* ucadr.mcr.841 */,
+				DD3658511665EEC800755138 /* ucadr.mcr.979 */,
+				DD3658521665EEC800755138 /* ucadr.sym.841 */,
+				DD3658531665EEC800755138 /* ucadr.sym.979 */,
+			);
+			name = proms;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DD308CCB1665E6A000361F6D /* CADR */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD308CFE1665E6A000361F6D /* Build configuration list for PBXNativeTarget "CADR" */;
+			buildPhases = (
+				DD308CC81665E6A000361F6D /* Sources */,
+				DD308CC91665E6A000361F6D /* Frameworks */,
+				DD308CCA1665E6A000361F6D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CADR;
+			productName = CADR;
+			productReference = DD308CCC1665E6A000361F6D /* CADR.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DD308CEC1665E6A000361F6D /* CADRTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD308D011665E6A000361F6D /* Build configuration list for PBXNativeTarget "CADRTests" */;
+			buildPhases = (
+				DD308CE81665E6A000361F6D /* Sources */,
+				DD308CE91665E6A000361F6D /* Frameworks */,
+				DD308CEA1665E6A000361F6D /* Resources */,
+				DD308CEB1665E6A000361F6D /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DD308CF21665E6A000361F6D /* PBXTargetDependency */,
+			);
+			name = CADRTests;
+			productName = CADRTests;
+			productReference = DD308CED1665E6A000361F6D /* CADRTests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DD308CC31665E6A000361F6D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+				ORGANIZATIONNAME = "Greg Gilley";
+			};
+			buildConfigurationList = DD308CC61665E6A000361F6D /* Build configuration list for PBXProject "CADR" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DD308CC11665E6A000361F6D;
+			productRefGroup = DD308CCD1665E6A000361F6D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD308CCB1665E6A000361F6D /* CADR */,
+				DD308CEC1665E6A000361F6D /* CADRTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DD308CCA1665E6A000361F6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CDB1665E6A000361F6D /* InfoPlist.strings in Resources */,
+				DD308CE11665E6A000361F6D /* Credits.rtf in Resources */,
+				DD308CE71665E6A000361F6D /* MainMenu.xib in Resources */,
+				DD3658301665EAC000755138 /* CreateDisk.xib in Resources */,
+				DD3658351665EAC000755138 /* Breakpoints.xib in Resources */,
+				DD3658391665EAC000755138 /* Debugger.xib in Resources */,
+				DD36583A1665EAC000755138 /* DebugSettings.xib in Resources */,
+				DD36583C1665EAC000755138 /* macro.png in Resources */,
+				DD36583E1665EAC000755138 /* micro.png in Resources */,
+				DD36583F1665EAC000755138 /* Partitions.xib in Resources */,
+				DD3658411665EAC000755138 /* pause.png in Resources */,
+				DD3658421665EAC000755138 /* play.png in Resources */,
+				DD3658441665EAC000755138 /* Preferences.xib in Resources */,
+				DD3658461665EAC000755138 /* step.png in Resources */,
+				DD3658541665EEC800755138 /* cadr_1.bin in Resources */,
+				DD3658551665EEC800755138 /* cadr_2.bin in Resources */,
+				DD3658561665EEC800755138 /* cadr_3.bin in Resources */,
+				DD3658571665EEC800755138 /* cadr_4.bin in Resources */,
+				DD3658581665EEC800755138 /* cadr_5.bin in Resources */,
+				DD3658591665EEC800755138 /* cadr_6.bin in Resources */,
+				DD36585A1665EEC800755138 /* promh.9 in Resources */,
+				DD36585B1665EEC800755138 /* promh.sym.9 in Resources */,
+				DD36585C1665EEC800755138 /* ucadr.lisp.841 in Resources */,
+				DD36585D1665EEC800755138 /* ucadr.mcr.841 in Resources */,
+				DD36585E1665EEC800755138 /* ucadr.mcr.979 in Resources */,
+				DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */,
+				DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD308CEA1665E6A000361F6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CF81665E6A000361F6D /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		DD308CEB1665E6A000361F6D /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DD308CC81665E6A000361F6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CDD1665E6A000361F6D /* main.m in Sources */,
+				DD308D1C1665E72000361F6D /* chaos.c in Sources */,
+				DD308D1D1665E72000361F6D /* ether.c in Sources */,
+				DD308D1E1665E72000361F6D /* Files.c in Sources */,
+				DD308D1F1665E72000361F6D /* iob.c in Sources */,
+				DD308D201665E72000361F6D /* kbd_old.c in Sources */,
+				DD308D231665E72000361F6D /* glob.c in Sources */,
+				DD308D251665E72000361F6D /* ucode.c in Sources */,
+				DD308D261665E72000361F6D /* disk.c in Sources */,
+				DD308D281665E72000361F6D /* config.c in Sources */,
+				DD308D291665E72000361F6D /* decode.c in Sources */,
+				DD308D2B1665E72000361F6D /* syms.c in Sources */,
+				DD308D2C1665E72000361F6D /* uart.c in Sources */,
+				DD36582F1665EAC000755138 /* cadrAppDelegate.m in Sources */,
+				DD3658311665EAC000755138 /* diskutil.m in Sources */,
+				DD3658321665EAC000755138 /* DebuggerController.m in Sources */,
+				DD3658331665EAC000755138 /* AppController.m in Sources */,
+				DD3658341665EAC000755138 /* Breakpoints.c in Sources */,
+				DD3658361665EAC000755138 /* BreakpointsController.m in Sources */,
+				DD3658371665EAC000755138 /* CreateDiskController.m in Sources */,
+				DD3658381665EAC000755138 /* DataTypes.c in Sources */,
+				DD36583B1665EAC000755138 /* DebugSettingsController.m in Sources */,
+				DD3658401665EAC000755138 /* PartitionViewController.m in Sources */,
+				DD3658431665EAC000755138 /* PreferenceController.m in Sources */,
+				DD3658451665EAC000755138 /* SimView.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD308CE81665E6A000361F6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD308CFB1665E6A000361F6D /* CADRTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DD308CF21665E6A000361F6D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD308CCB1665E6A000361F6D /* CADR */;
+			targetProxy = DD308CF11665E6A000361F6D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		DD308CD91665E6A000361F6D /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD308CDA1665E6A000361F6D /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		DD308CDF1665E6A000361F6D /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD308CE01665E6A000361F6D /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		DD308CE51665E6A000361F6D /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD308CE61665E6A000361F6D /* en */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+		DD308CF61665E6A000361F6D /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD308CF71665E6A000361F6D /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		DD308CFC1665E6A000361F6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"COCOA=1",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		DD308CFD1665E6A000361F6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "COCOA=1";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DD308CFF1665E6A000361F6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"DISPLAY_OSX=1",
+				);
+				INFOPLIST_FILE = "CADR/CADR-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		DD308D001665E6A000361F6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = "DISPLAY_OSX=1";
+				INFOPLIST_FILE = "CADR/CADR-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+		DD308D021665E6A000361F6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/CADR.app/Contents/MacOS/CADR";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
+				INFOPLIST_FILE = "CADRTests/CADRTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		DD308D031665E6A000361F6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/CADR.app/Contents/MacOS/CADR";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
+				INFOPLIST_FILE = "CADRTests/CADRTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DD308CC61665E6A000361F6D /* Build configuration list for PBXProject "CADR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD308CFC1665E6A000361F6D /* Debug */,
+				DD308CFD1665E6A000361F6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD308CFE1665E6A000361F6D /* Build configuration list for PBXNativeTarget "CADR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD308CFF1665E6A000361F6D /* Debug */,
+				DD308D001665E6A000361F6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD308D011665E6A000361F6D /* Build configuration list for PBXNativeTarget "CADRTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD308D021665E6A000361F6D /* Debug */,
+				DD308D031665E6A000361F6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DD308CC31665E6A000361F6D /* Project object */;
+}
