@@ -103,6 +103,9 @@ display_poll(void)
 	XEvent e;
 	int mod_state;
 	int keysym;
+	void send_accumulated_updates(void);
+
+	send_accumulated_updates();
 
 	while (XCheckWindowEvent(display, window, USIM_EVENT_MASK, &e)) {
 
@@ -247,6 +250,40 @@ video_read(int offset, unsigned int *pv)
 	}
 }
 
+int u_minh = 0x7fffffff, u_maxh, u_minv = 0x7fffffff, u_maxv;
+
+void
+accumulate_update(int h, int v, int hs, int vs)
+{
+#if 0
+        SDL_UpdateRect(screen, h, v, 32, 1);
+#else
+        if (h < u_minh) u_minh = h;
+        if (h+hs > u_maxh) u_maxh = h+hs;
+        if (v < u_minv) u_minv = v;
+        if (v+vs > u_maxv) u_maxv = v+vs;
+#endif
+}
+
+void
+send_accumulated_updates(void)
+{
+        int hs, vs;
+
+        hs = u_maxh - u_minh;
+        vs = u_maxv - u_minv;
+        if (u_minh != 0x7fffffff && u_minv != 0x7fffffff && u_maxh && u_maxv)
+	{
+		XPutImage(display, window, gc, ximage, u_minh, u_minv, u_minh, u_minv, hs, vs);
+		XFlush(display);
+        }
+
+        u_minh = 0x7fffffff;
+        u_maxh = 0;
+        u_minv = 0x7fffffff;
+        u_maxv = 0;
+}
+
 void
 video_write(int offset, unsigned int bits)
 {
@@ -267,8 +304,9 @@ video_write(int offset, unsigned int bits)
 			bits >>= 1;
 		}
 
-		XPutImage(display, window, gc, ximage, h, v, h, v, 32, 1);
-		XFlush(display);
+	//	XPutImage(display, window, gc, ximage, h, v, h, v, 32, 1);
+	//	XFlush(display);
+		accumulate_update(h, v, 32, 1);
 	}
 }
 

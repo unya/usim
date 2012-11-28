@@ -33,6 +33,11 @@ DISPLAY = X11
 KEYBOARD = OLD
 endif
 
+ifeq ($(OS_NAME), Linux)
+DISPLAY = X11
+KEYBOARD = OLD
+endif
+
 #----------- code ------------
 
 USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c 
@@ -46,7 +51,7 @@ endif
 
 ifeq ($(DISPLAY), X11)
 DISPLAY_SRC = x11.c
-USIM_LIBS = -L/usr/X11R6/lib -lX11
+USIM_LIBS = -L/usr/X11R6/lib -lX11 -lpthread
 DEFINES = -DDISPLAY_X11
 endif
 
@@ -71,7 +76,7 @@ endif
 
 ifeq ($(DISPLAY), X11)
 LFLAGS = -m32
-USIM_LIBS = -L/usr/X11R6/lib -lX11
+USIM_LIBS = -L/usr/X11R6/lib -lX11 -lpthread
 endif
 
 # Linux
@@ -85,6 +90,7 @@ CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
 LFLAGS = $(M32) -ldl -L/usr/lib
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
+USIM_LIBS += -lrt
 endif
 
 # NetBSD
@@ -106,7 +112,7 @@ endif
 endif
 
 #DEFINES=-DLASHUP
-DEFINES=-DCADR2
+DEFINES += -DCADR2
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 
