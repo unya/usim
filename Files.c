@@ -129,7 +129,7 @@ struct chpacket	{
 #define LOG_ERR		1
 #define LOG_NOTICE      2
 
-int log_verbose = 1;
+int log_verbose = 0;
 int log_stderr_tofile = 0;
 
 static void
@@ -2251,8 +2251,33 @@ diropen(struct xfer *ax, register struct transaction *t)
 	struct stat *s = (struct stat *)0;
 	struct stat sbuf;
 	int errcode;
+	char *realname;
+	char *wild;
+	size_t len = strlen(x->x_realname);
+
+	realname = malloc(len + 1);
+	strcpy(realname, x->x_realname);
     
-	x->x_glob = glob(x->x_realname);
+	// lisp keeps appending .wild
+	for (wild=realname; *wild; wild++, len--)
+            if (*wild == 'w' && len > 3)
+            {
+                if (*(wild + 1) == 'i' && *(wild+2) == 'l' && *(wild + 3) == 'd')
+                {
+                    *wild = '\0';
+                    if (wild != realname && *(wild - 1) == '.')
+                        *(wild - 1) = '\0';
+
+                    len = strlen(realname);
+                    if (realname[len-1] != '/')
+                        strcat(realname, "/");
+                    strcat(realname, "*");
+                }
+             }
+	log(LOG_INFO, "diropen: %s\n", x->x_realname);
+
+	x->x_glob = glob(realname);
+	free(realname);
 	if ((errcode = globerr) != 0)
 		goto derror;
 	if (x->x_glob) {
@@ -2338,6 +2363,13 @@ diropen(struct xfer *ax, register struct transaction *t)
 		x->x_left = x->x_bptr - x->x_bbuf;
 		x->x_bptr = x->x_bbuf;
 		x->x_state = X_PROCESS;
+#if defined(OSX)
+		dispatch_semaphore_signal(x->x_hangsem);
+#else
+		pthread_mutex_lock(&x->x_hangsem);
+		pthread_cond_signal(&x->x_hangcond);
+		pthread_mutex_unlock(&x->x_hangsem);
+#endif
 		return;
 	}
 derror:
@@ -2506,8 +2538,8 @@ xfree(register struct xfer *x)
         free(x->x_tempname);
     if (x->x_dirname)
         free(x->x_dirname);
-    if (x->x_glob)
-	blkfree(x->x_glob);
+//    if (x->x_glob)		// FIXME: a leak here, but i'm seeing a crash
+//	blkfree(x->x_glob);
 #if defined(OSX)
     dispatch_release(x->x_hangsem);
 #else
