@@ -29,21 +29,21 @@
 //#define TRACE
 
 extern ucw_t prom_ucode[512];
-static ucw_t ucode[16*1024];
+ucw_t ucode[16*1024];
 
-static unsigned int a_memory[1024];
+unsigned int a_memory[1024];
 static unsigned int m_memory[32];
 static unsigned int dispatch_memory[2048];
 
 static unsigned int pdl_memory[1024];
-static int pdl_ptr;
-static int pdl_index;
+int pdl_ptr;
+int pdl_index;
 
-static int lc;
+int lc;
 //static int lc_mode_flag;
 
 static int spc_stack[32];
-static int spc_stack_ptr;
+int spc_stack_ptr;
 
 struct page_s {
 	unsigned int w[256];
@@ -60,7 +60,7 @@ unsigned long max_cycles;
 unsigned long max_trace_cycles;
 unsigned long begin_trace_cycle;
 
-static int u_pc;
+int u_pc;
 static int page_fault_flag;
 static int interrupt_pending_flag;
 static int interrupt_status_reg;
@@ -70,17 +70,17 @@ static int interrupt_enable_flag;
 static int lc_byte_mode_flag;
 static int bus_reset_flag;
 
-static int prom_enabled_flag;
+int prom_enabled_flag;
 int stop_after_prom_flag;
 int run_ucode_flag;
 int warm_boot_flag;
 extern int save_state_flag;
 extern int dump_state_flag;
 
-static unsigned int md;
-static unsigned int vma;
-static unsigned int q;
-static unsigned int opc;
+unsigned int md;
+unsigned int vma;
+unsigned int q;
+unsigned int opc;
 
 static unsigned int new_md;
 static int new_md_delay;
@@ -209,7 +209,7 @@ deassert_xbus_interrupt(void)
 
 unsigned int last_virt = 0xffffff00, last_l1, last_l2;
 
-inline void
+static inline void
 invalidate_vtop_cache(void)
 {
 	last_virt = 0xffffff00;
@@ -220,7 +220,7 @@ invalidate_vtop_cache(void)
  * possibly returning l1 mapping
  * possibly returning offset into page
  */
-inline unsigned int
+static inline unsigned int
 map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 {
 	int l1_index, l2_index, l1;
@@ -793,7 +793,7 @@ if ((vaddr & 077700000) == 077200000) {
 	return 0;
 }
 
-inline void
+static inline void
 write_ucode(int addr, ucw_t w)
 {
 	tracef("u-code write; %Lo @ %o\n", w, addr);
@@ -808,7 +808,7 @@ note_location(char *s, unsigned int v)
 	printf("\n");
 }
 
-inline void
+static inline void
 write_a_mem(int loc, unsigned int v)
 {
 	//tracef("a_memory[%o] <- %o\n", loc, v);
@@ -821,7 +821,7 @@ read_a_mem(int loc)
 	return a_memory[loc];
 }
 
-inline unsigned int
+static inline unsigned int
 read_m_mem(int loc)
 {
 	if (loc > 32) {
@@ -831,7 +831,7 @@ read_m_mem(int loc)
 	return m_memory[loc];
 }
 
-inline void
+static inline void
 write_m_mem(int loc, unsigned int v)
 {
 	m_memory[loc] = v;
@@ -879,7 +879,7 @@ rotate_left(unsigned int v, int rot)
 	return v;
 }
 #else
-inline unsigned int
+static inline unsigned int
 rotate_left(unsigned int value, int bitstorotate)
 {
 	unsigned int tmp;
@@ -900,7 +900,7 @@ rotate_left(unsigned int value, int bitstorotate)
 }
 #endif
 
-inline void
+static inline void
 push_spc(int pc)
 {
 	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
@@ -909,7 +909,7 @@ push_spc(int pc)
 	spc_stack[spc_stack_ptr] = pc;
 }
 
-inline int
+static inline int
 pop_spc(void)
 {
 	unsigned int v;

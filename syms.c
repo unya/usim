@@ -189,7 +189,7 @@ _sym_loc_compare(const void *p1, const void *p2)
 	return 0;
 }
 
-static int
+int
 _sym_sort(struct symtab_s *tab)
 {
 	struct sym_s *s;
