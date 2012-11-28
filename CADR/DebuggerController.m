@@ -104,6 +104,7 @@ DebuggerController *debugger;
         if (macromicro)
         {
             char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst);
+            int read_mem_debug(int vaddr, unsigned int *pv);
             char *name = find_function_name(pc);
             unsigned int instr;
             char *decoded;

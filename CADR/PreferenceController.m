@@ -41,6 +41,6 @@
 {
     NSInteger state = [checkbox state];
 
-    NSLog(@"checkbox changed %d", state);
+    NSLog(@"checkbox changed %ld", state);
 }
 @end

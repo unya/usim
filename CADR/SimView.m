@@ -21,6 +21,8 @@
 
 extern CGImageRef cgImage;
 extern NSWindow *mWindow;
+extern void iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons);
+
 
 NSView *myView;
 
@@ -86,6 +88,7 @@ NSView *myView;
 }
 
 - (void)keyDown:(NSEvent *)theEvent {
+    void iob_sdl_key_event(int code, int extra);
 	int extra;
     NSUInteger modifiers = [theEvent modifierFlags];
     
@@ -154,7 +157,7 @@ NSView *myView;
     NSInteger buttons = [theEvent buttonNumber];
     extern unsigned int video_height;
     
-    iob_sdl_mouse_event((int)eyeCenter.x, (int)video_height - (int)eyeCenter.y - 1, 0, 0, buttons);
+    iob_sdl_mouse_event((int)eyeCenter.x, (int)video_height - (int)eyeCenter.y - 1, 0, 0, (int)buttons);
 }
 
 - (void)mouseEntered:(NSEvent *)anEvent
@@ -212,6 +215,8 @@ NSView *myView;
 
 - (void)run:(id)path
 {
+    int run(void);
+
     diskImagePath = [path retain];
     NSLog(@"running disk.img: %@", diskImagePath);
     run();
@@ -228,6 +233,8 @@ NSView *myView;
 }
 
 - (IBAction)dumpState:(id)sender {
+    void dump_state(void);
+
     dump_state();
 }
 

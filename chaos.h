@@ -133,7 +133,7 @@ chaos_connection *chaos_find_connection(unsigned short index);
 void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet);
 chaos_packet *chaos_connection_dequeue(chaos_connection *conn);
 chaos_connection *chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize);
-chaos_packet *chaos_allocate_packet(chaos_connection *conn, int opcode, int len);
+chaos_packet *chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len);
 void chaos_dump_connection(chaos_connection *conn);
 
 

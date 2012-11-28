@@ -376,6 +376,11 @@ int read_sym_files_from_resources(void)
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
+    int disk_init(char *filename);
+    int iob_init(void);
+    int ether_init(void);
+    void iob_warm_boot_key(void);
+    
     // Insert code here to initialize your application
     Black = 0x00000000;
     White = 0xFFFFFFFF;
@@ -394,7 +399,7 @@ int read_sym_files_from_resources(void)
     }
     [fmngr release];
 
-    disk_init([diskImagePath cStringUsingEncoding:NSASCIIStringEncoding]);
+    disk_init((char *)[diskImagePath cStringUsingEncoding:NSASCIIStringEncoding]);
     
     read_labl([diskImagePath cStringUsingEncoding:NSASCIIStringEncoding]);
 
@@ -421,18 +426,18 @@ int read_sym_files_from_resources(void)
         extern int trace_late_set;
         extern int trace_after_flag;
 
-        trace = [defaults integerForKey:@"Trace"];
-        trace_mcr_labels_flag = [defaults integerForKey:@"TraceMCRLabels"];
-        trace_lod_labels_flag = [defaults integerForKey:@"TraceLODLabels"];
-        trace_prom_flag = [defaults integerForKey:@"TracePROM"];
-        trace_mcr_flag = [defaults integerForKey:@"TraceMCR"];
-        trace_io_flag = [defaults integerForKey:@"TraceIO"];
-        trace_vm_flag = [defaults integerForKey:@"TraceVM"];
-        trace_disk_flag = [defaults integerForKey:@"TraceDisk"];
-        trace_net_flag = [defaults integerForKey:@"TraceNet"];
-        trace_int_flag = [defaults integerForKey:@"TraceInt"];
-        trace_late_set = [defaults integerForKey:@"TraceLateSet"];
-        trace_after_flag = [defaults integerForKey:@"TraceAfter"];
+        trace = (int)[defaults integerForKey:@"Trace"];
+        trace_mcr_labels_flag = (int)[defaults integerForKey:@"TraceMCRLabels"];
+        trace_lod_labels_flag = (int)[defaults integerForKey:@"TraceLODLabels"];
+        trace_prom_flag = (int)[defaults integerForKey:@"TracePROM"];
+        trace_mcr_flag = (int)[defaults integerForKey:@"TraceMCR"];
+        trace_io_flag = (int)[defaults integerForKey:@"TraceIO"];
+        trace_vm_flag = (int)[defaults integerForKey:@"TraceVM"];
+        trace_disk_flag = (int)[defaults integerForKey:@"TraceDisk"];
+        trace_net_flag = (int)[defaults integerForKey:@"TraceNet"];
+        trace_int_flag = (int)[defaults integerForKey:@"TraceInt"];
+        trace_late_set = (int)[defaults integerForKey:@"TraceLateSet"];
+        trace_after_flag = (int)[defaults integerForKey:@"TraceAfter"];
 
         NSData *bookmarkData = [defaults objectForKey:@"SourceFolder"];
         if (bookmarkData)

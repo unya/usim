@@ -236,7 +236,7 @@ static int ismcrband(const char *name)
     if (col == -1 || row == -1)
         return;
 
-    printf("clicked row=%d col=%d\n", row, col);
+    printf("clicked row=%ld col=%ld\n", row, col);
 
     if (col == 5)
     {

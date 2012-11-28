@@ -109,7 +109,7 @@ void set_hwaddr(void);
 int
 ether_init(void)
 {
-#ifdef BSD
+#if defined(BSD) && !defined(OSX)
 	int one = 1;
 	struct ifreq ifr;
 	int s;
@@ -169,10 +169,12 @@ ether_poll(void)
 {
 	int i, j, words;
 	uint16_t status;
-	uint32_t ptr, crc;
+	uint32_t ptr;
 	size_t len;
+#if defined(BSD) && !defined(OSX)
 	ssize_t ret;
-
+#endif
+    
 	if (enabled) {
 
 	    if (moder & ETHER_MODE_TXEN) {

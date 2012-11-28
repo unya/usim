@@ -196,7 +196,7 @@ _sym_sort(struct symtab_s *tab)
 	int i;
 
 	/* make vector of ptrs to syms */
-	tab->sorted_syms = (struct sym_s **)malloc(sizeof(void *) * tab->sym_count);
+	tab->sorted_syms = (struct sym_s **)malloc(sizeof(struct sym_s *) * tab->sym_count);
 	if (tab->sorted_syms == 0)
 		return -1;
 

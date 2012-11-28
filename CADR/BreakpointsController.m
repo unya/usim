@@ -59,7 +59,7 @@
 {
     NSInteger row = [_tableView selectedRow];
 
-    removebreakpoint(row);
+    removebreakpoint((int)row);
     [_tableView reloadData];
 }
 

@@ -1387,7 +1387,7 @@ int pc_histogram_cmp(const void *n1, const void *n2)
 {
   struct pc_histogram_s *e1 = (struct pc_histogram_s *)n1;
   struct pc_histogram_s *e2 = (struct pc_histogram_s *)n2;
-  return e2->count - e1->count;
+  return (int)(e2->count - e1->count);
 }
 
 void
@@ -1657,7 +1657,8 @@ int restored;
 int
 restore_state(void)
 {
-	int fd, ret, i;
+	int fd, i;
+    ssize_t ret;
 	unsigned char version[2];
 
 	if (restored)
@@ -1692,7 +1693,8 @@ restore_state(void)
 int
 save_state(void)
 {
-	int fd, ret, i;
+	int fd, i;
+    ssize_t ret;
 	unsigned char version[2];
 
 	fd = open("usim.state", O_RDWR | O_CREAT, 0666);
@@ -2433,31 +2435,31 @@ run(void)
 				case 1: /* (M&A)-1 */
 					lv = (long long)(m_src_value & a_src_value) -
 						(carry_in ? 0 : 1);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 2: /* (M&~A)-1 */
 					lv = (long long)(m_src_value & ~a_src_value) -
 						(carry_in ? 0 : 1);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 3: /* M-1 */
 					lv = (long long)m_src_value - (carry_in ? 0 : 1);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 4: /* M|~A */
 					lv = (long long)(m_src_value | ~a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 5: /* (M|~A)+(M&A) */
 					lv = (long long)(m_src_value | ~a_src_value) +
 						(m_src_value & a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 6: /* M-A-1 [SUB] */
@@ -2470,7 +2472,7 @@ run(void)
 					lv = (long long)(m_src_value | ~a_src_value) +
 						m_src_value +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 010: /* M|A */
@@ -2478,7 +2480,7 @@ run(void)
 					lv = (long long)(m_src_value |
 							 a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 011: /* M+A [ADD] */
@@ -2489,14 +2491,14 @@ run(void)
 					lv = (long long)(m_src_value | a_src_value) +
 						(m_src_value & ~a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 013: /* (M|A)+M */
 					lv = (long long)(m_src_value | a_src_value) +
 						m_src_value +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 014: /* M */
@@ -2520,14 +2522,14 @@ run(void)
 					lv = (long long)m_src_value +
 						(m_src_value & a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 016: /* M+(M|~A) */
 					lv = (long long)m_src_value +
 						(m_src_value | ~a_src_value) +
 						(carry_in ? 1 : 0);
-					alu_out = lv;
+					alu_out = (unsigned int)lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 017: /* M+M */

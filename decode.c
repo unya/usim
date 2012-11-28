@@ -1152,6 +1152,7 @@ static int misc_inst_vector[1024];
 static int misc_inst_vector_setup;
 
 char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst);
+extern int read_mem(int vaddr, unsigned int *pv);
 
 static char *
 disassemble_address(unsigned int fef, unsigned int reg, unsigned int delta)

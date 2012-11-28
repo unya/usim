@@ -832,7 +832,7 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 }
 
 chaos_packet *
-chaos_allocate_packet(chaos_connection *conn, int opcode, int len)
+chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len)
 {
     chaos_packet *packet = (chaos_packet *)malloc(CHAOS_PACKET_HEADER_SIZE + (size_t)len);
     

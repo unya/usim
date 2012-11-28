@@ -66,7 +66,7 @@
 - (IBAction)changeTrace:(id)sender {
     extern int trace;
     
-    trace = [traceCheckbox state];
+    trace = (int)[traceCheckbox state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace forKey:@"Trace"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -74,7 +74,7 @@
 - (IBAction)changeTraceMCRLabels:(id)sender {
     extern int trace_mcr_labels_flag;
     
-    trace_mcr_labels_flag = [traceMCRLabels state];
+    trace_mcr_labels_flag = (int)[traceMCRLabels state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_mcr_labels_flag forKey:@"TraceMCR"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -82,7 +82,7 @@
 - (IBAction)changeTraceLOD:(id)sender {
     extern int trace_lod_labels_flag;
     
-    trace_lod_labels_flag = [traceLODLabels state];
+    trace_lod_labels_flag = (int)[traceLODLabels state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_lod_labels_flag forKey:@"TraceLODLabels"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -90,7 +90,7 @@
 - (IBAction)changeTracePROM:(id)sender {
     extern int trace_prom_flag;
     
-    trace_prom_flag = [tracePROM state];
+    trace_prom_flag = (int)[tracePROM state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_prom_flag forKey:@"TracePROM"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -98,7 +98,7 @@
 - (IBAction)changeTraceMCR:(id)sender {
     extern int trace_mcr_flag;
     
-    trace_mcr_flag = [traceMCR state];
+    trace_mcr_flag = (int)[traceMCR state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_mcr_flag forKey:@"TraceMCR"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -106,7 +106,7 @@
 - (IBAction)changeTraceIO:(id)sender {
     extern int trace_io_flag;
     
-    trace_io_flag = [traceIO state];
+    trace_io_flag = (int)[traceIO state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_io_flag forKey:@"TraceIO"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -114,7 +114,7 @@
 - (IBAction)changeTraceVM:(id)sender {
     extern int trace_vm_flag;
     
-    trace_vm_flag = [traceVM state];
+    trace_vm_flag = (int)[traceVM state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_vm_flag forKey:@"TraceVM"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -122,7 +122,7 @@
 - (IBAction)changeTraceDisk:(id)sender {
     extern int trace_disk_flag;
     
-    trace_disk_flag = [traceDisk state];
+    trace_disk_flag = (int)[traceDisk state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_disk_flag forKey:@"TraceDisk"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -130,7 +130,7 @@
 - (IBAction)changeTraceNet:(id)sender {
     extern int trace_net_flag;
     
-    trace_net_flag = [traceNet state];
+    trace_net_flag = (int)[traceNet state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_net_flag forKey:@"TraceNet"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -138,7 +138,7 @@
 - (IBAction)changeTraceInt:(id)sender {
     extern int trace_int_flag;
     
-    trace_int_flag = [traceInt state];
+    trace_int_flag = (int)[traceInt state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_int_flag forKey:@"TraceInt"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -146,7 +146,7 @@
 - (IBAction)changeTraceLateSet:(id)sender {
     extern int trace_late_set;
     
-    trace_late_set = [traceLateSet state];
+    trace_late_set = (int)[traceLateSet state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_late_set forKey:@"TraceLateSet"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -154,7 +154,7 @@
 - (IBAction)changeTraceAfter:(id)sender {
     extern int trace_after_flag;
     
-    trace_after_flag = [traceAfter state];
+    trace_after_flag = (int)[traceAfter state];
     [[NSUserDefaults standardUserDefaults] setInteger:trace_after_flag forKey:@"TraceAfter"];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }

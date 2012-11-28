@@ -4930,9 +4930,10 @@ startxfer(struct xfer *ax)
  * Character set conversion routines.
  */
 static void
-buffer_to_lispm(unsigned char *data, int length)
+buffer_to_lispm(unsigned char *data, ssize_t length)
 {
-    register int c, i;
+    register int c;
+    register ssize_t i;
     
     for (i = 0; i < length; i++) {
         c = data[i] & 0377;
@@ -4976,7 +4977,8 @@ processmini(chaos_connection *conn)
         int binary = 0;
         chaos_packet *packet;
         chaos_packet *output;
-        int length, fd;
+        ssize_t length;
+        int fd;
         char tbuf[20];
         struct stat sbuf;
         struct tm *ptm;
