@@ -247,8 +247,7 @@ iob_sdl_key_event(int code, int extra)
 
 	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
 
-	if (code == 0 ||
-	    code == SDLK_LSHIFT ||
+	if (code == SDLK_LSHIFT ||
 	    code == SDLK_RSHIFT ||
 	    code == SDLK_LCTRL ||
 	    code == SDLK_RCTRL ||
