@@ -27,7 +27,7 @@ static char	**gargv;			/* Pointer to the (stack) arglist */
 static int	gargc;				/* Number args in gargv */
 static int	gargmax;
 static short	gflag;
-static int	tglob();
+static int	tglob(register char c);
 char **glob();
 int globerr;
 char *home;
@@ -46,8 +46,8 @@ static int execbrc();
 static int match();
 static int amatch();
 static void Gcat(char *s1, char *s2);
-static void addpath();
-static void rscan(char **t, int (*f)());
+static void addpath(char);
+static void rscan(char **t, int (*f)(char));
 static char *strspl(char *cp, char *dp);
 
 int letter(register char c);
@@ -59,6 +59,7 @@ int gethdir(char *home);
 int blklen(register char **av);
 char **blkcpy(char **oav, register char **bv);
 char **copyblk(register char **v);
+void blkfree(char **av0);
 void fatal(char *fmt, ...);
 
 static int	globcnt;
@@ -103,6 +104,11 @@ glob(register char *v)
     return (gargv = copyblk(gargv));
 }
 
+void gfree(char **glob)
+{
+    free(glob);
+}
+
 static void
 ginit()
 {
@@ -118,8 +124,7 @@ ginit()
 }
 
 static void
-collect(as)
-register char *as;
+collect(register char *as)
 {
 	if (eq(as, "{") || eq(as, "{}")) {
 		Gcat(as, "");
@@ -129,8 +134,7 @@ register char *as;
 }
 
 static void
-acollect(as)
-register char *as;
+acollect(register char *as)
 {
 	register int ogargc = gargc;
     
@@ -158,8 +162,7 @@ sort()
 }
 
 static void
-expand(as)
-char *as;
+expand(char *as)
 {
 	register char *cs;
 	register char *sgpathp, *oldcs;
@@ -215,8 +218,7 @@ endit:
 }
 
 static void
-matchdir(pattern)
-char *pattern;
+matchdir(char *pattern)
 {
 	struct stat stb;
 	register int dirf;
@@ -299,8 +301,7 @@ char *pattern;
             }
 
 static int
-execbrc(p, s)
-char *p, *s;
+execbrc(char *p, char *s)
 {
     char restbuf[BUFSIZ + 2];
     register char *pe, *pm, *pl;
@@ -391,8 +392,7 @@ pend:
 }
 
 static int
-match(s, p)
-char *s, *p;
+match(char *s, char *p)
 {
     register int c;
     register char *sentp;
@@ -411,8 +411,7 @@ char *s, *p;
 }
 
 static int
-amatch(s, p)
-register char *s, *p;
+amatch(register char *s, register char *p)
 {
     register int scc;
     int ok, lc;
@@ -502,8 +501,7 @@ register char *s, *p;
 }
 
 static int
-Gmatch(s, p)
-register char *s, *p;
+Gmatch(register char *s, register char *p)
 {
     register int scc;
     int ok, lc;
@@ -562,8 +560,7 @@ register char *s, *p;
 }
 
 static void
-Gcat(s1, s2)
-register char *s1, *s2;
+Gcat(register char *s1, register char *s2)
 {
     if (gargc == gargmax) {
         char **newvec;
@@ -584,8 +581,7 @@ register char *s1, *s2;
 }
 
 static void
-addpath(c)
-char c;
+addpath(char c)
 {
     
     if (gpathp >= lastgpathp) {
@@ -598,9 +594,7 @@ char c;
 }
 
 static void
-rscan(t, f)
-register char **t;
-int (*f)();
+rscan(register char **t, int (*f)(char))
 {
     register char *p, c;
     
@@ -629,8 +623,7 @@ int (*f)();
  }
  */
 static int
-tglob(c)
-register char c;
+tglob(register char c)
 {
     
     if (any(c, globchars))

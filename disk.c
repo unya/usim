@@ -311,7 +311,11 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 		(head * blocks_per_track) + block;
 
 	if (disk_fd) {
-		_disk_read(block_no, buffer);
+		if (_disk_read(block_no, buffer) < 0)
+        {
+            printf("disk_read_block: error reading block_no %d\n", block_no);
+            return -1;
+        }
 #if 0
 		if (block_no == 10312)
 		for (i = 0; i < 32; i++) {
@@ -687,6 +691,9 @@ int
 disk_init(char *filename)
 {
 	unsigned int label[256];
+    int ret;
+
+    label[0] = 0;
 
 #ifdef __BIG_ENDIAN__
 	disk_set_byteswap(1);
@@ -701,13 +708,14 @@ disk_init(char *filename)
 		exit(1);
 	}
 
-	_disk_read(0, label);
+	ret = _disk_read(0, label);
 
-	if (label[0] != LABEL_LABL) {
+	if (ret < 0 || label[0] != LABEL_LABL) {
 		printf("disk: invalid pack label - disk image ignored\n");
 		printf("label %o\n", label[0]);
 		close(disk_fd);
 		disk_fd = 0;
+        return -1;
 	}
 
 	cyls = label[2];

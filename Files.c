@@ -2255,7 +2255,8 @@ diropen(struct xfer *ax, register struct transaction *t)
 	char *wild;
 	size_t len = strlen(x->x_realname);
 
-	realname = malloc(len + 1);
+    // make sure we have room for trailing /*
+	realname = malloc(len + 3);
 	strcpy(realname, x->x_realname);
     
 	// lisp keeps appending .wild
@@ -2268,13 +2269,16 @@ diropen(struct xfer *ax, register struct transaction *t)
                     if (wild != realname && *(wild - 1) == '.')
                         *(wild - 1) = '\0';
 
-                    len = strlen(realname);
-                    if (realname[len-1] != '/')
-                        strcat(realname, "/");
-                    strcat(realname, "*");
                 }
              }
-	log(LOG_INFO, "diropen: %s\n", x->x_realname);
+
+    // glob wants a regex
+    len = strlen(realname);
+    if (realname[len-1] != '/')
+        strcat(realname, "/");
+    strcat(realname, "*");
+
+	log(LOG_INFO, "diropen: %s -> %s\n", x->x_realname, realname);
 
 	x->x_glob = glob(realname);
 	free(realname);
@@ -2373,8 +2377,16 @@ diropen(struct xfer *ax, register struct transaction *t)
 		return;
 	}
 derror:
+    printf("diropen error: %d\n", errcode);
 	error(t, t->t_fh->f_name, errcode);
 	x->x_state = X_DERROR;
+#if defined(OSX)
+    dispatch_semaphore_signal(x->x_hangsem);
+#else
+    pthread_mutex_lock(&x->x_hangsem);
+    pthread_cond_signal(&x->x_hangcond);
+    pthread_mutex_unlock(&x->x_hangsem);
+#endif
 #ifndef SELECT
 //	(void)write(ctlpipe[1], (char *)&ax, sizeof(x));
 #endif
@@ -2538,8 +2550,9 @@ xfree(register struct xfer *x)
         free(x->x_tempname);
     if (x->x_dirname)
         free(x->x_dirname);
-//    if (x->x_glob)		// FIXME: a leak here, but i'm seeing a crash
-//	blkfree(x->x_glob);
+    if (x->x_glob)
+        gfree(x->x_glob);
+
 #if defined(OSX)
     dispatch_release(x->x_hangsem);
 #else

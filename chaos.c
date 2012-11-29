@@ -689,30 +689,28 @@ void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
                     if (lastpacket)
                     {
                         printf("re-transmit last packet\n");
-//                        dumpbuffer(lastpacket, CHAOS_PACKET_HEADER_SIZE + lastpacket->length);
                         chaos_packet *retransmit = lastpacket;
                         lastpacket = 0;
                         chaos_queue(retransmit);
                     }
                 }
 #else // !defined(OSX)
-		pthread_mutex_lock(&conn->twsem);
-		struct timespec ts;
+                pthread_mutex_lock(&conn->twsem);
+                struct timespec ts;
 
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec += 5;
-		if (pthread_cond_timedwait(&conn->twcond, &conn->twsem, &ts))
-		{
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += 5;
+                if (pthread_cond_timedwait(&conn->twcond, &conn->twsem, &ts))
+                {
                     if (lastpacket)
                     {
                         printf("re-transmit last packet\n");
-//                        dumpbuffer(lastpacket, CHAOS_PACKET_HEADER_SIZE + lastpacket->length);
                         chaos_packet *retransmit = lastpacket;
                         lastpacket = 0;
                         chaos_queue(retransmit);
                     }
-		}
-		pthread_mutex_unlock(&conn->twsem);
+                }
+                pthread_mutex_unlock(&conn->twsem);
 #endif // defined(OSX)
             }
             else
@@ -1124,13 +1122,6 @@ chaos_send_to_chaosd(char *buffer, int size)
                 void processmini(chaos_connection *conn);
                 chaos_packet *answer;
 
-//                if (packet->data[4] == ' ' && packet->data[5] >= '0' && packet->data[5] <= '9')
-//                {
-//                    extern int protocol;
-//                    protocol = packet->data[5] - '0';
-//                    printf("FILE protocol version=%d\n", protocol);
-//                }
-                
                 packet->data[packet->length] = '\0';
                 printf("MINI: '%s'\n", &packet->data[4]);
 
@@ -1166,7 +1157,7 @@ chaos_send_to_chaosd(char *buffer, int size)
                 t = time.tv_sec;
                 t += 60UL*60*24*((1970-1900)*365L + 1970/4 - 1900/4);
                 
-                printf("timerfc: answering");
+                printf("time-rfc: answering\n");
                 
                 answer->opcode = CHAOS_OPCODE_ANS << 8;
                 answer->length = sizeof(long);
@@ -1185,7 +1176,7 @@ chaos_send_to_chaosd(char *buffer, int size)
             {
                 chaos_packet *answer = malloc(CHAOS_PACKET_HEADER_SIZE + sizeof(long));
                 
-                printf("uptime: answering");
+                printf("uptime: answering\n");
                 
                 answer->opcode = CHAOS_OPCODE_ANS << 8;
                 answer->length = sizeof(long);
@@ -1226,6 +1217,13 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
                 return 0;
             }
+            
+            char buffer[512];
+            
+            strncpy(buffer, (char *)packet->data, packet->length);
+            buffer[packet->length] = '\0';
+            printf("unknown RFC: '%s'\n", packet->data);
+
             return 0;
         }
         if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_SNS && conn)

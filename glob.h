@@ -5,7 +5,7 @@
  */
 
 char **glob(register char *v);
-void blkfree(char **av0);
+void gfree(char **glob);
 
 
 

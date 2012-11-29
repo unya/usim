@@ -1670,7 +1670,7 @@ restore_state(void)
 	  return -1;
 
 	ret = read(fd, version, 2);
-	if (version[0] != 0 || version[1] != 1) {
+	if (ret < 0 || version[0] != 0 || version[1] != 1) {
 	  close(fd);
 	  return -1;
 	}
@@ -1678,6 +1678,11 @@ restore_state(void)
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
 	  add_new_page_no(i);
 	  ret = read(fd, (char *)phy_pages[i], sizeof(struct page_s));
+      if (ret < 0)
+      {
+          close(fd);
+          return -1;
+      }
 #ifdef __BIG_ENDIAN__
 	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
 #endif
@@ -1704,12 +1709,22 @@ save_state(void)
 	version[0] = 0;
 	version[1] = 1;
 	ret = write(fd, version, 2);
+    if (ret < 0)
+    {
+        close(fd);
+        return -1;
+    }
 
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
 #ifdef __BIG_ENDIAN__
 	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
 #endif
 	  ret = write(fd, (char *)phy_pages[i], sizeof(struct page_s));
+      if (ret < 0)
+      {
+          close(fd);
+          return -1;
+      }
 	}
 
 	close(fd);
