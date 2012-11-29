@@ -64,6 +64,7 @@
 		DD36585E1665EEC800755138 /* ucadr.mcr.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658511665EEC800755138 /* ucadr.mcr.979 */; };
 		DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658521665EEC800755138 /* ucadr.sym.841 */; };
 		DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658531665EEC800755138 /* ucadr.sym.979 */; };
+		DD73006E16671C8300706ED9 /* cadr icon.icns in Resources */ = {isa = PBXBuildFile; fileRef = DD73006D16671C8300706ED9 /* cadr icon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -164,6 +165,7 @@
 		DD3658621665F0A600755138 /* syms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = syms.h; path = ../../syms.h; sourceTree = "<group>"; };
 		DD3658631665F0A600755138 /* decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = decode.h; path = ../../decode.h; sourceTree = "<group>"; };
 		DD3658641665F0A600755138 /* keyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyboard.h; path = ../../keyboard.h; sourceTree = "<group>"; };
+		DD73006D16671C8300706ED9 /* cadr icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "cadr icon.icns"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -271,6 +273,7 @@
 				DD308D071665E71F00361F6D /* Files.c */,
 				DD308D081665E71F00361F6D /* iob.c */,
 				DD308D091665E71F00361F6D /* kbd_old.c */,
+				DD73006D16671C8300706ED9 /* cadr icon.icns */,
 				DD308D0C1665E71F00361F6D /* glob.c */,
 				DD308D0D1665E71F00361F6D /* glob.h */,
 				DD308D0E1665E71F00361F6D /* Files.h */,
@@ -442,6 +445,7 @@
 				DD36585E1665EEC800755138 /* ucadr.mcr.979 in Resources */,
 				DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */,
 				DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */,
+				DD73006E16671C8300706ED9 /* cadr icon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
