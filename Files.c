@@ -2600,6 +2600,13 @@ fileclose(register struct xfer *x, register struct transaction *t)
 #if 0
 	(void)signal(SIGHUP, SIG_IGN);
 #endif
+#if defined(OSX)
+	dispatch_semaphore_signal(x->x_hangsem);
+#else
+	pthread_mutex_lock(&x->x_hangsem);
+	pthread_cond_signal(&x->x_hangcond);
+	pthread_mutex_unlock(&x->x_hangsem);
+#endif
 }
 
 /*

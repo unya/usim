@@ -805,7 +805,7 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
             free(node);
         if (packet)
         {
-            if ((packet->opcode >> 8) != CHAOS_OPCODE_SNS && cmp_gt(packet->number, conn->lastreceived))
+            if (cmp_gt(packet->number, conn->lastreceived))
                 conn->lastreceived = packet->number;
             conn->remotelastreceived = packet->acknowledgement;
             if (3 * (short)(conn->lastreceived - conn->lastacked) > conn->rwsize)
