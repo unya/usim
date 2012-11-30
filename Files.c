@@ -1986,25 +1986,28 @@ fileopen(register struct transaction *t)
 		goto openerr;
 	}
 	tm = localtime(&sbuf.st_mtime);
-#if 1
-	if (tm->tm_year > 99) tm->tm_year = 99;
-#endif
 	nbytes = foptions & O_CHARACTER || bytesize <= 8 ? sbuf.st_size : (sbuf.st_size + 1) / 2;
 	if (protocol > 0)
+    {
+        if (tm->tm_year > 99) tm->tm_year += 1900;
 		(void)sprintf(response,
-                      "%02d/%02d/%02d %02d:%02d:%02d %ld %s%s%s%c%s%c",
+                      "%02d/%02d/%04d %02d:%02d:%02d %ld %s%s%s%c%s%c",
                       tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                       tm->tm_hour, tm->tm_min, tm->tm_sec, (long)nbytes,
                       qfasl, foptions & O_DEFAULT ? " " : "",
                       foptions & O_DEFAULT ? (foptions & O_CHARACTER ?
-                                             TRUE : FALSE) : "",
+                                              TRUE : FALSE) : "",
                       CHNL, realname, CHNL);
+    }
 	else
+    {
+        if (tm->tm_year > 99) tm->tm_year = 99;
 		(void)sprintf(response,
                       "%d %02d/%02d/%02d %02d:%02d:%02d %ld %s%c%s%c",
                       -1, tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                       tm->tm_hour, tm->tm_min, tm->tm_sec, (long)nbytes,
                       qfasl, CHNL, realname, CHNL);
+    }
 	if (foptions & (O_READ|O_WRITE)) {
 		x = makexfer(t, foptions);
         if (x) {
@@ -2251,37 +2254,28 @@ diropen(struct xfer *ax, register struct transaction *t)
 	struct stat *s = (struct stat *)0;
 	struct stat sbuf;
 	int errcode;
-	char *realname;
 	char *wild;
 	size_t len = strlen(x->x_realname);
 
-    // make sure we have room for trailing /*
-	realname = malloc(len + 3);
-	strcpy(realname, x->x_realname);
-    
 	// lisp keeps appending .wild
-	for (wild=realname; *wild; wild++, len--)
+	for (wild=x->x_realname; *wild; wild++, len--)
             if (*wild == 'w' && len > 3)
             {
                 if (*(wild + 1) == 'i' && *(wild+2) == 'l' && *(wild + 3) == 'd')
                 {
                     *wild = '\0';
-                    if (wild != realname && *(wild - 1) == '.')
+                    if (wild != x->x_realname && *(wild - 1) == '.')
                         *(wild - 1) = '\0';
 
                 }
              }
 
-    // glob wants a regex
-    len = strlen(realname);
-    if (realname[len-1] != '/')
-        strcat(realname, "/");
-    strcat(realname, "*");
+    if (x->x_realname[len-1] == '/')
+        x->x_realname[len-1] = '\0';
 
-	log(LOG_INFO, "diropen: %s -> %s\n", x->x_realname, realname);
+	log(LOG_INFO, "diropen: %s\n", x->x_realname);
 
-	x->x_glob = glob(realname);
-	free(realname);
+	x->x_glob = glob(x->x_realname);
 	if ((errcode = globerr) != 0)
 		goto derror;
 	if (x->x_glob) {
@@ -2731,21 +2725,24 @@ xclose(struct xfer *ax)
 				fatal("Fstat in xclose 2");
 		}
 		tm = localtime(&sbuf.st_mtime);
-#if 1
-        if (tm->tm_year > 99) tm->tm_year = 99;
-#endif
-		if (protocol > 0)
+
+        if (protocol > 0)
+        {
+            if (tm->tm_year > 99) tm->tm_year += 1900;
 			(void)sprintf(response,
 #if defined(linux)
-                          "%02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
+                          "%02d/%02d/%04d %02d:%02d:%02d %ld%c%s%c",
 #else
-                          "%02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
+                          "%02d/%02d/%04d %02d:%02d:%02d %lld%c%s%c",
 #endif
                           tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
                           sbuf.st_size, CHNL,
-                          x->x_realname, CHNL);
+                          x->x_realname, CHNL);            
+        }
 		else
+        {
+            if (tm->tm_year > 99) tm->tm_year = 99;
 			(void)sprintf(response,
 #if defined(linux)
                           "%d %02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
@@ -2756,6 +2753,7 @@ xclose(struct xfer *ax)
                           tm->tm_year, tm->tm_hour, tm->tm_min,
                           tm->tm_sec, sbuf.st_size, CHNL,
                           x->x_realname, CHNL);
+        }
 		respond(t, response);
 	} else
 		error(t, x->x_fh->f_name, errcode);
@@ -3799,10 +3797,8 @@ getmdate(register struct stat *s, register char *cp)
     struct tm *tm;
     
     tm = localtime(&s->st_mtime);
-#if 1
-    if (tm->tm_year > 99) tm->tm_year = 99;
-#endif
-    (void)sprintf(cp, "%02d/%02d/%02d %02d:%02d:%02d",
+    if (tm->tm_year > 99) tm->tm_year += 1900;
+   (void)sprintf(cp, "%02d/%02d/%04d %02d:%02d:%02d",
                   tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                   tm->tm_hour, tm->tm_min, tm->tm_sec);
     while (*cp)
@@ -3816,10 +3812,8 @@ getrdate(register struct stat *s, register char *cp)
     struct tm *tm;
     
     tm = localtime(&s->st_atime);
-#if 1
-    if (tm->tm_year > 99) tm->tm_year = 99;
-#endif
-    (void)sprintf(cp, "%02d/%02d/%02d %02d:%02d:%02d",
+    if (tm->tm_year > 99) tm->tm_year += 1900;
+    (void)sprintf(cp, "%02d/%02d/%04d %02d:%02d:%02d",
                   tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                   tm->tm_hour, tm->tm_min, tm->tm_sec);
     while (*cp)
@@ -4045,12 +4039,13 @@ parsetime(register char *cp, register time_t *t)
         !(cp = tnum(cp, '\0', &second)) ||
         month < 1 || month > 12 ||
         day < 1 || day > 31 ||
-        year < 70 || year > 99 ||
+        year < 70 || // year > 99 ||
         hour < 0 || hour > 23 ||
         minute < 0 || minute > 59 ||
         second < 0 || second > 59)
         return 1;
-    year += 1900;
+    if (year < 100)
+        year += 1900;
     *t = 0;
 #define dysize(i) (((i%4)==0) ? 366 : 365)
     for (i = 1970; i < year; i++)
