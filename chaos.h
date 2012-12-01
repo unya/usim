@@ -124,17 +124,19 @@ typedef struct chaos_connection
 #endif
     packet_queue *orderhead;
     packet_queue *ordertail;
+    chaos_packet *lastpacket;
 } chaos_connection;
 
 void chaos_queue(chaos_packet *packet);
 chaos_connection *chaos_make_connection(void);
 void chaos_delete_connection(chaos_connection *conn);
 chaos_connection *chaos_find_connection(unsigned short index);
-void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet);
+int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet);
 chaos_packet *chaos_connection_dequeue(chaos_connection *conn);
 chaos_connection *chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize);
 chaos_packet *chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len);
 void chaos_dump_connection(chaos_connection *conn);
+void chaos_interrupt_connection(chaos_connection *conn);
 
 
 #endif // OSX

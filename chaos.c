@@ -522,7 +522,6 @@ chaos_force_reconect(void)
 
 static packet_queue *queuehead;
 static packet_queue *queuetail;
-static chaos_packet *lastpacket;
 int connectionstate = 0;
 
 #if defined(OSX)
@@ -602,10 +601,10 @@ chaos_make_connection(void)
             conn->queuesem = dispatch_semaphore_create(0);
             conn->twsem = dispatch_semaphore_create(0);
 #else
-	    pthread_mutex_init(&conn->queuesem, NULL);
-	    pthread_cond_init(&conn->queuecond, NULL);
-	    pthread_mutex_init(&conn->twsem, NULL);	
-	    pthread_cond_init(&conn->twcond, NULL);
+            pthread_mutex_init(&conn->queuesem, NULL);
+            pthread_cond_init(&conn->queuecond, NULL);
+            pthread_mutex_init(&conn->twsem, NULL);	
+            pthread_cond_init(&conn->twcond, NULL);
 #endif
             conn->lastreceived = 0;
             conn->lastsent = 0;
@@ -667,7 +666,19 @@ chaos_delete_connection(chaos_connection *conn)
     free(conn);
 }
 
-void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
+void chaos_interrupt_connection(chaos_connection *conn)
+{
+    conn->remotelastreceived = conn->lastsent;
+#if defined(OSX)
+    dispatch_semaphore_signal(conn->twsem);
+#else
+    pthread_mutex_lock(&conn->twsem);
+    pthread_cond_signal(&conn->twsem);
+    pthread_mutex_unlock(&conn->twsem);
+#endif    
+}
+
+int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 {
     packet_queue *node;
     unsigned short nextpacket;
@@ -686,11 +697,11 @@ void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 #if defined(OSX)
                 if (dispatch_semaphore_wait(conn->twsem, dispatch_time(DISPATCH_TIME_NOW, 5LL * NSEC_PER_SEC)))
                 {
-                    if (lastpacket)
+                    if (conn->lastpacket)
                     {
                         printf("re-transmit last packet\n");
-                        chaos_packet *retransmit = lastpacket;
-                        lastpacket = 0;
+                        chaos_packet *retransmit = conn->lastpacket;
+                        conn->lastpacket = 0;
                         chaos_queue(retransmit);
                     }
                 }
@@ -719,8 +730,9 @@ void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
         
         if ((packet->opcode >> 8) != CHAOS_OPCODE_STS && packet->destindex == conn->remoteindex && cmp_gt(packet->number, conn->lastsent))
             conn->lastsent = packet->number;
+        conn->lastpacket = packet;
         chaos_queue(packet);
-        return;
+        return 0;
     }
     
     node = malloc(sizeof(packet_queue));
@@ -739,7 +751,7 @@ void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
         if (conn->orderhead == 0)
             conn->orderhead = node;
         pthread_mutex_unlock(&conn->queuelock);
-        return;
+        return 0;
     }
 
     {
@@ -758,6 +770,7 @@ void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
     pthread_cond_signal(&conn->queuecond);
     pthread_mutex_unlock(&conn->queuesem);
 #endif
+    return 0;
 }
 
 chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
@@ -1009,10 +1022,6 @@ chaos_poll(void)
     chaos_rcv_buffer[size + 2] = 0;        // unused checksum
     size += 3;
 
-    if (lastpacket)
-        free(lastpacket);
-    lastpacket = packet;
-
     // ignore any packets not to us
     if (dest_addr != chaos_addr)
         return 0;
@@ -1258,6 +1267,12 @@ chaos_send_to_chaosd(char *buffer, int size)
                 if (cmp_gt(packet->acknowledgement, conn->remotelastreceived))
                     conn->remotelastreceived = packet->acknowledgement;
 
+                if (conn->lastpacket && conn->remotelastreceived == conn->lastpacket->number)
+                {
+                    free(conn->lastpacket);
+                    conn->lastpacket = 0;
+                }
+
                 conn->state = cs_open;
                 conn->twsize = *(unsigned short *)&packet->data[2];
 #if CHAOS_DEBUG
@@ -1266,14 +1281,17 @@ chaos_send_to_chaosd(char *buffer, int size)
 #if defined(OSX)
                 dispatch_semaphore_signal(conn->twsem);
 #else
-		pthread_mutex_lock(&conn->twsem);
-		pthread_cond_signal(&conn->twcond);
-		pthread_mutex_unlock(&conn->twsem);
+                pthread_mutex_lock(&conn->twsem);
+                pthread_cond_signal(&conn->twcond);
+                pthread_mutex_unlock(&conn->twsem);
 #endif
             }
             return 0;
         }
-        
+        if (conn && (packet->opcode >> 8) == CHAOS_OPCODE_CLS)
+        {
+            printf("chaos: got close\n");
+        }
         if (conn && (cmp_gt(conn->lastreceived, packet->number) || (conn->lastreceived == packet->number)))
         {
 #if CHAOS_DEBUG

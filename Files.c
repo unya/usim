@@ -858,7 +858,7 @@ getwork(chaos_connection *conn)
             case DATOP:
                 break;
             default:
-                log(LOG_ERR, "FILE: Bad op: 0%o\n", ((packet->opcode & 0xff00) >> 8));
+                printf("FILE: Bad op: 0%o\n", ((packet->opcode & 0xff00) >> 8));
                 tfree(t);
                 return TNULL;
 		}
@@ -2354,7 +2354,6 @@ diropen(struct xfer *ax, register struct transaction *t)
 		return;
 	}
 derror:
-    printf("diropen error: %d\n", errcode);
 	error(t, t->t_fh->f_name, errcode);
 	x->x_state = X_DERROR;
 #if defined(OSX)
@@ -2558,6 +2557,7 @@ xfree(register struct xfer *x)
 void
 fileclose(register struct xfer *x, register struct transaction *t)
 {
+    log(LOG_INFO, "FILE: fileclose\n");
 	x->x_flags |= X_CLOSE;
 	switch (x->x_options & (O_READ | O_WRITE | O_DIRECTORY | O_PROPERTIES)) {
         case O_READ:
@@ -2590,6 +2590,12 @@ fileclose(register struct xfer *x, register struct transaction *t)
 #if 0
 	(void)signal(SIGHUP, SIG_IGN);
 #endif
+
+    // we may have a packet stuck waiting to transmit
+    // force the transmit window to close and tickle the connection
+    if (x->x_options & O_READ)
+        chaos_interrupt_connection(x->x_fh->f_connection);
+
 #if defined(OSX)
 	dispatch_semaphore_signal(x->x_hangsem);
 #else
@@ -2611,7 +2617,9 @@ xclose(struct xfer *ax)
 	char response[CHMAXDATA];
 	int errcode = 0;
 	struct tm *tm;
-	
+
+    log(LOG_INFO, "FILE: xclose\n");
+
     if (x->x_options & (O_DIRECTORY|O_PROPERTIES)) {
 		respond(t, NOSTR);
 		return;
@@ -4719,7 +4727,8 @@ int
 xpweof(register struct xfer *x)
 {
     chaos_packet *packet = chaos_allocate_packet(x->x_fh->f_connection, CHAOS_OPCODE_EOF, 0);
-    chaos_connection_queue(x->x_fh->f_connection, packet);
+    if (chaos_connection_queue(x->x_fh->f_connection, packet))
+        return -1;
     return 0;
 }
 
@@ -4745,7 +4754,8 @@ xpwrite(register struct xfer *x)
     
     chaos_packet *packet = chaos_allocate_packet(conn, x->x_op, len);
     memcpy(packet->data, x->x_pkt.cp_data, len);
-    chaos_connection_queue(conn, packet);
+    if (chaos_connection_queue(conn, packet))
+        return -1;
     
     return 0;
 }
