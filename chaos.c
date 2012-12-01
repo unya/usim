@@ -713,11 +713,11 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
                 ts.tv_sec += 5;
                 if (pthread_cond_timedwait(&conn->twcond, &conn->twsem, &ts))
                 {
-                    if (lastpacket)
+                    if (conn->lastpacket)
                     {
                         printf("re-transmit last packet\n");
-                        chaos_packet *retransmit = lastpacket;
-                        lastpacket = 0;
+                        chaos_packet *retransmit = conn->lastpacket;
+                        conn->lastpacket = 0;
                         chaos_queue(retransmit);
                     }
                 }
