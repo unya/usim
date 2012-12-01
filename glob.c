@@ -79,18 +79,50 @@ glob(register char *v)
 {
 	char agpath[BUFSIZ];
 	char *vv[2];
+
 	vv[0] = v;
 	vv[1] = 0;
 	gflag = 0;
 	rscan(vv, tglob);
 	if (gflag == 0)
-		return copyblk(vv);
+    {
+#if 0   // if you do a change properties on a directory, it wants the directory
+        struct stat sbuf;
+
+        // if it's a directory, we're probably looking for the list of contents
+        if (stat(v, &sbuf) == 0) {
+            if ((sbuf.st_mode & S_IFMT) == S_IFDIR)
+            {
+                ssize_t len = strlen(v);
+
+                wild = malloc(len + 3);                
+                strcpy(wild, v);
+                if (wild[len] != '/')
+                    wild[len++] = '/';
+                wild[len++] = '*';
+                wild[len] = '\0';
+                
+                vv[0] = wild;
+                vv[1] = 0;
+                rscan(vv, tglob);
+                if (gflag == 0)
+                {
+                    free(wild);
+                    vv[0] = v;
+                    return copyblk(vv);
+                }
+            }
+        }
+        else
+#endif
+            return copyblk(vv);
+    }
     
 	globerr = 0;
 	gpath = agpath; gpathp = gpath; *gpathp = 0;
 	lastgpathp = &gpath[sizeof agpath - 2];
 	ginit(); globcnt = 0;
-	collect(v);
+	collect(vv[0]);
 	if (globcnt == 0 && (gflag&1)) {
 		blkfree(gargv), gargv = 0;
         lastgpathp = 0;
@@ -101,12 +133,12 @@ glob(register char *v)
     lastgpathp = 0;
     gpathp = 0;
     gpath = 0;
-    return (gargv = copyblk(gargv));
+    return gargv;
 }
 
 void gfree(char **glob)
 {
-    free(glob);
+    blkfree(glob);
 }
 
 static void
@@ -713,12 +745,31 @@ strspl(char *cp, char *dp)
 char **
 copyblk(register char **v)
 {
+    if (v == 0)
+        return 0;
+
     register char **nv = (char **)malloc((size_t)(((size_t)blklen(v) + 1) *
                                                     sizeof(char **)));
     if (nv == (char **)0)
         fatal(NOMEM);
     
-    return (blkcpy(nv, v));
+    register char **av = v;
+    
+    if (av)
+    {
+        char **bv = nv;
+
+        while (*av)
+        {
+            *bv = malloc(strlen(*av) + 1);
+            strcpy(*bv, *av);
+            av++;
+            bv++;
+        }
+        *bv = 0;
+    }
+
+    return nv;
 }
 
 static

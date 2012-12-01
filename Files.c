@@ -2254,35 +2254,14 @@ diropen(struct xfer *ax, register struct transaction *t)
 	struct stat *s = (struct stat *)0;
 	struct stat sbuf;
 	int errcode;
-	char *wild;
-	size_t len = strlen(x->x_realname);
 
-	//printf("diropen: %s -> ", x->x_realname);
-
-	// lisp keeps appending .wild
-	for (wild=x->x_realname; *wild; wild++, len--)
-            if (*wild == 'w' && len > 3)
-            {
-                if (*(wild + 1) == 'i' && *(wild + 2) == 'l' && *(wild + 3) == 'd')
-                {
-                    *wild = '\0';
-                    while (wild != x->x_realname && *(wild - 1) == '.')
-		    {
-                        *(wild - 1) = '\0';
-			wild--;
-		    }
-                }
-             }
-
-    if (x->x_realname[strlen(x->x_realname)-1] == '/')
-        x->x_realname[strlen(x->x_realname)-1] = '\0';
-
-//	printf("%s\n", x->x_realname);
+//	printf("diropen: %s\n", x->x_realname);
 
 	x->x_glob = glob(x->x_realname);
 	if ((errcode = globerr) != 0)
 		goto derror;
-	if (x->x_glob) {
+    
+ 	if (x->x_glob) {
 		char **badfile = NOBLK;
 		int baderrno;
 		/*
