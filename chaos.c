@@ -1377,12 +1377,17 @@ chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsiz
     return 0;
 }
 
-void chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
+int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 {    
+    return 0;
 }
 
 void
 chaos_delete_connection(chaos_connection *conn)
+{
+}
+
+void chaos_interrupt_connection(chaos_connection *conn)
 {
 }
 
