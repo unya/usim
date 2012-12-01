@@ -584,6 +584,7 @@ chaos_make_connection(void)
         if (connections[i] == 0)
         {
             chaos_connection *conn = (chaos_connection *)malloc(sizeof(chaos_connection));
+            static unsigned short index = 0x0101;
             
             conn->state = cs_closed;
             conn->packetnumber = 0;
@@ -591,7 +592,8 @@ chaos_make_connection(void)
             conn->remoteindex = 0;
             conn->remoteaddr = 0;
             conn->localaddr = CHAOS_SERVER_ADDRESS;
-            conn->localindex = (unsigned short)(((i+1) << 8) | (i + 1));
+            conn->localindex = index;
+            index += 0x0100;
             conn->queuehead = 0;
             conn->queuetail = 0;
  
@@ -779,6 +781,9 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
     packet_queue *node = NULL;
     unsigned short nextpacket = conn->lastreceived + 1;
 
+    if (conn->state == cs_closed)
+        return 0;
+
     for (;;)
     {
         pthread_mutex_lock(&conn->queuelock);
@@ -835,10 +840,13 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 #if defined(OSX)
         dispatch_semaphore_wait(conn->queuesem, DISPATCH_TIME_FOREVER);
 #else
-	pthread_mutex_lock(&conn->queuesem);
-	pthread_cond_wait(&conn->queuecond, &conn->queuesem);
-	pthread_mutex_unlock(&conn->queuesem);
+        pthread_mutex_lock(&conn->queuesem);
+        pthread_cond_wait(&conn->queuecond, &conn->queuesem);
+        pthread_mutex_unlock(&conn->queuesem);
 #endif
+        
+        if (conn->state == cs_closed)
+            return 0;
     }
 }
 
@@ -917,8 +925,12 @@ chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsiz
         
         chaos_connection_queue(conn, pkt);
 
+        conn->state = cs_rfcsent;
+
         // wait for answer
         chaos_packet *answer = chaos_connection_dequeue(conn);
+        if (answer == 0)
+            return conn;
         
         conn->remoteindex = answer->sourceindex;
         conn->state = cs_open;
@@ -1080,7 +1092,6 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
                 return 0;
             }
-            
             if (conn)
             {
                 chaos_packet *pkt = malloc((size_t)size);
@@ -1290,7 +1301,21 @@ chaos_send_to_chaosd(char *buffer, int size)
         }
         if (conn && (packet->opcode >> 8) == CHAOS_OPCODE_CLS)
         {
+#if CHAOS_DEBUG
             printf("chaos: got close\n");
+#endif
+            conn->state = cs_closed;
+            
+#if defined(OSX)
+            dispatch_semaphore_signal(conn->queuesem);
+#else
+            pthread_mutex_lock(&conn->queuesem);
+            pthread_cond_signal(&conn->queuecond);
+            pthread_mutex_unlock(&conn->queuesem);
+#endif
+            usleep(100000);      // wait for queue to wake up
+            chaos_delete_connection(conn);
+            return 0;
         }
         if (conn && (cmp_gt(conn->lastreceived, packet->number) || (conn->lastreceived == packet->number)))
         {

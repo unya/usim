@@ -832,6 +832,9 @@ getwork(chaos_connection *conn)
 		errcode = BUG;		/* Default error is bad syntax */
         
         packet = chaos_connection_dequeue(conn);
+        if (packet == 0)
+            return NULL;
+
         t->t_packet = packet;
         t->t_connection = conn;
 
@@ -4772,6 +4775,8 @@ xpread(register struct xfer *x)
     
 loop:
 	packet = chaos_connection_dequeue(x->x_fh->f_connection);
+    if (packet == 0)
+        return -1;
 
     switch ((packet->opcode & 0xff00) >> 8) {
         case EOFOP:
@@ -4994,6 +4999,8 @@ processmini(chaos_connection *conn)
         for (;;) {
             
             packet = chaos_connection_dequeue(conn);
+            if (packet == 0)
+                break;
 
             switch (packet->opcode >> 8) {
                 case 0200:
@@ -5067,6 +5074,8 @@ _processmini(void *vconn)
         for (;;) {
             
             packet = chaos_connection_dequeue(conn);
+            if (packet == 0)
+                break;
 
             switch (packet->opcode >> 8) {
                 case 0200:
