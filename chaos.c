@@ -675,7 +675,7 @@ void chaos_interrupt_connection(chaos_connection *conn)
     dispatch_semaphore_signal(conn->twsem);
 #else
     pthread_mutex_lock(&conn->twsem);
-    pthread_cond_signal(&conn->twsem);
+    pthread_cond_signal(&conn->twcond);
     pthread_mutex_unlock(&conn->twsem);
 #endif    
 }
