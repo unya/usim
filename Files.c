@@ -131,8 +131,8 @@ struct chpacket	{
 #define LOG_ERR		1
 #define LOG_NOTICE      2
 
-int log_verbose = 1;
-int log_stderr_tofile = 1;
+int log_verbose = 0;
+int log_stderr_tofile = 0;
 
 static void
 log(int level, char *fmt, ...)
