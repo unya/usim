@@ -90,6 +90,8 @@
 #include <sys/statvfs.h>
 #endif
 
+#define TRUNCATE_DATES  1
+
 #define CHSP	(040)
 #define CHNL	(0200|015)
 #define CHTAB	(0200|011)
@@ -173,9 +175,6 @@ log(int level, char *fmt, ...)
  * are performed synchronously with the control/main process, like
  * OPEN-PROBES, completion, etc., while others relate to the action
  * of a transfer process (e.g. SET-BYTE-POINTER).
- * Until the Berkeley select mechanism is done, we must implement transfer
- * tasks as sub-processes.
- * The #ifdef SELECT code is for when that time comes (untested, incomplete).
  */
 struct xfer		{
 	struct xfer		*x_next;	/* Next in global list */
@@ -209,12 +208,8 @@ struct xfer		{
 	pthread_mutex_t x_hangsem;
 	pthread_cond_t x_hangcond;
 #endif
-#ifdef SELECT
+    pthread_mutex_t x_xfersem;
 	struct transaction	*x_work;	/* Queued transactions */
-#else
-	int			x_pfd;		/* Subprocess pipe file */
-	int			x_pid;		/* Subprocess pid */
-#endif
 } *xfers;
 
 #define XNULL	((struct xfer *)0)
@@ -439,29 +434,6 @@ struct xoption {
 #define QBIN2		071660		/* Second word of "QFASL" */
 #define LBIN1		((unsigned)0170023)		/* First word of BIN file */
 #define LBIN2LIMIT	100		/* Maximum value of second word of BIN file */
-
-#ifndef SELECT
-/*
- * Definitions for communication between the control process and transfer
- * processes.  YICK.
- */
-/*
- * The structure in which a command is sent to a transfer process.
- */
-struct pmesg {
-	char		pm_tid[TIDLEN + 1];	/* TIDLEN chars of t->t_tid */
-	struct command	*pm_cmd;		/* Actual t_command */
-	char		pm_args;		/* 0 = no args, !0 = args */
-	long		pm_n;			/* copy of t_args->a_numbers[0] */
-	unsigned	pm_strlen;		/* length of string arg. */
-};
-int ctlpipe[2];					/* Pipe - xfer proc to ctl */
-/* Just PID's are written */
-jmp_buf closejmp;
-void interrupt(int arg);
-struct xfer *myxfer;
-int nprocdone;					/* Number of processes done */
-#endif
 
 /*
  * Definition of options
@@ -1720,6 +1692,8 @@ fileopen(register struct transaction *t)
 	off_t nbytes;
 	struct tm *tm;
 	struct stat sbuf;
+    
+    log(LOG_INFO, "FILE: fileopen\n");
 
     memset(&sbuf, 0, sizeof(sbuf));
 	if ((errcode = parsepath(pathname, &dirname, &realname, 0)) != 0)
@@ -1992,9 +1966,15 @@ fileopen(register struct transaction *t)
 	nbytes = foptions & O_CHARACTER || bytesize <= 8 ? sbuf.st_size : (sbuf.st_size + 1) / 2;
 	if (protocol > 0)
     {
+#if TRUNCATE_DATES
+        if (tm->tm_year > 99) tm->tm_year = 99;
+		(void)sprintf(response,
+                      "%02d/%02d/%02d %02d:%02d:%02d %ld %s%s%s%c%s%c",
+#else
         if (tm->tm_year > 99) tm->tm_year += 1900;
 		(void)sprintf(response,
                       "%02d/%02d/%04d %02d:%02d:%02d %ld %s%s%s%c%s%c",
+#endif
                       tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                       tm->tm_hour, tm->tm_min, tm->tm_sec, (long)nbytes,
                       qfasl, foptions & O_DEFAULT ? " " : "",
@@ -2141,7 +2121,11 @@ getprops(register struct transaction *t)
                 x->x_state = X_IDLE;
                 x->x_tempname = tempname;
                 if ((errcode = startxfer(x)) == 0) {
-                    propopen(x, t);
+                    t->t_command = &propcom;
+                    afree(a);
+                    t->t_args = ANULL;
+                    xcommand(t);
+//                    propopen(x, t);
                     return;
                 }
                 xflush(x);
@@ -2237,7 +2221,11 @@ directory(register struct transaction *t)
             x->x_dirname = dirname;
             x->x_state = X_IDLE;
             if ((errcode = startxfer(x)) == 0) {
-                diropen(x, t);
+                t->t_command = &dircom;
+                afree(t->t_args);
+                t->t_args = ANULL;
+                xcommand(t);
+//              diropen(x, t);
                 return;
             }
             xflush(x);
@@ -2366,9 +2354,6 @@ derror:
     pthread_cond_signal(&x->x_hangcond);
     pthread_mutex_unlock(&x->x_hangsem);
 #endif
-#ifndef SELECT
-//	(void)write(ctlpipe[1], (char *)&ax, sizeof(x));
-#endif
 }
 /*
  * Assemble a directory entry record in the buffer for this transfer.
@@ -2424,9 +2409,7 @@ makexfer(register struct transaction *t, long foptions)
         x->x_fh = t->t_fh;
         if (t->t_fh)
             t->t_fh->f_xfer = x;
-#ifdef SELECT
         x->x_work = TNULL;
-#endif
         x->x_flags = 0;
         x->x_options = foptions;
         if (foptions & O_WRITE)
@@ -2442,9 +2425,10 @@ makexfer(register struct transaction *t, long foptions)
 #if defined(OSX)
         x->x_hangsem = dispatch_semaphore_create(0);
 #else
-	pthread_mutex_init(&x->x_hangsem, NULL);
-	pthread_cond_init(&x->x_hangcond, NULL);
+        pthread_mutex_init(&x->x_hangsem, NULL);
+        pthread_cond_init(&x->x_hangcond, NULL);
 #endif
+        pthread_mutex_init(&x->x_xfersem, NULL);
 
         xfers = x;
     }
@@ -2452,6 +2436,20 @@ makexfer(register struct transaction *t, long foptions)
         fatal(NOMEM);
 	return x;
 }
+
+/*
+ * Queue up the transaction onto the transfer.
+ */
+void xqueue(register struct transaction *t, register struct xfer *x)
+{
+	register struct transaction **qt;
+    
+	for (qt = &x->x_work; *qt; qt = &(*qt)->t_next)
+		;
+	t->t_next = TNULL;
+	*qt = t;
+}
+
 /*
  * Issue the command on its xfer.
  */
@@ -2466,7 +2464,8 @@ xcommand(register struct transaction *t)
 		errstring = "No transfer in progress on this file handle";
 		error(t, f ? f->f_name : "", BUG);
 	} else {
-	    (*t->t_command->c_func)(x, t);
+        xqueue(t, x);
+//	    (*t->t_command->c_func)(x, t);
 #if defined(OSX)
 	    dispatch_semaphore_signal(x->x_hangsem);
 #else
@@ -2476,22 +2475,7 @@ xcommand(register struct transaction *t)
 #endif
 	}
 }
-#ifdef SELECT
-/*
- * Queue up the transaction onto the transfer.
- */
-xqueue(t, x)
-register struct transaction *t;
-register struct xfer *x;
-{
-	register struct transaction **qt;
-    
-	for (qt = &x->x_work; *qt; qt = &(*qt)->t_next)
-		;
-	t->t_next = TNULL;
-	*qt = t;
-}
-#endif
+
 /*
  * Flush the transfer - just make the file handle not busy
  */
@@ -2514,15 +2498,13 @@ xflush(register struct xfer *x)
 void
 xfree(register struct xfer *x)
 {
-    
-#ifdef SELECT
 	register struct transaction *t;
     
 	while ((t = x->x_work) != TNULL) {
 		x->x_work = t->t_next;
 		tfree(t);
 	}
-#endif
+
 	if (x->x_realname)
 		free(x->x_realname);
     if (x->x_tempname)
@@ -2538,6 +2520,7 @@ xfree(register struct xfer *x)
     pthread_mutex_destroy(&x->x_hangsem);
     pthread_cond_destroy(&x->x_hangcond);
 #endif
+    pthread_mutex_destroy(&x->x_xfersem);
     sfree(x);
 }
 /*
@@ -2722,6 +2705,7 @@ xclose(struct xfer *ax)
 
         if (protocol > 0)
         {
+#if TRUNCATE_DATES
             if (tm->tm_year > 99) tm->tm_year += 1900;
 			(void)sprintf(response,
 #if defined(linux)
@@ -2729,6 +2713,16 @@ xclose(struct xfer *ax)
 #else
                           "%02d/%02d/%04d %02d:%02d:%02d %lld%c%s%c",
 #endif
+#else
+            if (tm->tm_year > 99) tm->tm_year = 99;
+            (void)sprintf(response,
+#if defined(linux)
+                          "%02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
+#else
+                          "%02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
+#endif
+#endif
+                          
                           tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
                           sbuf.st_size, CHNL,
@@ -2959,9 +2953,7 @@ delete(register struct transaction *t)
                     error(t, "", NER);
                 } else {
                     while ((rp = wait(&st)) >= 0)
-                        if (rp != pid)
-                            nprocdone++;
-                        else
+                        if (rp == pid)
                             break;
                     if (rp != pid)
                         fatal("Lost a process!");
@@ -3528,9 +3520,7 @@ crdir(register struct transaction *t)
                 exit(1);
             }
             while ((rp = wait(&st)) >= 0)
-                if (rp != pid)
-                    nprocdone++;
-                else
+                if (rp == pid)
                     break;
             if (rp != pid)
                 fatal("Lost a process!");
@@ -3791,8 +3781,13 @@ getmdate(register struct stat *s, register char *cp)
     struct tm *tm;
     
     tm = localtime(&s->st_mtime);
+#if TRUNCATE_DATES
+    if (tm->tm_year > 99) tm->tm_year = 99;
+    (void)sprintf(cp, "%02d/%02d/%02d %02d:%02d:%02d",
+#else
     if (tm->tm_year > 99) tm->tm_year += 1900;
    (void)sprintf(cp, "%02d/%02d/%04d %02d:%02d:%02d",
+#endif
                   tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                   tm->tm_hour, tm->tm_min, tm->tm_sec);
     while (*cp)
@@ -3806,8 +3801,13 @@ getrdate(register struct stat *s, register char *cp)
     struct tm *tm;
     
     tm = localtime(&s->st_atime);
+#if TRUNCATE_DATES
+    if (tm->tm_year > 99) tm->tm_year = 99;
+    (void)sprintf(cp, "%02d/%02d/%02d %02d:%02d:%02d",
+#else
     if (tm->tm_year > 99) tm->tm_year += 1900;
     (void)sprintf(cp, "%02d/%02d/%04d %02d:%02d:%02d",
+#endif
                   tm->tm_mon+1, tm->tm_mday, tm->tm_year,
                   tm->tm_hour, tm->tm_min, tm->tm_sec);
     while (*cp)
@@ -4859,14 +4859,28 @@ startxfer(struct xfer *ax)
     register struct xfer *x = ax;
     
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        myxfer = x;
         log(LOG_INFO, "startxfer: entering\n");
-        setjmp(closejmp);
-        for (;;) {
-           if (log_verbose) {
+
+         for (;;) {
+            if (log_verbose) {
                 log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
                     tell(x->x_fd), x->x_state);
             }
+
+            while ((x->x_flags & X_CLOSE) == 0) {
+                 if (x->x_work)
+                 {
+                     struct transaction *t;
+                     
+                     t = x->x_work;
+                     x->x_work = t->t_next;
+                     log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
+                     (*t->t_command->c_func)(x, t);
+                 }
+                 else
+                     break;
+            }
+             
             switch (dowork(x)) {
                 case X_SYNCMARK:
                     syncmark(x->x_fh);	/* Ignore errors */
@@ -4916,9 +4930,9 @@ _startxfer(void *ax)
 #if defined(OSX)
                 dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
 #else
-		pthread_mutex_lock(&x->x_hangsem);
-		pthread_cond_wait(&x->x_hangcond, &x->x_hangsem);
-		pthread_mutex_unlock(&x->x_hangsem);
+                pthread_mutex_lock(&x->x_hangsem);
+                pthread_cond_wait(&x->x_hangcond, &x->x_hangsem);
+                pthread_mutex_unlock(&x->x_hangsem);
 #endif
                 continue;
         }
