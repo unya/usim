@@ -131,8 +131,8 @@ struct chpacket	{
 #define LOG_ERR		1
 #define LOG_NOTICE      2
 
-int log_verbose = 0;
-int log_stderr_tofile = 0;
+int log_verbose = 1;
+int log_stderr_tofile = 1;
 
 static void
 log(int level, char *fmt, ...)
@@ -4909,14 +4909,27 @@ _startxfer(void *ax)
 {
     register struct xfer *x = (struct xfer *)ax;
     
-    myxfer = x;
     log(LOG_INFO, "startxfer: entering\n");
-    setjmp(closejmp);
     for (;;) {
        if (log_verbose) {
             log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
                 tell(x->x_fd), x->x_state);
         }
+
+        while ((x->x_flags & X_CLOSE) == 0) {
+             if (x->x_work)
+             {
+                 struct transaction *t;
+                     
+                 t = x->x_work;
+                 x->x_work = t->t_next;
+                 log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
+                 (*t->t_command->c_func)(x, t);
+             }
+             else
+                 break;
+        }
+
         switch (dowork(x)) {
             case X_SYNCMARK:
                 syncmark(x->x_fh);	/* Ignore errors */

@@ -48,7 +48,7 @@
 # define CHAOS_DEBUG 0
 #endif
 
-#define CHAOS_DEBUG_PKT 0
+#define CHAOS_DEBUG_PKT 1
 //#define CHAOS_TOSS_IF_RXBUFF_FULL
 
 #define CHAOS_BUF_SIZE_BYTES 8192

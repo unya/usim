@@ -86,7 +86,7 @@ ifeq ($(OS), LINUX)
 #CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 #CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
-CFLAGS = -O3 -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
+CFLAGS = -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
 LFLAGS = $(M32) -ldl -L/usr/lib
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
