@@ -69,7 +69,7 @@ LFLAGS = -m32 -framework Cocoa
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
 USIM_LIBS = -lSDLmain -lSDL -lpthread -lobjc
-CFLAGS = -O -m32 -I/usr/X11/include -DDISPLAY_X11 $(DEFINES)
+CFLAGS = -O -m32 -I/usr/X11/include -DDISPLAY_X11 -DMAP_SITE_TREE_DIRECTORY $(DEFINES)
 # good for G5
 #CFLAGS = -fast $(DEFINES)
 endif
@@ -86,7 +86,7 @@ ifeq ($(OS), LINUX)
 #CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 #CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
-CFLAGS = -mfpmath=sse -mmmx -msse $(DEFINES) $(M32) -g
+CFLAGS = -mfpmath=sse -mmmx -msse -DMAP_SITE_TREE_DIRECTORY $(DEFINES) $(M32) -g
 LFLAGS = $(M32) -ldl -L/usr/lib
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h

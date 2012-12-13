@@ -29,6 +29,18 @@
 {
     self = [super initWithWindowNibName:@"CreateDisk"];
     
+    partitionTypes = [[NSArray alloc] initWithObjects:@"MCR1", @"MCR2", @"MCR3", @"MCR4", @"PAGE", @"LOD1", @"LOD2", @"LOD3", @"LOD4", @"FILE", nil];
+    partitionSize[0] = 148;
+    partitionSize[1] = 148;
+    partitionSize[2] = 148;
+    partitionSize[3] = 148;
+    partitionSize[4] = 32768;
+    partitionSize[5] = 25344;
+    partitionSize[6] = 25344;
+    partitionSize[7] = 25344;
+    partitionSize[8] = 25344;
+    partitionSize[9] = 131072;
+
     diskFileName = 0;
     return self;
 }
@@ -60,6 +72,8 @@
     _tableContents = [NSMutableArray new];
     
     default_template();
+
+    [_partitionMenu addItemsWithTitles:partitionTypes];
 
     [_tableView setDataSource:self];
     [_tableView setAction:@selector(handleAction:)];
@@ -98,6 +112,19 @@
     return nil;
 }
 
+- (NSNumber *)findIndex:(NSString *)name
+{
+    int i = 1;
+    
+    for (id object in partitionTypes)
+    {
+        if ([name compare:object] == NSOrderedSame)
+            break;
+        i++;
+    }
+    return [NSNumber numberWithInt:i];
+}
+
 - (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
     // Group our "model" object, which is a dictionary
@@ -108,8 +135,8 @@
     
     if ([identifier isEqualToString:@"DefaultCell"]) {
         return [dictionary objectForKey:@"Default"];
-    } else if ([identifier isEqualToString:@"NameCell"]) {
-        return [dictionary objectForKey:@"Name"];
+    } else if ([identifier isEqualToString:@"PartitionTypeCell"]) {
+        return [self findIndex:[dictionary objectForKey:@"Name"]];
     } else if ([identifier isEqualToString:@"StartCell"]) {
         return [dictionary objectForKey:@"Start"];
     } else if ([identifier isEqualToString:@"SizeCell"]) {
@@ -124,9 +151,40 @@
     return nil;
 }
 
-- (void)tableView:(NSTableView *)tableView setObjectValue:(id)anObject forTableColumn:(NSTableColumn *)aTableColumn row:(NSInteger)rowIndex
+- (void)tableView:(NSTableView *)tableView setObjectValue:(id)anObject forTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
+    // Group our "model" object, which is a dictionary
+    NSMutableDictionary *dictionary = [_tableContents objectAtIndex:(NSUInteger)row];
     
+    // In IB the tableColumn has the identifier set to the same string as the keys in our dictionary
+    NSString *identifier = [tableColumn identifier];
+    
+    if ([identifier isEqualToString:@"PartitionTypeCell"])
+    {
+        int index = [anObject intValue] - 1;
+
+        [dictionary setObject:[partitionTypes objectAtIndex:index] forKey:@"Name"];
+        [dictionary setObject:[[NSNumber numberWithInt:partitionSize[index]] stringValue] forKey:@"Size"];
+        
+        free((void *)parts[row].name);
+        parts[row].name = strdup([[partitionTypes objectAtIndex:index] cStringUsingEncoding:NSASCIIStringEncoding]);
+        parts[row].size = partitionSize[index];
+        [self updateStarts];
+        [self updateDictionary];
+        [_tableView reloadData];        
+    }
+    else if ([identifier isEqualToString:@"DescriptionCell"])
+    {
+        const char *description = [anObject cStringUsingEncoding:NSASCIIStringEncoding];
+        size_t len = description ? strlen(description) : 0;
+        
+        if (description)
+            strcpy(parts[row].label, description);
+        
+        for (size_t i = len; i < 16; i++)
+            parts[row].label[i] = ' ';
+        [self updateDictionary];
+    }
 }
 
 static int isloadband(const char *name)
@@ -198,7 +256,7 @@ static int ismcrband(const char *name)
         for (NSInteger i = (NSInteger)part_count - 1; i >= row; i--)
             parts[i + 1] = parts[i];
 
-        parts[row].name = "PART";
+        parts[row].name = "LOD1";
         parts[row].filename = 0;
         parts[row].size = 200;
         parts[row].start = 0;
@@ -242,12 +300,6 @@ static int ismcrband(const char *name)
     {
         
     }
-#if 0
-    if (col < 5)
-    {
-        [sender editColumn:col row:row withEvent:nil select:YES];
-    }
-#endif
 }
 
 - (IBAction)dismissWindow:(id)sender

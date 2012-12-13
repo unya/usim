@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <signal.h>
+#include <string.h>
 
 #if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
@@ -29,6 +30,8 @@
 #include "SDL/SDL.h"
 #endif
 #endif /* DISPLAY_SDL */
+
+#include "Files.h"
 
 int show_video_flag;
 int mouse_sync_flag;
@@ -47,6 +50,7 @@ extern int chaos_init(void);
 extern int ether_init(void);
 extern void iob_warm_boot_key(void);
 extern void run(void);
+extern int dcanon(char *cp, int blankok);
 
 struct timeval tv1;
 
@@ -138,6 +142,9 @@ usage(void)
 	fprintf(stderr, "-n		run with no SDL video window\n");
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
+#if defined(OSX) || defined(linux)
+	fprintf(stderr, "-r		map /tree to ../../lisp\n");
+#endif
 	fprintf(stderr, "-t		turn on microcode tracing\n");
 	fprintf(stderr, "-T<flags>	turn on tracing\n");
 	fprintf(stderr, "   d - disk\n");
@@ -167,8 +174,8 @@ main(int argc, char *argv[])
 	show_video_flag = 1;
 	mouse_sync_flag = 1;
 
-	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:tT:sSw")) != -1) {
-		switch (c) {
+	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:rtT:sSw")) != -1) {
+		switch (c) { 
 		case 'a':
 			alt_prom_flag = 1;
 			break;
@@ -205,6 +212,23 @@ main(int argc, char *argv[])
 		case 'q':
 			breakpoint_set_count(atoi(optarg));
 			break;
+#if defined(MAP_SITE_TREE_DIRECTORY)
+		case 'r':
+			{			
+				char *p = "../../lisp";
+				char *newpath = malloc(strlen(argv[0]) + strlen(p) + 2);
+				char *q = &argv[0][strlen(argv[0])];
+				
+				while (*q != '/') q--;
+				*(q+1) = '\0';
+				strcpy(newpath, argv[0]);
+				strcat(newpath, p);
+				dcanon(newpath, 0);
+				settreeroot(newpath);
+				free(newpath);
+			}
+			break;
+#endif
 		case 'S':
 			save_state_flag = 1;
 			break;

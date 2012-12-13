@@ -7,6 +7,7 @@
 //
 
 #import "AppController.h"
+#include "Files.h"
 
 @implementation AppController
 
@@ -44,6 +45,7 @@
 
         sourceFolderURL = [sourceFolder retain];
         [sourceFolderURL startAccessingSecurityScopedResource];
+        settreeroot([[sourceFolderURL path] fileSystemRepresentation]);
     }
 }
 

@@ -69,7 +69,36 @@
 #define CDR_NIL         02
 #define CDR_NEXT        03
 
+#define IS_QDTP_TYPE(o, type) ((o & QDTP_MASK) == type << QDTP_SHIFT)
+
+#define QDTP_HEADER_SHIFT		19
+#define QDTP_HEADER_MASK		(0x1f << QDTP_HEADER_SHIFT)
+
+#define IS_HEADER_TYPE(o, type) ((o & QDTP_HEADER_MASK) == type << QDTP_HEADER_SHIFT)
+
+static inline int fixnump(unsigned int o) { return IS_QDTP_TYPE(o, DTP_FIX); }
 static inline int fixnum(unsigned int o) { return (int)((o & QPOINTER_MASK) << 8) >> 8; }
+//static inline int characterp(unsigned int o) { return IS_QDTP_TYPE(o, DTP_CHARACTER); }
+//static inline int character(unsigned int o) { return o & 0xFF; }
+static inline int shortfloatp(unsigned int o) { return IS_QDTP_TYPE(o, DTP_SMALL_FLONUM); }
+static inline float shortfloat(unsigned int o) { unsigned int intermediate = (o & QPOINTER_MASK) << 7; return *(float *)&intermediate; }
+
+static inline int consp(unsigned int o) { return IS_QDTP_TYPE(o, DTP_LIST); }
+
+struct symbol
+{
+	unsigned int name;
+	unsigned int value;
+	unsigned int function;
+	unsigned int plist;
+	unsigned int package;
+	unsigned int setFunction;
+	unsigned int flags;
+};
+
+static inline int symbolp(unsigned int o) { return IS_QDTP_TYPE(o, DTP_SYMBOL); }
+static inline struct symbol *symbol(unsigned int o) { return (struct symbol *)((o & QPOINTER_MASK) << 2); }
+
 
 void print_cell(unsigned int cell);
 

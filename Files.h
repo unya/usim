@@ -163,3 +163,5 @@ extern int globerr;			/* Error return from glob() */
 #if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #define BSD42
 #endif
+
+void settreeroot(const char *root);

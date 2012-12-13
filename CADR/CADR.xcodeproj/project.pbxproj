@@ -65,6 +65,7 @@
 		DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658521665EEC800755138 /* ucadr.sym.841 */; };
 		DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658531665EEC800755138 /* ucadr.sym.979 */; };
 		DD73006E16671C8300706ED9 /* cadr icon.icns in Resources */ = {isa = PBXBuildFile; fileRef = DD73006D16671C8300706ED9 /* cadr icon.icns */; };
+		DDA39C211671AF840079DDDF /* CADR_profile.provisionprofile in Resources */ = {isa = PBXBuildFile; fileRef = DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -166,6 +167,8 @@
 		DD3658631665F0A600755138 /* decode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = decode.h; path = ../../decode.h; sourceTree = "<group>"; };
 		DD3658641665F0A600755138 /* keyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = keyboard.h; path = ../../keyboard.h; sourceTree = "<group>"; };
 		DD73006D16671C8300706ED9 /* cadr icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "cadr icon.icns"; sourceTree = SOURCE_ROOT; };
+		DDA39C17166EFC2A0079DDDF /* CADR.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = CADR.entitlements; sourceTree = "<group>"; };
+		DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */ = {isa = PBXFileReference; lastKnownFileType = file; path = CADR_profile.provisionprofile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -232,9 +235,9 @@
 		DD308CD61665E6A000361F6D /* CADR */ = {
 			isa = PBXGroup;
 			children = (
+				DDA39C17166EFC2A0079DDDF /* CADR.entitlements */,
+				DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */,
 				DD36580B1665EAC000755138 /* cadrAppDelegate.m */,
-				DD36580C1665EAC000755138 /* CreateDisk.xib */,
-				DD36580D1665EAC000755138 /* diskutil.m */,
 				DD36580E1665EAC000755138 /* DebuggerController.m */,
 				DD36580F1665EAC000755138 /* AppController.h */,
 				DD3658101665EAC000755138 /* AppController.m */,
@@ -246,6 +249,7 @@
 				DD3658161665EAC000755138 /* cadrAppDelegate.h */,
 				DD3658171665EAC000755138 /* CreateDiskController.h */,
 				DD3658181665EAC000755138 /* CreateDiskController.m */,
+				DD36580C1665EAC000755138 /* CreateDisk.xib */,
 				DD3658191665EAC000755138 /* DataTypes.c */,
 				DD36581A1665EAC000755138 /* DataTypes.h */,
 				DD36581B1665EAC000755138 /* Debugger.xib */,
@@ -254,19 +258,20 @@
 				DD36581E1665EAC000755138 /* DebugSettingsController.h */,
 				DD36581F1665EAC000755138 /* DebugSettingsController.m */,
 				DD3658201665EAC000755138 /* diskutil.h */,
+				DD36580D1665EAC000755138 /* diskutil.m */,
 				DD3658211665EAC000755138 /* macro.png */,
 				DD3658231665EAC000755138 /* micro.png */,
+				DD3658271665EAC000755138 /* pause.png */,
+				DD3658281665EAC000755138 /* play.png */,
+				DD36582E1665EAC000755138 /* step.png */,
 				DD3658241665EAC000755138 /* Partitions.xib */,
 				DD3658251665EAC000755138 /* PartitionViewController.h */,
 				DD3658261665EAC000755138 /* PartitionViewController.m */,
-				DD3658271665EAC000755138 /* pause.png */,
-				DD3658281665EAC000755138 /* play.png */,
 				DD3658291665EAC000755138 /* PreferenceController.h */,
 				DD36582A1665EAC000755138 /* PreferenceController.m */,
 				DD36582B1665EAC000755138 /* Preferences.xib */,
 				DD36582C1665EAC000755138 /* SimView.h */,
 				DD36582D1665EAC000755138 /* SimView.m */,
-				DD36582E1665EAC000755138 /* step.png */,
 				DD308D041665E71F00361F6D /* chaos.c */,
 				DD308D051665E71F00361F6D /* chaos.h */,
 				DD308D061665E71F00361F6D /* ether.c */,
@@ -446,6 +451,7 @@
 				DD36585F1665EEC800755138 /* ucadr.sym.841 in Resources */,
 				DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */,
 				DD73006E16671C8300706ED9 /* cadr icon.icns in Resources */,
+				DDA39C211671AF840079DDDF /* CADR_profile.provisionprofile in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -617,15 +623,19 @@
 		DD308CFF1665E6A000361F6D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CADR/CADR.entitlements;
+				CODE_SIGN_IDENTITY = "Mac Developer: Greg Gilley (HW2UG2Q7MX)";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"DISPLAY_OSX=1",
+					"MAP_SITE_TREE_DIRECTORY=1",
 				);
 				INFOPLIST_FILE = "CADR/CADR-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -633,12 +643,18 @@
 		DD308D001665E6A000361F6D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CADR/CADR.entitlements;
+				CODE_SIGN_IDENTITY = "Mac Developer: Greg Gilley (HW2UG2Q7MX)";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = "DISPLAY_OSX=1";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DISPLAY_OSX=1",
+					"MAP_SITE_TREE_DIRECTORY=1",
+				);
 				INFOPLIST_FILE = "CADR/CADR-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

@@ -751,7 +751,7 @@ copyblk(register char **v)
     register char **nv = (char **)malloc((size_t)(((size_t)blklen(v) + 1) *
                                                     sizeof(char **)));
     if (nv == (char **)0)
-        fatal(NOMEM);
+        return 0;
     
     register char **av = v;
     
@@ -762,6 +762,8 @@ copyblk(register char **v)
         while (*av)
         {
             *bv = malloc(strlen(*av) + 1);
+            if (*bv == 0)
+                return 0;
             strcpy(*bv, *av);
             av++;
             bv++;

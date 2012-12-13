@@ -90,7 +90,7 @@
 #include <sys/statvfs.h>
 #endif
 
-#define TRUNCATE_DATES  1
+#define TRUNCATE_DATES  0
 
 #define CHSP	(040)
 #define CHNL	(0200|015)
@@ -668,7 +668,19 @@ void from_lispm(register struct xfer *x);
 void processdata(chaos_connection *conn);
 void processmini(chaos_connection *conn);
 
+#if defined(MAP_SITE_TREE_DIRECTORY)
+static char *treeroot;
 
+void
+settreeroot(const char *root)
+{
+    treeroot = strdup(root);
+    if (treeroot[strlen(treeroot)] == '/')
+        treeroot[strlen(treeroot)] = '\0';
+    
+    printf("settreeroot: '%s'\n", treeroot);
+}
+#endif
 
 static void
 dumpbuffer(u_char *buf, ssize_t cnt)
@@ -805,7 +817,10 @@ getwork(chaos_connection *conn)
         
         packet = chaos_connection_dequeue(conn);
         if (packet == 0)
+        {
+            tfree(t);
             return NULL;
+        }
 
         t->t_packet = packet;
         t->t_connection = conn;
@@ -2466,6 +2481,12 @@ xcommand(register struct transaction *t)
 	} else {
         xqueue(t, x);
 //	    (*t->t_command->c_func)(x, t);
+
+        // we may have a packet stuck waiting to transmit
+        // force the transmit window to close and tickle the connection
+        if ((t->t_command->c_func == fileclose || t->t_command->c_func == filepos) && x->x_options & O_READ)
+            chaos_interrupt_connection(x->x_fh->f_connection);
+        
 #if defined(OSX)
 	    dispatch_semaphore_signal(x->x_hangsem);
 #else
@@ -2577,17 +2598,12 @@ fileclose(register struct xfer *x, register struct transaction *t)
 	(void)signal(SIGHUP, SIG_IGN);
 #endif
 
-    // we may have a packet stuck waiting to transmit
-    // force the transmit window to close and tickle the connection
-    if (x->x_options & O_READ)
-        chaos_interrupt_connection(x->x_fh->f_connection);
-
 #if defined(OSX)
-	dispatch_semaphore_signal(x->x_hangsem);
+    dispatch_semaphore_signal(x->x_hangsem);
 #else
-	pthread_mutex_lock(&x->x_hangsem);
-	pthread_cond_signal(&x->x_hangcond);
-	pthread_mutex_unlock(&x->x_hangsem);
+    pthread_mutex_lock(&x->x_hangsem);
+    pthread_cond_signal(&x->x_hangcond);
+    pthread_mutex_unlock(&x->x_hangsem);
 #endif
 }
 
@@ -4110,6 +4126,7 @@ parsepath(register char *path, char **dir, char **real, int blankok)
     register char *cp;
     int errcode;
     char *wd, save;
+    int freewd = 0;
     
     if (path == 0) {
         errstring = "Empty pathname";
@@ -4142,7 +4159,24 @@ parsepath(register char *path, char **dir, char **real, int blankok)
         while (*path == '/')
             path++;
     } else if (*path == '/')
+    {
+#if defined(MAP_SITE_TREE_DIRECTORY)
+        if (treeroot == NULL || path[0] != '/' || tolower(path[1]) != 't' || tolower(path[2]) != 'r' ||
+            tolower(path[3]) != 'e' || tolower(path[4]) != 'e' || (path[5] != '/' && path[5] != '\0'))
+            wd = "";
+        else
+        {
+            size_t newlength = strlen(treeroot) + strlen(path);
+            
+            wd = malloc(newlength);
+            strcpy(wd, treeroot);
+            path += 6;
+            freewd = 1;
+        }
+#else // !MAP_SITE_TREE_DIRECTORY
         wd = "";
+#endif
+    }
     else if ((wd = cwd) == NOSTR) {
         errstring = "Relative pathname when no working directory";
         return IPS;
@@ -4154,6 +4188,8 @@ parsepath(register char *path, char **dir, char **real, int blankok)
             (void)strcat(cp, "/");
         (void)strcat(cp, path);
         if ((errcode = dcanon(cp, blankok))) {
+            if (freewd)
+                free(wd);
             (void)free(cp);
             return errcode;
         }
@@ -4175,6 +4211,9 @@ parsepath(register char *path, char **dir, char **real, int blankok)
     }
     else
         fatal("Parsepath");
+    
+    if (freewd)
+        free(wd);
     return 0;
 }
 
@@ -4191,7 +4230,7 @@ dcanon(char *cp, int blankok)
     register int slash;
     
     if (*cp != '/')
-        fatal("dcanon");
+        return 0;
     for (p = cp; *p; ) {		/* for each component */
         sp = p;			/* save slash address */
         while(*++p == '/')	/* flush extra slashes */
@@ -4962,6 +5001,7 @@ int
 startxfer(struct xfer *ax)
 {
     pthread_create(&startxfer_thread, NULL, _startxfer, (void *)ax);
+    return 0;
 }
 
 #endif // defined(OSX)
@@ -5022,6 +5062,9 @@ processmini(chaos_connection *conn)
         char tbuf[20];
         struct stat sbuf;
         struct tm *ptm;
+        char *dirname;
+        char *realname;
+        int errcode;
                 
         for (;;) {
             
@@ -5036,18 +5079,34 @@ processmini(chaos_connection *conn)
 
                     packet->data[packet->length] = '\0';
                     printf("MINI: op %o %s\n", packet->opcode, packet->data);
-                    if ((fd = open((char *)packet->data, O_RDONLY)) < 0) {
+                    dirname = 0;
+                    realname = 0;
+                    if ((errcode = parsepath((char *)packet->data, &dirname, &realname, 0)) != 0)
+                    {
                         output->opcode = 0203 << 8;
                         printf("MINI: open failed %s\n", strerror(errno));
                         chaos_connection_queue(conn, output);
                         continue;
+                    }
+                    if ((fd = open(realname, O_RDONLY)) < 0) {
+                        output->opcode = 0203 << 8;
+                        printf("MINI: open failed %s\n", strerror(errno));
+                        chaos_connection_queue(conn, output);
+                        if (dirname)
+                            free(dirname);
+                        if (realname)
+                            free(realname);
+                        continue;
                     } else {
+                        if (dirname)
+                            free(dirname);
+                        if (realname)
+                            free(realname);
                         output->opcode = 0202 << 8;
                         fstat(fd, &sbuf);
                         ptm = localtime(&sbuf.st_mtime);
                         strftime(tbuf, sizeof(tbuf), "%D %T", ptm);
-                        length = sprintf((char *)output->data, "%s%c%s",
-                                         packet->data, 0215, tbuf);
+                        length = sprintf((char *)output->data, "%s%c%s", packet->data, 0215, tbuf);
                         output->length = (unsigned short)length;
                         chaos_connection_queue(conn, output);
                         binary = (packet->opcode >> 8) & 1;
@@ -5085,75 +5144,94 @@ processmini(chaos_connection *conn)
 #else // !defined(OSX)
 
 void *
-_processmini(void *vconn)
+_processmini(void *conn)
 {
     printf("processmini:\n");
     
-        int binary = 0;
-        chaos_packet *packet;
-        chaos_packet *output;
-        int length, fd;
-        char tbuf[20];
-        struct stat sbuf;
-        struct tm *ptm;
-	chaos_connection *conn = (chaos_connection *)vconn;
+    int binary = 0;
+    chaos_packet *packet;
+    chaos_packet *output;
+    ssize_t length;
+    int fd;
+    char tbuf[20];
+    struct stat sbuf;
+    struct tm *ptm;
+    char *dirname;
+    char *realname;
+    int errcode;
+    
+    for (;;) {
+        
+        packet = chaos_connection_dequeue(conn);
+        if (packet == 0)
+            break;
+        
+        switch (packet->opcode >> 8) {
+            case 0200:
+            case 0201:
+                output = chaos_allocate_packet(conn, DWDOP, CHMAXDATA);
                 
-        for (;;) {
-            
-            packet = chaos_connection_dequeue(conn);
-            if (packet == 0)
-                break;
-
-            switch (packet->opcode >> 8) {
-                case 0200:
-                case 0201:
-                    output = chaos_allocate_packet(conn, DWDOP, CHMAXDATA);
-
-                    packet->data[packet->length] = '\0';
-                    printf("MINI: op %o %s\n", packet->opcode, packet->data);
-                    if ((fd = open((char *)packet->data, O_RDONLY)) < 0) {
-                        output->opcode = 0203 << 8;
-                        printf("MINI: open failed %s\n", strerror(errno));
-                        chaos_connection_queue(conn, output);
-                        continue;
-                    } else {
-                        output->opcode = 0202 << 8;
-                        fstat(fd, &sbuf);
-                        ptm = localtime(&sbuf.st_mtime);
-                        strftime(tbuf, sizeof(tbuf), "%D %T", ptm);
-                        length = sprintf((char *)output->data, "%s%c%s",
-                                         packet->data, 0215, tbuf);
-                        output->length = (unsigned short)length;
-                        chaos_connection_queue(conn, output);
-                        binary = (packet->opcode >> 8) & 1;
-                        log(LOG_INFO, "MINI: binary = %d\n", binary);
-                    }
-                    free(packet);
-
-                    do {
-                        char buffer[CHMAXDATA];
-                        
-                        length = read(fd, buffer, CHMAXDATA);
-                        /*log(LOG_INFO, "MINI: read %d\n", length);*/
-                        if (length == 0)
-                            break;
-                        output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
-                        memcpy(output->data, buffer, length);
-                        if (binary == 0)
-                            buffer_to_lispm((unsigned char *)output->data, length);
-                        chaos_connection_queue(conn, output);
-                     } while (length > 0);
-                    
-                    printf("MINI: before eof\n");
-                    output = chaos_allocate_packet(conn, EOFOP, 0);
+                packet->data[packet->length] = '\0';
+                printf("MINI: op %o %s\n", packet->opcode, packet->data);
+                dirname = 0;
+                realname = 0;
+                if ((errcode = parsepath((char *)packet->data, &dirname, &realname, 0)) != 0)
+                {
+                    output->opcode = 0203 << 8;
+                    printf("MINI: open failed %s\n", strerror(errno));
                     chaos_connection_queue(conn, output);
-                    close(fd);
-                    break;
-                default:
-                    log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
-                    break;
-            }
+                    continue;
+                }
+                if ((fd = open(realname, O_RDONLY)) < 0) {
+                    output->opcode = 0203 << 8;
+                    printf("MINI: open failed %s\n", strerror(errno));
+                    chaos_connection_queue(conn, output);
+                    if (dirname)
+                        free(dirname);
+                    if (realname)
+                        free(realname);
+                    continue;
+                } else {
+                    if (dirname)
+                        free(dirname);
+                    if (realname)
+                        free(realname);
+                    output->opcode = 0202 << 8;
+                    fstat(fd, &sbuf);
+                    ptm = localtime(&sbuf.st_mtime);
+                    strftime(tbuf, sizeof(tbuf), "%D %T", ptm);
+                    length = sprintf((char *)output->data, "%s%c%s", packet->data, 0215, tbuf);
+                    output->length = (unsigned short)length;
+                    chaos_connection_queue(conn, output);
+                    binary = (packet->opcode >> 8) & 1;
+                    log(LOG_INFO, "MINI: binary = %d\n", binary);
+                }
+                free(packet);
+                
+                do {
+                    char buffer[CHMAXDATA];
+                    
+                    length = read(fd, buffer, CHMAXDATA);
+                    /*log(LOG_INFO, "MINI: read %d\n", length);*/
+                    if (length == 0)
+                        break;
+                    output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
+                    memcpy(output->data, buffer, length);
+                    if (binary == 0)
+                        buffer_to_lispm((unsigned char *)output->data, length);
+                    chaos_connection_queue(conn, output);
+                } while (length > 0);
+                
+                printf("MINI: before eof\n");
+                output = chaos_allocate_packet(conn, EOFOP, 0);
+                chaos_connection_queue(conn, output);
+                close(fd);
+                break;
+            default:
+                log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
+                break;
         }
+    }
 }
 
 static pthread_t processmini_thread;

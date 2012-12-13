@@ -22,6 +22,7 @@
 #include "chaos.h"
 //#include "ether.h"
 #include "diskutil.h"
+#include "Files.h"
 
 @implementation cadrAppDelegate
 
@@ -458,6 +459,7 @@ int read_sym_files_from_resources(void)
                 
                 sourceFolderURL = [bookmarkFileURL retain];
                 [sourceFolderURL startAccessingSecurityScopedResource];
+                settreeroot([[sourceFolderURL path] fileSystemRepresentation]);
 //            [sourceFolderURL stopAccessingSecurityScopedResource];
             }
         }
