@@ -402,7 +402,9 @@ static int misc_inst_vector[1024];
 static int misc_inst_vector_setup;
 
 void
-disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst)
+disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
+	unsigned int width)
+
 {
 	int op, dest, reg, delta, adr;
 	int to;
@@ -434,18 +436,21 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst)
 		{
 			unsigned int v, tag;
 			v = get(fefptr + delta);
-			tag = (v >> 24) & 077;
+			tag = (v >> width) & 037;
 			if (0) printf("(tag%o %o) ", tag, v);
 			switch (tag) {
 			case 3:
 				v = get(v);
 				showstr(v, 0);
 				break;
+			case 4:
+				showstr(v, 0);
+				break;
 			case 027:
 				break;
 			default:
 				v = get(v);
-				show_fef_func_name( v );
+				show_fef_func_name( v , width);
 			}
 		}
 //		nlc = (loc*2 + (even?0:1)) + delta;
