@@ -188,7 +188,7 @@ get_us_clock_low(void)
 unsigned int
 get_us_clock_high(void)
 {
-	return cv >> 16;
+	return (unsigned int)(cv >> 16);
 }
 
 unsigned int get_60hz_clock(void)

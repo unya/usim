@@ -128,7 +128,7 @@ _sym_find(struct symtab_s *tab, char *name, int *pval)
 int 
 _sym_read_file(struct symtab_s *tab, const char *filename)
 {
-	int first = 1;
+	int first = 0;
 	FILE *f;
 	char line[8*1024];
 

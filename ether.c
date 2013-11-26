@@ -183,7 +183,7 @@ ether_poll(void)
 		    if (status & ETHER_DESC_TX_READY) {
 			len = (size_t) descs.desc_structs[i].len;
 			ptr = descs.desc_structs[i].ptr;
-			words = (len + 3) >> 2;
+			words = (int)((len + 3) >> 2);
 			for (j = 0; j < words; j++) {
 			    read_phy_mem(ptr + j, &packet[j]);
 			}
@@ -221,7 +221,7 @@ ether_poll(void)
 
 			ptr = descs.desc_structs[i].ptr;
 			descs.desc_structs[i].len = (uint16_t) len;
-			words = (len + 3) >> 2;
+			words = (int)((len + 3) >> 2);
 			for (j = 0; j < words; j++) {
 			    write_phy_mem(ptr + j, packet[j]);
 			}

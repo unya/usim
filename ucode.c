@@ -1978,6 +1978,9 @@ run(void)
 {
 	int trace_pt_prom, trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
+    ucw_t p1 = 0;
+    int p0_pc = 0, p1_pc= 0;
+    char no_exec_next = 0;
 
 	/* 2Mwords */
 	phys_ram_pages = 8192;
@@ -2002,7 +2005,6 @@ run(void)
 
 	while (run_ucode_flag) {
 		char op_code;
-		char no_exec_next;
 		char invert_sense, take_jump;
 		int a_src, m_src, new_pc, dest, alu_op;
 		int r_bit, p_bit, n_bit, ir8, ir7;
@@ -2020,8 +2022,6 @@ run(void)
 		unsigned int out_bus;
 		int64 lv;
 		ucw_t u, w;
-		ucw_t p1;
-		int p0_pc, p1_pc;
 #define p0 u
 
 		char n_plus1, enable_ish;
@@ -2029,7 +2029,7 @@ run(void)
 
 		if (cycles == 0) {
 			p0 = p1 = 0;
-			p0_pc = p1_pc = 0;
+			p1_pc = 0;
 			no_exec_next = 0;
 		}
 

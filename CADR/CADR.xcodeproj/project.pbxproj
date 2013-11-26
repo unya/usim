@@ -399,6 +399,11 @@
 			attributes = {
 				LastUpgradeCheck = 0450;
 				ORGANIZATIONNAME = "Greg Gilley";
+				TargetAttributes = {
+					DD308CCB1665E6A000361F6D = {
+						DevelopmentTeam = NU3PG23S53;
+					};
+				};
 			};
 			buildConfigurationList = DD308CC61665E6A000361F6D /* Build configuration list for PBXProject "CADR" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -624,7 +629,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CADR/CADR.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer: Greg Gilley (HW2UG2Q7MX)";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
@@ -644,7 +650,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CADR/CADR.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer: Greg Gilley (HW2UG2Q7MX)";
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";

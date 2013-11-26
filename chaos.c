@@ -818,7 +818,10 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
         pthread_mutex_unlock(&conn->queuelock);
 
         if (node)
+        {
             free(node);
+            node = 0;
+        }
         if (packet)
         {
             if (cmp_gt(packet->number, conn->lastreceived))

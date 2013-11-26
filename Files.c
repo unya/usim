@@ -1057,16 +1057,17 @@ parseargs(unsigned char *args, struct command *c, register struct transaction *t
                     for (o = options; o->o_name; o++)
                         if (strcmp(oname, o->o_name) == 0)
                             break;
-                    free(oname);
                     if (o->o_name == NOSTR) {
                         log(LOG_ERR, "FILE: UOO:'%s'\n",
                             oname);
                         (void)sprintf(errstring = errbuf,
                                       "Unknown open option: %s",
                                       oname);
+                        free(oname);
                         afree(a);
                         return UUO;
                     }
+                    free(oname);
                     switch (o->o_type) {
                         case O_BIT:
                             a->a_options |= o->o_value;
@@ -2031,7 +2032,7 @@ openerr:
 		error(t, f != FNULL ? f->f_name : "", errcode);
 	if (dirname)
 		free(dirname);
-	if (realname)
+    if (!(foptions & O_PROBEDIR) && realname)
 		free(realname);
 	if (tempname)
 		free(tempname);
@@ -3635,35 +3636,37 @@ chngprop(register struct transaction *t)
         register struct property *pp;
         register struct plist *plp;
     doit:
-        for (plp = t->t_args->a_plist; plp; plp = plp->p_next) {
-            for (pp = properties; pp->p_indicator; pp++)
-                if (strcmp(pp->p_indicator, plp->p_name) == 0) {
-                    if (pp->p_put)
-                        if ((errcode =
-                             (*pp->p_put)
-                             (&sbuf, file,
-                              plp->p_value, x))) {
-                                 error(t,
-                                       fhname, errcode);
-                                 return;
-                             } else
-                                 break;
-                        else {
-                            errstring = errbuf;
-                            (void)sprintf(errstring,
-                                          "No a changeable property: %s",
-                                          plp->p_name);
-                            error(t, fhname, CSP);
-                            return;
-                        }
+        if (t->t_args) {
+            for (plp = t->t_args->a_plist; plp; plp = plp->p_next) {
+                for (pp = properties; pp->p_indicator; pp++)
+                    if (strcmp(pp->p_indicator, plp->p_name) == 0) {
+                        if (pp->p_put)
+                            if ((errcode =
+                                 (*pp->p_put)
+                                 (&sbuf, file,
+                                  plp->p_value, x))) {
+                                     error(t,
+                                           fhname, errcode);
+                                     return;
+                                 } else
+                                     break;
+                            else {
+                                errstring = errbuf;
+                                (void)sprintf(errstring,
+                                              "No a changeable property: %s",
+                                              plp->p_name);
+                                error(t, fhname, CSP);
+                                return;
+                            }
+                    }
+                if (pp->p_indicator == NOSTR) {
+                    (void)sprintf(errbuf,
+                                  "Unknown property name: %s",
+                                  plp->p_name);
+                    errstring = errbuf;
+                    error(t, fhname, UKP);
+                    return;
                 }
-            if (pp->p_indicator == NOSTR) {
-                (void)sprintf(errbuf,
-                              "Unknown property name: %s",
-                              plp->p_name);
-                errstring = errbuf;
-                error(t, fhname, UKP);
-                return;
             }
         }
         respond(t, NOSTR);
@@ -4497,7 +4500,7 @@ dowork(register struct xfer *x)
                         register char *from = x->x_bptr;
                         register char *to = x->x_pptr;
                         
-                        n = MIN(x->x_room, x->x_left);
+                        n = MIN(x->x_room, (int)x->x_left);
                         x->x_left -= n;
                         x->x_room -= n;
                         do *to++ = *from++; while (--n);
@@ -4612,7 +4615,7 @@ dowork(register struct xfer *x)
                         register char *from = x->x_pptr;
                         register char *to = x->x_bptr;
                         
-                        n = MIN(x->x_left, x->x_room);
+                        n = MIN((int)x->x_left, x->x_room);
                         x->x_left -= n;
                         x->x_room -= n;
                         do *to++ = *from++; while (--n);
@@ -4859,6 +4862,7 @@ loop:
             log(LOG_ERR, "FILE: bad opcode in data connection: %d\n",
                 x->x_op & 0377);
             free(packet);
+            packet = 0;
             fatal("Bad opcode on data connection");
             /* NOTREACHED */
     }

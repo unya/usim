@@ -763,7 +763,10 @@ copyblk(register char **v)
         {
             *bv = malloc(strlen(*av) + 1);
             if (*bv == 0)
+            {
+                free(nv);
                 return 0;
+            }
             strcpy(*bv, *av);
             av++;
             bv++;
