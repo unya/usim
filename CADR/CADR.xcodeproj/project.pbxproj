@@ -66,6 +66,10 @@
 		DD3658601665EEC800755138 /* ucadr.sym.979 in Resources */ = {isa = PBXBuildFile; fileRef = DD3658531665EEC800755138 /* ucadr.sym.979 */; };
 		DD73006E16671C8300706ED9 /* cadr icon.icns in Resources */ = {isa = PBXBuildFile; fileRef = DD73006D16671C8300706ED9 /* cadr icon.icns */; };
 		DDA39C211671AF840079DDDF /* CADR_profile.provisionprofile in Resources */ = {isa = PBXBuildFile; fileRef = DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */; };
+		DDD7ED9E18AC8A95005E0364 /* File.sys99 in Resources */ = {isa = PBXBuildFile; fileRef = DDD7ED9A18AC8A94005E0364 /* File.sys99 */; };
+		DDD7ED9F18AC8A95005E0364 /* partition-78.48-LOD1 in Resources */ = {isa = PBXBuildFile; fileRef = DDD7ED9B18AC8A94005E0364 /* partition-78.48-LOD1 */; };
+		DDD7EDA018AC8A95005E0364 /* partition-78.50-LOD1 in Resources */ = {isa = PBXBuildFile; fileRef = DDD7ED9C18AC8A94005E0364 /* partition-78.50-LOD1 */; };
+		DDD7EDA118AC8A95005E0364 /* partition-sys210-LOD2 in Resources */ = {isa = PBXBuildFile; fileRef = DDD7ED9D18AC8A94005E0364 /* partition-sys210-LOD2 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -169,6 +173,10 @@
 		DD73006D16671C8300706ED9 /* cadr icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "cadr icon.icns"; sourceTree = SOURCE_ROOT; };
 		DDA39C17166EFC2A0079DDDF /* CADR.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = CADR.entitlements; sourceTree = "<group>"; };
 		DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */ = {isa = PBXFileReference; lastKnownFileType = file; path = CADR_profile.provisionprofile; sourceTree = "<group>"; };
+		DDD7ED9A18AC8A94005E0364 /* File.sys99 */ = {isa = PBXFileReference; lastKnownFileType = file; name = File.sys99; path = ../File.sys99; sourceTree = "<group>"; };
+		DDD7ED9B18AC8A94005E0364 /* partition-78.48-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.48-LOD1"; path = "../partition-78.48-LOD1"; sourceTree = "<group>"; };
+		DDD7ED9C18AC8A94005E0364 /* partition-78.50-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.50-LOD1"; path = "../partition-78.50-LOD1"; sourceTree = "<group>"; };
+		DDD7ED9D18AC8A94005E0364 /* partition-sys210-LOD2 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-sys210-LOD2"; path = "../partition-sys210-LOD2"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +203,10 @@
 		DD308CC11665E6A000361F6D = {
 			isa = PBXGroup;
 			children = (
+				DDD7ED9A18AC8A94005E0364 /* File.sys99 */,
+				DDD7ED9B18AC8A94005E0364 /* partition-78.48-LOD1 */,
+				DDD7ED9C18AC8A94005E0364 /* partition-78.50-LOD1 */,
+				DDD7ED9D18AC8A94005E0364 /* partition-sys210-LOD2 */,
 				DD3658611665EED400755138 /* proms */,
 				DD308CD61665E6A000361F6D /* CADR */,
 				DD308CF31665E6A000361F6D /* CADRTests */,
@@ -428,6 +440,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DDD7ED9E18AC8A95005E0364 /* File.sys99 in Resources */,
+				DDD7ED9F18AC8A95005E0364 /* partition-78.48-LOD1 in Resources */,
+				DDD7EDA018AC8A95005E0364 /* partition-78.50-LOD1 in Resources */,
+				DDD7EDA118AC8A95005E0364 /* partition-sys210-LOD2 in Resources */,
 				DD308CDB1665E6A000361F6D /* InfoPlist.strings in Resources */,
 				DD308CE11665E6A000361F6D /* Credits.rtf in Resources */,
 				DD308CE71665E6A000361F6D /* MainMenu.xib in Resources */,
