@@ -173,10 +173,10 @@
 		DD73006D16671C8300706ED9 /* cadr icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "cadr icon.icns"; sourceTree = SOURCE_ROOT; };
 		DDA39C17166EFC2A0079DDDF /* CADR.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = CADR.entitlements; sourceTree = "<group>"; };
 		DDA39C201671AF840079DDDF /* CADR_profile.provisionprofile */ = {isa = PBXFileReference; lastKnownFileType = file; path = CADR_profile.provisionprofile; sourceTree = "<group>"; };
-		DDD7ED9A18AC8A94005E0364 /* File.sys99 */ = {isa = PBXFileReference; lastKnownFileType = file; name = File.sys99; path = ../File.sys99; sourceTree = "<group>"; };
-		DDD7ED9B18AC8A94005E0364 /* partition-78.48-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.48-LOD1"; path = "../partition-78.48-LOD1"; sourceTree = "<group>"; };
-		DDD7ED9C18AC8A94005E0364 /* partition-78.50-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.50-LOD1"; path = "../partition-78.50-LOD1"; sourceTree = "<group>"; };
-		DDD7ED9D18AC8A94005E0364 /* partition-sys210-LOD2 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-sys210-LOD2"; path = "../partition-sys210-LOD2"; sourceTree = "<group>"; };
+		DDD7ED9A18AC8A94005E0364 /* File.sys99 */ = {isa = PBXFileReference; lastKnownFileType = file; name = File.sys99; path = ../../bands/File.sys99; sourceTree = "<group>"; };
+		DDD7ED9B18AC8A94005E0364 /* partition-78.48-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.48-LOD1"; path = "../../bands/partition-78.48-LOD1"; sourceTree = "<group>"; };
+		DDD7ED9C18AC8A94005E0364 /* partition-78.50-LOD1 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-78.50-LOD1"; path = "../../bands/partition-78.50-LOD1"; sourceTree = "<group>"; };
+		DDD7ED9D18AC8A94005E0364 /* partition-sys210-LOD2 */ = {isa = PBXFileReference; lastKnownFileType = file; name = "partition-sys210-LOD2"; path = "../../bands/partition-sys210-LOD2"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
