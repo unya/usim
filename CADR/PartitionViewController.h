@@ -18,6 +18,7 @@
 
 - (IBAction)setDefault:(id)sender;
 - (IBAction)extractPartition:(id)sender;
+- (IBAction)importPartition:(id)sender;
 - (IBAction)dismissWindow:(id)sender;
 
 - (void) setFilename:(NSString *)filename;

@@ -691,7 +691,7 @@ default_template(void)
 	part_count = 0;
 	add_partition("MCR1", 021,      0224,	0, "ucadr.mcr.841   ", [[mainBundle pathForResource:@"ucadr.mcr.841" ofType:nil] cStringUsingEncoding:NSASCIIStringEncoding]);
 	add_partition("MCR2", 0245,     0224,	0, "ucadr.mcr.979   ", [[mainBundle pathForResource:@"ucadr.mcr.979" ofType:nil] cStringUsingEncoding:NSASCIIStringEncoding]);
-    add_partition("MCR3", 0471,     0224,   0, "", NULL);
+    add_partition("MCR3", 0471,     0224,   0, "ucadr.mcr.843   ", [[mainBundle pathForResource:@"ucadr.mcr.843" ofType:nil] cStringUsingEncoding:NSASCIIStringEncoding]);
     add_partition("MCR4", 0715,     0224,   0, "", NULL);
 	add_partition("PAGE", 01141,	0100000,0, "", NULL);
 	add_partition("LOD1", 0101141,  061400,	0, "78.48           ", [[mainBundle pathForResource:@"partition-78.48-LOD1" ofType:nil] cStringUsingEncoding:NSASCIIStringEncoding]);
@@ -929,6 +929,94 @@ extract_partition(const char *filename, const char *extract_filename, const char
 }
 
 int
+import_partition(const char *filename, const char *import_filename, int row)
+{
+    ssize_t ret;
+	int fd, p, result;
+	unsigned int i, count, offset, size;
+    
+	result = -1;
+    
+	fd = open(filename, O_RDWR, 0666);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+    
+	ret = read(fd, buffer, 256*4);
+	if (ret != 256*4) {
+		perror(filename);
+		close(fd);
+		return -1;
+	}
+    
+#ifdef NEED_SWAP
+	/* don't swap the text */
+	_swaplongbytes(&buffer[0], 8);
+	_swaplongbytes(&buffer[0200], 128);
+#endif
+    
+	if (buffer[0] != str4("LABL")) {
+		fprintf(stderr, "%s: no valid disk label found\n", filename);
+		close(fd);
+		return -1;
+	}
+    
+	if (buffer[1] != 1) {
+		fprintf(stderr, "%s: label version not 1\n", filename);
+		close(fd);
+		return -1;
+	}
+    
+	cyls = buffer[2];		/* # cyls */
+	heads = buffer[3];		/* # heads */
+	blocks_per_track = buffer[4];	/* # blocks */
+    if (mcr_name)
+        free((void *)mcr_name);
+	mcr_name = strdup(unstr4(buffer[6]));	/* name of micr part */
+    if (lod_name)
+        free((void *)lod_name);
+	lod_name = strdup(unstr4(buffer[7]));	/* name of load part */
+    
+	count = buffer[0200];
+	size = buffer[0201];
+	p = 0202;
+    
+	part_count = 0;
+	for (i = 0; i < count; i++) {
+        char label[17];
+        
+        memcpy(&label[0], unstr4(buffer[p+3]), 4);
+        memcpy(&label[4], unstr4(buffer[p+4]), 4);
+        memcpy(&label[8], unstr4(buffer[p+5]), 4);
+        memcpy(&label[12], unstr4(buffer[p+6]), 4);
+        label[16] = '\0';
+		add_partition(strdup(unstr4(buffer[p+0])),
+                      buffer[p+1], buffer[p+2], 0, label,
+                      NULL);
+		
+		p += size;
+	}
+    
+	brand = strdup((char *)&buffer[010]);
+	text = strdup((char *)&buffer[020]);
+	comment = strdup((char *)&buffer[030]);
+    
+	offset = parts[row].start;
+    size = parts[row].size;
+    
+    free((void *)parts[row].filename);
+    parts[row].filename = strdup(import_filename);
+
+    printf("importing partition '%s' at %o from %s\n", parts[row].filename, offset, filename);
+
+    make_one_partition(fd, row);
+
+	close(fd);
+	return result;
+}
+
+int
 set_current_band(const char *filename, const char *partition_name)
 {
     int fd;
@@ -985,6 +1073,11 @@ set_current_mcr(const char *filename, const char *partition_name)
             if (mcr_name)
                 free((void *)mcr_name);
             mcr_name = strdup(parts[i].name);
+            if (comment)
+                free(comment);
+            comment = strdup(parts[i].label);
+            if (strchr(comment, ' '))
+                *strchr(comment, ' ') = '\0';
             found = 1;
             break;
         }

@@ -28,6 +28,7 @@ extern const char *mcr_name;
 extern const char *lod_name;
 
 int extract_partition(const char *filename, const char *extract_filename, const char *partition_name);
+int import_partition(const char *filename, const char *extract_filename, int row);
 int set_current_band(const char *filename, const char *partition_name);
 int set_current_mcr(const char *filename, const char *partition_name);
 int create_disk_image(const char *image_filename);

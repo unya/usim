@@ -339,13 +339,24 @@ int read_sym_files_from_resources(void)
     extern struct symtab_s sym_prom;
     extern struct symtab_s sym_mcr;
     NSBundle *mainBundle = [NSBundle mainBundle];
+    const char *mcrsym_filename = config_get_mcrsym_filename();
+    const char *promsym_filename = config_get_promsym_filename();
+    char *mcrsymver;
+    char *promsymver;
 
-    NSString* promname = [mainBundle pathForResource:@"promh.sym" ofType:@"9"];
+    mcrsymver = strrchr(mcrsym_filename, '.');
+    if (mcrsymver)
+        mcrsymver++;
+    promsymver = strrchr(promsym_filename, '.');
+    if (promsymver)
+        promsymver++;
+    
+    NSString* promname = [mainBundle pathForResource:@"promh.sym" ofType:(promsymver ? [NSString stringWithCString:promsymver encoding:NSASCIIStringEncoding] : @"9")];
 
 	_sym_read_file(&sym_prom, [promname cStringUsingEncoding:NSASCIIStringEncoding]);
 	_sym_sort(&sym_prom);
     
-    NSString* mcrname = [mainBundle pathForResource:@"ucadr.sym" ofType:@"841"];
+    NSString* mcrname = [mainBundle pathForResource:@"ucadr.sym" ofType:(mcrsymver ? [NSString stringWithCString:mcrsymver encoding:NSASCIIStringEncoding] : @"841")];
 
 	_sym_read_file(&sym_mcr, [mcrname cStringUsingEncoding:NSASCIIStringEncoding]);
 	_sym_sort(&sym_mcr);

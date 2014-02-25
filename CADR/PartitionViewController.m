@@ -183,6 +183,36 @@ static int ismcrband(const char *name)
     }
 }
 
+- (IBAction)importPartition:(id)sender
+{
+    NSInteger row = [_tableView selectedRow];
+    NSOpenPanel *panel	= [NSOpenPanel openPanel];
+    
+    [panel setDirectoryURL:[NSURL fileURLWithPath:diskFileName]];
+    if (ismcrband(parts[row].name))
+        [panel setAllowedFileTypes:@[@"mcr"]];
+    else
+        [panel setAllowedFileTypes:@[@"band"]];
+    [panel setAllowsOtherFileTypes:YES];
+    [panel setAllowsMultipleSelection:NO];
+    
+    if ([panel runModal] == NSOKButton)
+    {
+        import_partition([diskFileName cStringUsingEncoding:NSASCIIStringEncoding], [[[panel URL] path] fileSystemRepresentation], (int)row);
+        
+        NSError *error = NULL;
+        
+        if (ismcrband(parts[row].name))
+            [[panel URL] setResourceValue:@"com.cadr.mcr" forKey:NSURLTypeIdentifierKey error:&error];
+        else
+            [[panel URL] setResourceValue:@"com.cadr.band" forKey:NSURLTypeIdentifierKey error:&error];
+        
+        if (error)
+            NSLog(@"Error: %@\n", [error localizedDescription]);
+        
+    }
+}
+
 - (IBAction)dismissWindow:(id)sender
 {
     [[self window] orderOut:sender];
