@@ -11,6 +11,6 @@
 @interface PreferenceController : NSWindowController
 {
 
-    IBOutlet NSButton *checkbox;
+    IBOutlet NSButton *wideIntegers;
 }
 @end

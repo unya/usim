@@ -19,6 +19,7 @@
 int runpause = 1;
 int step = 0;
 int macromicro = 1;
+int wide_integer = 0;
 DebuggerController *debugger;
 
 @implementation DebuggerController
@@ -103,7 +104,7 @@ DebuggerController *debugger;
     {
         if (macromicro)
         {
-            char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst);
+            char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width);
             int read_mem_debug(int vaddr, unsigned int *pv);
             char *name = find_function_name(pc);
             unsigned int instr;
@@ -121,7 +122,7 @@ DebuggerController *debugger;
 
             if (pc & 2)
                 instr = instr >> 16;
-            decoded = disass(0, pc & 0377777777, 0, instr & 0xffff);
+            decoded = disass(0, pc & 0377777777, 0, instr & 0xffff, wide_integer ? 25 : 24);
             [instruction setStringValue:[NSString stringWithCString:decoded encoding:NSASCIIStringEncoding]];
             
         }

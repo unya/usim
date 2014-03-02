@@ -35,12 +35,19 @@
     [super windowDidLoad];
     
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
+    [wideIntegers setState:[[NSUserDefaults standardUserDefaults] boolForKey:@"WideIntegers"]];
 }
 
 -(IBAction)changeCheckbox:(id)sender
 {
-    NSInteger state = [checkbox state];
+    NSInteger state = [wideIntegers state];
+    extern int wide_integer;
 
-    NSLog(@"checkbox changed %ld", state);
+    [[NSUserDefaults standardUserDefaults] setBool:state forKey:@"WideIntegers"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    wide_integer = (int)state;
+
+    NSLog(@"wide integers changed %ld", state);
 }
 @end

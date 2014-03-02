@@ -437,6 +437,9 @@ int read_sym_files_from_resources(void)
         extern int trace_int_flag;
         extern int trace_late_set;
         extern int trace_after_flag;
+        extern int wide_integer;
+
+        wide_integer = [defaults boolForKey:@"WideIntegers"];
 
         trace = (int)[defaults integerForKey:@"Trace"];
         trace_mcr_labels_flag = (int)[defaults integerForKey:@"TraceMCRLabels"];
