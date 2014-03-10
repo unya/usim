@@ -1504,7 +1504,6 @@ undataconn(register struct transaction *t)
 		free((char *)f);
 		free(of->f_name);
 		free((char *)of);
-        t->t_fh = FNULL;
 	}
 }
 
