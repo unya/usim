@@ -1384,7 +1384,7 @@ chaos_init(void)
 static struct sockaddr_un unix_addr;
 
 chaos_packet *
-chaos_allocate_packet(chaos_connection *conn, int opcode, int len)
+chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len)
 {
     return 0;
 }
