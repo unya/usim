@@ -76,7 +76,11 @@ endif
 
 ifeq ($(DISPLAY), X11)
 LFLAGS = -m32
+ifeq ($(OS), LINUX)
+USIM_LIBS = -L/usr/lib/x86_64-linux-gnu -lX11 -lpthread
+else
 USIM_LIBS = -L/usr/X11R6/lib -lX11 -lpthread
+endif
 endif
 
 # Linux
@@ -86,8 +90,8 @@ ifeq ($(OS), LINUX)
 #CFLAGS= -O3 -march=pentium3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
 #CFLAGS = -O3 -fomit-frame-pointer -mcpu=i686 -g $(DEFINES)
 #CFLAGS= -O3 -mfpmath=sse -mmmx -msse $(DEFINES) -Walle
-CFLAGS = -mfpmath=sse -mmmx -msse -DMAP_SITE_TREE_DIRECTORY $(DEFINES) $(M32) -g
-LFLAGS = $(M32) -ldl -L/usr/lib
+CFLAGS = -mfpmath=sse -mmmx -msse -DMAP_SITE_TREE_DIRECTORY $(DEFINES) -g
+LFLAGS = -ldl -L/usr/lib
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
 USIM_LIBS += -lrt
@@ -118,7 +122,7 @@ USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 
 SRC = $(USIM_SRC) $(DISPLAY_SRC) $(KEYBOARD_SRC)
 
-all: usim readmcr diskmaker lod lmfs
+all: usim readmcr diskmaker lod lmfs disk.img
 
 usim: $(USIM_OBJ)
 	$(CC) -o usim $(LFLAGS) $(USIM_OBJ) $(USIM_LIBS)
@@ -137,6 +141,9 @@ lmfs: lmfs.c
 
 lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
+
+disk.img: diskmaker
+	./diskmaker -c -f disk.img -t template.disk9
 
 clean:
 	rm -f *.o usim lod readmcr diskmaker lmfs xx
