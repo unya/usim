@@ -10,7 +10,7 @@ cyls		825
 heads		19
 blockspertrack	17
 mcr		MCR1
-lod		LOD2
+lod		LOD1
 #brand		""
 #text		""
 comment		ucadr.mcr.841
