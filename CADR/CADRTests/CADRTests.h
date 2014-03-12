@@ -6,8 +6,8 @@
 //  Copyright (c) 2012 Greg Gilley. All rights reserved.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
-@interface CADRTests : SenTestCase
+@interface CADRTests : XCTestCase
 
 @end

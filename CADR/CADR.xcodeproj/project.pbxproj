@@ -14,7 +14,6 @@
 		DD308CDD1665E6A000361F6D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DD308CDC1665E6A000361F6D /* main.m */; };
 		DD308CE11665E6A000361F6D /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = DD308CDF1665E6A000361F6D /* Credits.rtf */; };
 		DD308CE71665E6A000361F6D /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD308CE51665E6A000361F6D /* MainMenu.xib */; };
-		DD308CEF1665E6A000361F6D /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD308CEE1665E6A000361F6D /* SenTestingKit.framework */; };
 		DD308CF01665E6A000361F6D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD308CD01665E6A000361F6D /* Cocoa.framework */; };
 		DD308CF81665E6A000361F6D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DD308CF61665E6A000361F6D /* InfoPlist.strings */; };
 		DD308CFB1665E6A000361F6D /* CADRTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DD308CFA1665E6A000361F6D /* CADRTests.m */; };
@@ -98,8 +97,7 @@
 		DD308CDE1665E6A000361F6D /* CADR-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CADR-Prefix.pch"; sourceTree = "<group>"; };
 		DD308CE01665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
 		DD308CE61665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		DD308CED1665E6A000361F6D /* CADRTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CADRTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
-		DD308CEE1665E6A000361F6D /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		DD308CED1665E6A000361F6D /* CADRTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CADRTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD308CF51665E6A000361F6D /* CADRTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CADRTests-Info.plist"; sourceTree = "<group>"; };
 		DD308CF71665E6A000361F6D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		DD308CF91665E6A000361F6D /* CADRTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CADRTests.h; sourceTree = "<group>"; };
@@ -196,7 +194,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DD308CEF1665E6A000361F6D /* SenTestingKit.framework in Frameworks */,
 				DD308CF01665E6A000361F6D /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -231,7 +228,7 @@
 			isa = PBXGroup;
 			children = (
 				DD308CCC1665E6A000361F6D /* CADR.app */,
-				DD308CED1665E6A000361F6D /* CADRTests.octest */,
+				DD308CED1665E6A000361F6D /* CADRTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -240,7 +237,6 @@
 			isa = PBXGroup;
 			children = (
 				DD308CD01665E6A000361F6D /* Cocoa.framework */,
-				DD308CEE1665E6A000361F6D /* SenTestingKit.framework */,
 				DD308CD21665E6A000361F6D /* Other Frameworks */,
 			);
 			name = Frameworks;
@@ -414,8 +410,8 @@
 			);
 			name = CADRTests;
 			productName = CADRTests;
-			productReference = DD308CED1665E6A000361F6D /* CADRTests.octest */;
-			productType = "com.apple.product-type.bundle";
+			productReference = DD308CED1665E6A000361F6D /* CADRTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -423,6 +419,7 @@
 		DD308CC31665E6A000361F6D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastTestingUpgradeCheck = 0510;
 				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Greg Gilley";
 				TargetAttributes = {
@@ -701,13 +698,15 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/CADR.app/Contents/MacOS/CADR";
 				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				FRAMEWORK_SEARCH_PATHS = (
+					"\\\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\\\"",
+					"$(inherited)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
 				INFOPLIST_FILE = "CADRTests/CADRTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Debug;
 		};
@@ -716,13 +715,15 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/CADR.app/Contents/MacOS/CADR";
 				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				FRAMEWORK_SEARCH_PATHS = (
+					"\\\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\\\"",
+					"$(inherited)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CADR/CADR-Prefix.pch";
 				INFOPLIST_FILE = "CADRTests/CADRTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Release;
 		};

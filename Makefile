@@ -142,7 +142,7 @@ lmfs: lmfs.c
 lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-disk.img: diskmaker
+disk.img:
 	./diskmaker -c -f disk.img -t template.disk9
 
 clean:

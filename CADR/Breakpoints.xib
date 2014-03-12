@@ -2,13 +2,13 @@
 <archive type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="8.00">
 	<data>
 		<int key="IBDocument.SystemTarget">1080</int>
-		<string key="IBDocument.SystemVersion">12D31</string>
-		<string key="IBDocument.InterfaceBuilderVersion">2844</string>
-		<string key="IBDocument.AppKitVersion">1187.35</string>
-		<string key="IBDocument.HIToolboxVersion">626.00</string>
+		<string key="IBDocument.SystemVersion">13C64</string>
+		<string key="IBDocument.InterfaceBuilderVersion">4514</string>
+		<string key="IBDocument.AppKitVersion">1265.19</string>
+		<string key="IBDocument.HIToolboxVersion">697.40</string>
 		<object class="NSMutableDictionary" key="IBDocument.PluginVersions">
 			<string key="NS.key.0">com.apple.InterfaceBuilder.CocoaPlugin</string>
-			<string key="NS.object.0">2844</string>
+			<string key="NS.object.0">4514</string>
 		</object>
 		<array key="IBDocument.IntegratedClassDependencies">
 			<string>IBNSLayoutConstraint</string>
@@ -51,7 +51,7 @@
 				<nil key="NSViewClass"/>
 				<nil key="NSUserInterfaceItemIdentifier"/>
 				<object class="NSView" key="NSWindowView" id="1006">
-					<reference key="NSNextResponder"/>
+					<nil key="NSNextResponder"/>
 					<int key="NSvFlags">256</int>
 					<array class="NSMutableArray" key="NSSubviews">
 						<object class="NSScrollView" id="978845881">
@@ -60,14 +60,14 @@
 							<array class="NSMutableArray" key="NSSubviews">
 								<object class="NSClipView" id="233081673">
 									<reference key="NSNextResponder" ref="978845881"/>
-									<int key="NSvFlags">2304</int>
+									<int key="NSvFlags">2322</int>
 									<array class="NSMutableArray" key="NSSubviews">
 										<object class="NSTableView" id="754248592">
 											<reference key="NSNextResponder" ref="233081673"/>
 											<int key="NSvFlags">256</int>
 											<string key="NSFrameSize">{351, 269}</string>
 											<reference key="NSSuperview" ref="233081673"/>
-											<reference key="NSNextKeyView" ref="426384119"/>
+											<reference key="NSNextKeyView" ref="602062692"/>
 											<string key="NSReuseIdentifierKey">_NS:13</string>
 											<bool key="NSEnabled">YES</bool>
 											<bool key="NSAllowsLogicalLayoutDirection">NO</bool>
@@ -100,7 +100,7 @@
 														<int key="NSCellFlags2">2048</int>
 														<string key="NSContents"/>
 														<object class="NSFont" key="NSSupport" id="26">
-															<string key="NSName">LucidaGrande</string>
+															<string key="NSName">.LucidaGrandeUI</string>
 															<double key="NSSize">11</double>
 															<int key="NSfFlags">3100</int>
 														</object>
@@ -123,7 +123,7 @@
 														<int key="NSCellFlags2">1024</int>
 														<string key="NSContents"/>
 														<object class="NSFont" key="NSSupport" id="703612391">
-															<string key="NSName">LucidaGrande</string>
+															<string key="NSName">.LucidaGrandeUI</string>
 															<double key="NSSize">13</double>
 															<int key="NSfFlags">1044</int>
 														</object>
@@ -251,7 +251,7 @@
 								</object>
 								<object class="NSClipView" id="602062692">
 									<reference key="NSNextResponder" ref="978845881"/>
-									<int key="NSvFlags">2304</int>
+									<int key="NSvFlags">2338</int>
 									<array class="NSMutableArray" key="NSSubviews">
 										<reference ref="102389521"/>
 									</array>
@@ -267,7 +267,7 @@
 							</array>
 							<string key="NSFrame">{{20, 51}, {353, 287}}</string>
 							<reference key="NSSuperview" ref="1006"/>
-							<reference key="NSNextKeyView" ref="602062692"/>
+							<reference key="NSNextKeyView" ref="233081673"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<int key="NSsFlags">133682</int>
 							<reference key="NSVScroller" ref="426384119"/>
@@ -331,7 +331,7 @@
 						<object class="NSButton" id="491726917">
 							<reference key="NSNextResponder" ref="1006"/>
 							<int key="NSvFlags">268</int>
-							<string key="NSFrame">{{306, 13}, {73, 32}}</string>
+							<string key="NSFrame">{{305, 13}, {74, 32}}</string>
 							<reference key="NSSuperview" ref="1006"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -353,10 +353,9 @@
 						</object>
 					</array>
 					<string key="NSFrameSize">{393, 358}</string>
-					<reference key="NSSuperview"/>
 					<reference key="NSNextKeyView" ref="978845881"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1680, 1028}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1440, 878}}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<string key="NSFrameAutosaveName">Breakpoints</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
@@ -471,9 +470,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="54667041">
 								<reference key="firstItem" ref="1006"/>
@@ -487,9 +487,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="910116971">
 								<reference key="firstItem" ref="533763939"/>
@@ -506,6 +507,7 @@
 								<int key="scoringType">3</int>
 								<float key="scoringTypeFloat">9</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="921853714">
 								<reference key="firstItem" ref="1006"/>
@@ -519,9 +521,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="403098970">
 								<reference key="firstItem" ref="1006"/>
@@ -535,9 +538,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="1006901043">
 								<reference key="firstItem" ref="261415746"/>
@@ -551,9 +555,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="483735849">
 								<reference key="firstItem" ref="1006"/>
@@ -567,9 +572,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="985204780">
 								<reference key="firstItem" ref="1006"/>
@@ -586,6 +592,7 @@
 								<int key="scoringType">3</int>
 								<float key="scoringTypeFloat">9</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="406437499">
 								<reference key="firstItem" ref="978845881"/>
@@ -599,9 +606,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<object class="IBNSLayoutConstraint" id="144542630">
 								<reference key="firstItem" ref="978845881"/>
@@ -615,9 +623,10 @@
 								</object>
 								<float key="priority">1000</float>
 								<reference key="containingView" ref="1006"/>
-								<int key="scoringType">8</int>
+								<int key="scoringType">0</int>
 								<float key="scoringTypeFloat">29</float>
 								<int key="contentType">3</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 							<reference ref="261415746"/>
 							<reference ref="533763939"/>
@@ -707,6 +716,7 @@
 								<int key="scoringType">3</int>
 								<float key="scoringTypeFloat">9</float>
 								<int key="contentType">1</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 						</array>
 						<reference key="parent" ref="1006"/>
@@ -741,6 +751,7 @@
 								<int key="scoringType">3</int>
 								<float key="scoringTypeFloat">9</float>
 								<int key="contentType">1</int>
+								<bool key="placeholder">NO</bool>
 							</object>
 						</array>
 						<reference key="parent" ref="1006"/>
@@ -888,6 +899,15 @@
 		<object class="IBClassDescriber" key="IBDocument.Classes"/>
 		<int key="IBDocument.localizationMode">0</int>
 		<string key="IBDocument.TargetRuntimeIdentifier">IBCocoaFramework</string>
+		<bool key="IBDocument.previouslyAttemptedUpgradeToXcode5">YES</bool>
+		<object class="NSMutableDictionary" key="IBDocument.PluginDeclaredDependencyDefaults">
+			<string key="NS.key.0">com.apple.InterfaceBuilder.CocoaPlugin.macosx</string>
+			<real value="1080" key="NS.object.0"/>
+		</object>
+		<object class="NSMutableDictionary" key="IBDocument.PluginDeclaredDevelopmentDependencies">
+			<string key="NS.key.0">com.apple.InterfaceBuilder.CocoaPlugin.InterfaceBuilder3</string>
+			<integer value="4600" key="NS.object.0"/>
+		</object>
 		<bool key="IBDocument.PluginDeclaredDependenciesTrackSystemTargetVersion">YES</bool>
 		<int key="IBDocument.defaultPropertyAccessControl">3</int>
 		<object class="NSMutableDictionary" key="IBDocument.LastKnownImageSizes">
