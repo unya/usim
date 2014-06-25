@@ -1404,6 +1404,7 @@ show_pc_history(void)
 #define MAX_LC_HISTORY 200
 struct {
     unsigned short instr;
+    unsigned int lc;
 } lc_history[MAX_LC_HISTORY];
 int lc_history_ptr, lc_history_max, lc_history_stores;
 
@@ -1427,6 +1428,7 @@ record_lc_history()
     
     read_mem(lc >> 2, &instr);
     lc_history[index].instr = (lc & 2) ? (instr >> 16) & 0xffff : (instr & 0xffff);
+    lc_history[index].lc = lc;
     
     if (breakpoint_count)
     {
@@ -1462,10 +1464,10 @@ show_lc_history(void)
     
     for (i = 0; i < MAX_LC_HISTORY; i++) {
         instr = lc_history[lc_history_ptr].instr;
-        if (instr == 0)
+        if (lc_history_max < MAX_LC_HISTORY && lc_history_ptr == lc_history_max)
             break;
         
-        decoded = disass(0, lc & 0377777777, 0, instr, wide_integer ? 25 : 24);
+        decoded = disass(0, lc_history[lc_history_ptr].lc & 0377777777, 0, instr, wide_integer ? 25 : 24);
         
         printf("%s\n", decoded);
         
