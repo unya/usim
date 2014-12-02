@@ -499,7 +499,7 @@ int read_sym_files_from_resources(void)
 
     [_window orderFront:self];
     // start running the emulator from the main run loop
-    [[_window firstResponder] performSelector:@selector(run:) withObject:diskImagePath afterDelay:0.5];
+    [[_window initialFirstResponder] performSelector:@selector(run:) withObject:diskImagePath afterDelay:0.5];
 }
 
 @end
