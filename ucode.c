@@ -148,7 +148,6 @@ extern int uart_xbus_read(int, unsigned int *);
 extern int uart_xbus_write(int, unsigned int);
 #endif
 
-extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
 void reset_pc_histogram(void);
 #if defined(OSX)
@@ -1457,6 +1456,7 @@ show_lc_history(void)
     int i;
     unsigned short instr;
     char *decoded;
+
     
     printf("lc history:\n");
     if (0) printf("lc_history_ptr %d, lc_history_max %d, lc_history_stores %d\n",
@@ -1467,7 +1467,7 @@ show_lc_history(void)
         if (lc_history_max < MAX_LC_HISTORY && lc_history_ptr == lc_history_max)
             break;
         
-        decoded = disass(0, lc_history[lc_history_ptr].lc & 0377777777, 0, instr, wide_integer ? 25 : 24);
+        decoded = disassemble_ucode_loc(lc_history[lc_history_ptr].lc & 037777777, instr);
         
         printf("%s\n", decoded);
         
@@ -1675,6 +1675,9 @@ dump_state(void)
 #endif
 #ifdef STAT_PC_HISTOGRAM
 	show_pc_histogram();
+#endif
+#if defined(OSX)
+    show_lc_history();
 #endif
 
 	for (i = 0; i < 32; i += 4) {
