@@ -583,6 +583,7 @@ read_mem(int vaddr, unsigned int *pv)
 		page_fault_flag = 1;
 		opc = pn;
 		tracef("read_mem(vaddr=%o) page fault\n", vaddr);
+        *pv = 0;
 		return -1;
 	}
 
