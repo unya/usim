@@ -163,8 +163,8 @@ void display_poll(void)
                 [application updateWindows];
             }
         }
+        last = current;
     }
-    last = current;
 }
 
 void
