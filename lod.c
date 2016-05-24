@@ -42,7 +42,7 @@ struct {
 	{ "%SYS-COM-ETHER-FREE-LIST", 0405 },
 	{ "%SYS-COM-ETHER-TRANSMIT-LIST", 0406 },
 	{ "%SYS-COM-ETHER-RECEIVE-LIST", 0407 },
-	{ "%SYS-COM-SPARE-1", 0410 },
+	{ "%SYS-COM-BAND-FORMAT", 0410 },
 	{ "%SYS-COM-SPARE-2", 0411 },
 	{ "%SYS-COM-UNIBUS-INTERRUPT-LIST", 0412 },
 	{ "%SYS-COM-TEMPORARY", 0413 },
@@ -561,6 +561,7 @@ main(int argc, char *argv[])
 	if (loadband_filename) {
 		/* %SYS-COM-AREA-ORIGIN-PNTR */
 		com = showlabel("%SYS-COM-AREA-ORIGIN-PNTR", 0400, 1);
+		showlabel("%SYS-COM-BAND-FORMAT", 0410, 1);
 
 		if (show_comm) {
 			for (i = 0; cv[i].name; i++) {
