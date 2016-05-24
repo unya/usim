@@ -175,6 +175,7 @@ char_xmit_done_intr(void)
 	  assert_unibus_interrupt(0270);
 }
 
+#if CHAOS_DEBUG_PKT
 char *opcodetable[256] = {
     "UNKNOWN",                                      // 0
     "RFC - Request for Connection",                 // 1
@@ -194,7 +195,6 @@ char *opcodetable[256] = {
     "UNKNOWN",                                      // 15
 };
 
-#if CHAOS_DEBUG_PKT
 static void
 dumpbuffer(unsigned short *buffer, int size)
 {
@@ -1171,7 +1171,7 @@ chaos_send_to_chaosd(char *buffer, int size)
             }
             if (memcmp(&packet->data, "TIME", 4) == 0)
             {
-                long t;
+                time_t t;
                 struct timeval time;
                 chaos_packet *answer = malloc(CHAOS_PACKET_HEADER_SIZE + sizeof(long));
                
@@ -1698,7 +1698,6 @@ chaos_connect_to_server(void)
     
     if (getsockopt(chaos_fd, SOL_SOCKET, SO_RCVBUF, &value, &length) == 0)
     {
-        printf("SO_RCVBUF size: %d\n", value);
         value = value * 4;
         if (setsockopt(chaos_fd, SOL_SOCKET, SO_RCVBUF, &value, sizeof(value)) != 0)
             printf("setsockopt(SO_RCVBUF) failed\n");
