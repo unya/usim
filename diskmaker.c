@@ -44,8 +44,10 @@ char *brand;
 char *text;
 char *comment;
 char *boot_name;
+char *boot_mcr_name;
 
 int boot;
+int boot_mcr;
 int debug;
 int create;
 int show;
@@ -947,6 +949,50 @@ set_current_band(const char *filename, const char *partition_name)
     return 0;
 }
 
+/* ---!!! This is a straight duplicate of set_current_band.  */
+int
+set_current_mcr(const char *filename, const char *partition_name)
+{
+    int fd;
+    int found = 0;
+    unsigned int i;
+
+    if (read_labl(filename) < 0)
+        return -1;
+	  
+    for (i = 0; i < part_count; i++)
+    {
+
+        if (strcasecmp(partition_name, parts[i].name) == 0)
+        {
+            if (mcr_name)
+                free((void *)mcr_name);
+            mcr_name = strdup(parts[i].name);
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found)
+    {
+        printf("can't find band %s\n", partition_name);
+        return -1;
+    }
+
+ 	fd = open(filename, O_RDWR);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+    
+	printf("re-write label\n");
+	make_labl(fd);
+    
+	close(fd);
+
+    return 0;
+}
+
 void
 usage(void)
 {
@@ -960,6 +1006,7 @@ usage(void)
 	fprintf(stderr, "-x <partition-name>\n");
 	fprintf(stderr, "-m <partition-name>\n");
 	fprintf(stderr, "-b <partition-name>\n");
+	fprintf(stderr, "-B <partition-name>\n");
 
 	exit(1);
 }
@@ -974,11 +1021,15 @@ main(int argc, char *argv[])
 	if (argc <= 1)
 		usage();
 
-	while ((c = getopt(argc, argv, "b:cdlt:f:pm:x:")) != -1) {
+	while ((c = getopt(argc, argv, "b:B:cdlt:f:pm:x:")) != -1) {
 		switch (c) {
 		case 'b':
 			boot++;
 			boot_name = strdup(optarg);
+			break;
+		case 'B':
+			boot_mcr++;
+			boot_mcr_name = strdup(optarg);
 			break;
 		case 'c':
 			create++;
@@ -1019,6 +1070,11 @@ main(int argc, char *argv[])
 		exit(0);
 	}
 
+	if (boot_mcr) {
+		set_current_mcr(img_filename, boot_mcr_name);
+		exit(0);
+	}
+ 
 	if (show) {
 		show_partition_info(img_filename);
 		exit(0);
