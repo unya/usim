@@ -164,11 +164,6 @@ onto the lispm keyboard.
 
 Some default keys:
 
-f1	terminal
-f2	system
-f3	network
-f4	abort
-f5	clear_input
 esc	Alt Mode
 f1	Terminal
 f2	System
