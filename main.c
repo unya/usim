@@ -286,7 +286,7 @@ main(int argc, char *argv[])
 	signal_shutdown();
 
 	if (show_video_flag) {
-		while (1) {
+		while (run_ucode_flag) {
 			display_poll();
 		}
 	}
