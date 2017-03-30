@@ -1,0 +1,73 @@
+The Big Bang -*- text -*-
+
+;; Boot 78.48 and bring it up to latest (as of March, 30th 2017, it is
+;; System 78.52).
+(si:set-sys-host "server" ':unix 0404)
+(login 'ams 'server)
+
+(load "server://tree//site//site.lisp")
+(fs:define-sys-logical-device)
+
+(dolist (x '(
+	     ;; Y2K fixes.
+	     "sys:patch;system-78-49"
+	     "sys:patch;system-78-50"
+	     ;; Make ASSIGN-ALTERNATE read symbol into current package.
+	     "sys:patch;system-78-51"
+	     ;; Add SEND, GETF, WHEN and UNLESS.
+	     "sys:patch;system-78-52"
+	     ))
+  (qc-file x))
+(load-patches)
+
+;; Save current system, and make it current...
+(qc-file "sys:site;site")
+(qc-file "sys:site;hsttbl")
+(qc-file "sys:site;lmlocs")
+(si:update-site-configuration-info)
+(si:disk-save 2)
+(set-current-band 2)
+
+;; Recompile world, microcode, and other bits.
+(qc-file "sys:sys2;defmac lisp")
+(qc-file "sys:sys2;lmmac lisp")
+(qc-file "sys:sys2;struct lisp")
+(qc-file "sys:sys2;setf lisp")
+
+;; Compile RTC and read-table.
+(qc-file "sys:io;rtc lisp")
+(load "sys:io;rtc")
+(si:rtc-file "sys:io;rdtbl lisp")
+
+(si:recompile-world 'no-increment-patch)
+
+(fs:define-sys-logical-device)
+(si:update-site-configuration-info)
+
+;; Compile ucode and prom.
+(pkg-load 'ua)
+(ua:assemble "sys:ucadr;ucadr lisp") ; Enter 1511 (841.) as version.
+(ua:assemble "sys:ucadr;promh lisp") ; Enter 11 (9.) as version.
+
+;; Creating a cold load band
+(load "sys:cold;coldpk")
+(load "sys:cold;coldut")
+(load "sys:cold;coldld")
+(cold:load-parameters)
+(make-system 'cold 'compile)
+(cold:make-cold 3)
+
+;; If you get the error "SYM:SITE-NAME is unbound, use value of
+;; SYS:SITE-NAME instead", answer yes.
+
+;; If you get the error "COLD:ARRAY-INDEX-ORDER is unbound", type m-C and
+;; return the value NIL.
+
+;; To boot the cold load, find a unused LOD partition and make it
+;; active and reboot.  You can also use DISK-RESTORE to try out the
+;; new COLD LOD.
+
+(print-disk-label)
+(set-current-band 3)
+
+;; Now you can do QLD, and DISK-SAVE.
