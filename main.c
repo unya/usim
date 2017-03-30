@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <string.h>
+#include <limits.h>
 
 #if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
@@ -216,16 +217,10 @@ main(int argc, char *argv[])
 		case 'r':
 			{			
 				char *p = "../../lisp";
-				char *newpath = malloc(strlen(argv[0]) + strlen(p) + 2);
-				char *q = &argv[0][strlen(argv[0])];
-				
-				while (*q != '/') q--;
-				*(q+1) = '\0';
-				strcpy(newpath, argv[0]);
-				strcat(newpath, p);
+				char newpath[PATH_MAX];
+				realpath (p, newpath);
 				dcanon(newpath, 0);
 				settreeroot(newpath);
-				free(newpath);
 			}
 			break;
 #endif
