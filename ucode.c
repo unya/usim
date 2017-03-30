@@ -741,6 +741,11 @@ if ((vaddr & 077700000) == 077200000) {
 			traceio("unibus: clear bus error %o\n", v);
 			return 0;
 
+		case 0100: case 0104:
+		case 0110: case 0114:
+			traceio("unibus: cadr debugee (%o) v %o\n", offset, v);
+			return 0;
+
 		default:
 			if (offset >= 0140 && offset <= 0176) {
 				traceio("unibus: mapping reg %o\n", offset);
