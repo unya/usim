@@ -17,6 +17,7 @@
 
 #include "ucode.h"
 
+int showmcr;
 int debug;
 int needswap;
 ucw_t ucode[16*1024];
@@ -79,7 +80,7 @@ read_i_mem(int fd, int start, int size)
 			((unsigned long long)w3 << 16) |
 			((unsigned long long)w4 << 0);
 
-		if (0) {
+		if (showmcr) {
 			printf("%03o %016Lo\n",
 			       loc, ll);
 		}
@@ -175,10 +176,11 @@ main(int argc, char *argv[])
 {
 	int c, fd, done, skip;
 
+	showmcr = 1;
 	needswap = 1;
 	skip = 0;
 
-	while ((c = getopt(argc, argv, "bds:")) != -1) {
+	while ((c = getopt(argc, argv, "mbds:")) != -1) {
 		switch (c) {
 		case 'b':
 			needswap = 0;
@@ -189,6 +191,9 @@ main(int argc, char *argv[])
 		case 's':
 			skip = atoi(optarg);
 			break;
+		case 'm':
+			showmcr = 1;
+			break;			
 		}
 	}
 
