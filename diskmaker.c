@@ -699,7 +699,7 @@ show_partition_info(char *filename)
 
 	printf("#\n");
 	printf("output:\n");
-	printf("%s:\n", filename);
+	printf("%s\n", filename);
 
 	printf("#\n");
 	printf("label:\n");
