@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
@@ -28,49 +29,86 @@
 #include "decode.h"
 #include "syms.h"
 
-u_char prom[6][512];
+/*---!!! Should be detected, or supplied via command line. */
+int needswap = 1;
+
 ucw_t prom_ucode[512];
+
+/*---!!! read16 and read32 are from readmcr; should be shared. */
+unsigned int
+read16(int fd)
+{
+	unsigned char b[2];
+	int ret;
+
+	ret = read(fd, b, 2);
+	if (ret < 2) {
+		printf("eof!\n");
+		exit(1);
+	}
+
+	if (needswap)
+		return (b[1] << 8) | b[0];
+
+	return (b[0] << 8) | b[1];
+}
+
+unsigned int
+read32(int fd)
+{
+	unsigned char b[4];
+	int ret;
+
+	ret = read(fd, b, 4);
+	if (ret < 4) {
+		printf("eof!\n");
+		exit(1);
+	}
+
+	if (needswap)
+		return (b[1] << 24) | (b[0] << 16) | (b[3] << 8) | b[2];
+
+	return (b[3] << 24) | (b[2] << 16) | (b[1] << 8) | b[0];
+//	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+}
 
 int
 read_prom_files(void)
 {
-	int fd, i;
-    ssize_t ret;
 
-	for (i = 0; i < 6; i++) {
-		char name[256];
+	char *name = "../../lisp/ubin/promh.mcr";
+	int fd;
+	unsigned int code, start, size;
 
-		sprintf(name, "cadr_%1d.bin", i+1);
+	if (alt_prom_flag) {
+		sprintf(name, "./promh.mcr");
+ 	}
 
-		if (alt_prom_flag) {
-			sprintf(name, "../prom/alt_cadr_%1d.bin", i+1);
-		}
-
-		printf("%s\n", name);
-		fd = open(name, O_RDONLY | O_BINARY);
-		if (fd < 0) {
-			perror(name);
-			exit(1);
-		}
-
-		ret = read(fd, prom[i], 512);
-		close(fd);
-				
-		if (ret != 512) {
-			fprintf(stderr, "read_prom_files: short read\n");
-			exit(1);
-		}
+	fd = open(name, O_RDONLY | O_BINARY);
+	if (fd < 0) {
+		perror(name);
+		exit(1);
 	}
 
-	for (i = 0; i < 512; i++) {
-		prom_ucode[511-i] =
-			((uint64)prom[0][i] << (8*5)) |
-			((uint64)prom[1][i] << (8*4)) |
-			((uint64)prom[2][i] << (8*3)) |
-			((uint64)prom[3][i] << (8*2)) |
-			((uint64)prom[4][i] << (8*1)) |
-			((uint64)prom[5][i] << (8*0));
-	}
+	code = read32(fd);
+	start = read32(fd);
+	size = read32(fd);
+
+	printf ("prom (%s): code: %d, start: %d, size: %d\n", name, code, start, size);
+
+	int loc = start;
+	for (int i = 0; i < size; i++) {
+		unsigned int w1, w2, w3, w4;
+		w1 = read16(fd);
+		w2 = read16(fd);
+		w3 = read16(fd);
+		w4 = read16(fd);
+		prom_ucode[loc] = ((unsigned long long) w1 << 48) |
+			((unsigned long long) w2 << 32) |
+			((unsigned long long) w3 << 16) |
+			((unsigned long long) w4 << 0);
+		loc++;
+ 	}
 
 	return 0;
 }
@@ -82,25 +120,11 @@ show_prom(void)
 
 	for (i = 0; i < 16; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
-		printf(" %02x %02x %02x %02x %02x %02x",
-		       prom[0][i], 
-		       prom[1][i], 
-		       prom[2][i], 
-		       prom[3][i], 
-		       prom[4][i], 
-		       prom[5][i]);
 		printf("\n");
 	}
 
-	for (i = 0100; i < 0110; i++) {
+	for (i = 0; i < 512; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
-		printf(" %02x %02x %02x %02x %02x %02x",
-		       prom[0][i], 
-		       prom[1][i], 
-		       prom[2][i], 
-		       prom[3][i], 
-		       prom[4][i], 
-		       prom[5][i]);
 		printf("\n");
 	}
 
