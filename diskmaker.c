@@ -57,7 +57,7 @@ int label;
 
 unsigned int buffer[256];
 
-#define MAX_PARTITIONS	16
+#define MAX_PARTITIONS	18
 
 struct part_s {
 	char *name;
