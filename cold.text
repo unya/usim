@@ -9,6 +9,60 @@ The Big Bang -*- text -*-
 (fs:define-sys-logical-device)
 
 (dolist (x '(
+	     ;; This is for when we have made a 78.0 COLD band and
+	     ;; need to run (load-patches).
+	     "sys:patch;system-78-1"
+	     "sys:patch;system-78-2"
+	     "sys:patch;system-78-3"
+	     "sys:patch;system-78-4"
+	     "sys:patch;system-78-5"
+	     "sys:patch;system-78-6"
+	     "sys:patch;system-78-7"
+	     "sys:patch;system-78-8"
+	     "sys:patch;system-78-9"
+	     "sys:patch;system-78-10"
+	     "sys:patch;system-78-11"
+	     "sys:patch;system-78-12"
+	     "sys:patch;system-78-13"
+	     "sys:patch;system-78-14"
+	     "sys:patch;system-78-15"
+	     "sys:patch;system-78-16"
+	     "sys:patch;system-78-17"
+	     "sys:patch;system-78-18"
+	     "sys:patch;system-78-19"
+	     "sys:patch;system-78-20"
+	     "sys:patch;system-78-21"
+	     "sys:patch;system-78-22"
+	     "sys:patch;system-78-23"
+	     "sys:patch;system-78-24"
+	     "sys:patch;system-78-25"
+	     "sys:patch;system-78-26"
+	     "sys:patch;system-78-27"
+	     "sys:patch;system-78-28"
+	     "sys:patch;system-78-29"
+	     "sys:patch;system-78-30"
+	     "sys:patch;system-78-31"
+	     "sys:patch;system-78-32"
+	     "sys:patch;system-78-33"
+	     "sys:patch;system-78-34"
+	     "sys:patch;system-78-35"
+	     "sys:patch;system-78-36"
+	     "sys:patch;system-78-37"
+	     "sys:patch;system-78-38"
+	     "sys:patch;system-78-39"
+	     "sys:patch;system-78-40"
+	     "sys:patch;system-78-41"
+	     "sys:patch;system-78-42"
+	     "sys:patch;system-78-43"
+	     "sys:patch;system-78-44"
+	     "sys:patch;system-78-45"
+	     "sys:patch;system-78-46"
+	     "sys:patch;system-78-47"
+	     "sys:patch;system-78-48"
+	     "sys:patch;system-78-49"
+	     "sys:patch;system-78-50"
+	     "sys:patch;system-78-51"
+	     "sys:patch;system-78-52"
 	     ;; Y2K fixes.
 	     "sys:patch;system-78-49"
 	     "sys:patch;system-78-50"
@@ -70,4 +124,6 @@ The Big Bang -*- text -*-
 (print-disk-label)
 (set-current-band 3)
 
-;; Now you can do QLD, and DISK-SAVE.
+;; Now you can do QLD, and DISK-SAVE.  When you have cold booted the
+;; new fresh LOD band, you can run (load-patches) to bring it back up
+;; to 78.52.
