@@ -28,7 +28,7 @@ typedef unsigned long off_t;
 #define NOP_MASK 03777777777767777
 #endif /* WIN32 */
 
-typedef uint64 ucw_t;
+typedef uint64_t ucw_t;
 
 extern int trace;
 #define tracef	if (trace) printf
