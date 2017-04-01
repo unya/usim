@@ -10,11 +10,7 @@
 #include <string.h>
 #include <signal.h>
 
-#ifdef _WIN32
-#include "SDL/SDL.h"
-#else
-#include <SDL/SDL.h>
-#endif
+#include <SDL.h>
 
 #include "usim.h"
 #include "logo.h"
