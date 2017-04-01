@@ -26,7 +26,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 typedef unsigned long off_t;
 #endif
 

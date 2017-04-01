@@ -12,7 +12,7 @@ typedef unsigned long long uint64;
 #endif /* __linux__ */
 
 
-#ifdef WIN32
+#ifdef _WIN32
 typedef __int64 int64;
 typedef __int64 uint64;
 
@@ -26,7 +26,7 @@ typedef unsigned long off_t;
 
 #define inline 
 #define NOP_MASK 03777777777767777
-#endif /* WIN32 */
+#endif /* _WIN32 */
 
 typedef uint64_t ucw_t;
 

@@ -1756,7 +1756,7 @@ chaos_reconnect(void)
 #endif /* __linux__ || osx */
 
 /* these are stubs; eventually I'll fix the code work with win32 sockets */
-#ifdef WIN32
+#ifdef _WIN32
 int
 chaos_init(void)
 {
