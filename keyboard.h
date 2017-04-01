@@ -5,11 +5,7 @@
  */
 
 #ifdef DISPLAY_SDL
-#ifdef _WIN32
-#include "SDL/SDL_keysym.h"
-#else
-#include <SDL/SDL_keysym.h>
-#endif
+#include <SDL_keysym.h>
 #endif /* USE_SDL */
 
 /* keycodes produced by LM keyboard */

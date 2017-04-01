@@ -19,11 +19,7 @@
 #endif
 
 #ifdef DISPLAY_SDL
-#ifdef _WIN32
-#include <SDL/SDL_keysym.h>
-#else
-#include "SDL/SDL_keysym.h"
-#endif
+#include <SDL_keysym.h>
 #endif /* DISPLAY_SDL */
 
 #include "ucode.h"

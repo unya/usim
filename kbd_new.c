@@ -10,11 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include "SDL/SDL.h"
-#else
-#include <SDL/SDL.h>
-#endif
+#include <SDL.h>
 
 #include "keyboard.h"
 

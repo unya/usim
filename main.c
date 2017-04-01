@@ -25,11 +25,7 @@
 #include "config.h"
 
 #ifdef DISPLAY_SDL
-#ifdef _WIN32
-#include <SDL/SDL.h>
-#else
-#include "SDL/SDL.h"
-#endif
+#include <SDL.h>
 #endif /* DISPLAY_SDL */
 
 #include "Files.h"

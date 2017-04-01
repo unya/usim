@@ -9,12 +9,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#ifdef _WIN32
-#include "SDL/SDL.h"
-#else
 #if !defined(DISPLAY_X11) && !defined(DISPLAY_OSX)
-#include <SDL/SDL.h>
-#endif
+#include <SDL.h>
 #endif
 
 #include "usim.h"
