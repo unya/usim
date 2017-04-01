@@ -2293,7 +2293,7 @@ diropen(struct xfer *ax, register struct transaction *t)
 				switch(baderrno) {
                         register char *cp;
                     case ENOENT:
-                        cp = rindex(*x->x_gptr, '/');
+                        cp = strrchr(*x->x_gptr, '/');
                         if (cp) {
                             register char c;
                             
@@ -2772,7 +2772,7 @@ backfile(register char *file)
 {
     register char *back;
 #if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-	register char *name = rindex(file, '/');
+	register char *name = strrchr(file, '/');
 	register char *end;
 
 	if (name == NOSTR)
@@ -3233,7 +3233,7 @@ complete(register struct transaction *t)
 		if (*cp == '/')
 			cp++;
 		if (*cp != '\0') {
-			if ((tp = rindex(cp, '.')) == NOSTR)
+			if ((tp = strrchr(cp, '.')) == NOSTR)
 				dname = savestr(cp);
 			else {
 				*tp = '\0';
@@ -3246,7 +3246,7 @@ complete(register struct transaction *t)
 		if (*cp == '/')
 			cp++;
 		if (*cp != '\0') {
-			if ((tp = rindex(cp, '.')) == NOSTR)
+			if ((tp = strrchr(cp, '.')) == NOSTR)
 				iname = savestr(cp);
 			else {
 				*tp = '\0';
@@ -3334,7 +3334,7 @@ complete(register struct transaction *t)
                 continue;
             ename = dirp->d_name;
 #endif
-            if ((etype = rindex(ename, '.')) != NOSTR)
+            if ((etype = strrchr(ename, '.')) != NOSTR)
                 *etype++ = '\0';
             if ((namematch = prefix(iname, ename)) == SNONE ||
                 (typematch = prefix(itype, etype)) == SNONE)
@@ -4200,7 +4200,7 @@ parsepath(register char *path, char **dir, char **real, int blankok)
     else
         fatal(NOMEM);
     
-    cp = rindex(cp, '/');
+    cp = strrchr(cp, '/');
     if (cp) {
         if (cp == *real)
             cp++;
