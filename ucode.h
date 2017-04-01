@@ -22,7 +22,6 @@ struct timeval {
 };
 
 typedef unsigned char u_char;
-typedef unsigned long off_t;
 
 #define inline 
 #define NOP_MASK 03777777777767777
