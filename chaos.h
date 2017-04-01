@@ -10,6 +10,8 @@
 #include <dispatch/dispatch.h>
 #endif
 
+typedef unsigned char u_char;
+
 void chaos_rx_pkt(void);
 void char_xmit_done_intr(void);
 void chaos_xmit_pkt(void);
