@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 
 #if defined(__linux__) || defined(OSX) || defined(BSD)
