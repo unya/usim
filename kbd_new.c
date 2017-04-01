@@ -101,8 +101,8 @@ static int iob_key_queue_optr = 0;
 static int iob_key_queue_iptr = 0;
 static int iob_key_queue_free = IOB_KEY_QUEUE_LEN;
 
-extern int iob_key_scan;
-extern int iob_kbd_csr;
+extern unsigned int iob_key_scan;
+extern unsigned int iob_kbd_csr;
 
 
 void iob_queue_key_event(int ev)
