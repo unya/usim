@@ -132,7 +132,7 @@ get_us_clock()
 {
 	unsigned long v;
 #ifdef US_CLOCK_IS_WALL_CLOCK
-	static unsigned long last_hz60;
+	static unsigned long last_hz60, hz60;
 	static struct timeval tv;
 	struct timeval tv2;
 	unsigned long ds, du;
