@@ -60,7 +60,6 @@
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 #endif
 
-#define _XOPEN_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdarg.h>
