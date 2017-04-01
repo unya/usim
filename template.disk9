@@ -1,6 +1,6 @@
 #
 output:
-disk.img:
+disk.img
 #
 label:
 cyls	815
