@@ -3,6 +3,8 @@
  * $Id$
  */
 
+#include <sys/types.h>
+
 #include <pthread.h>
 #if defined(OSX)
 #include <dispatch/dispatch.h>
