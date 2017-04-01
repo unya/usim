@@ -3,13 +3,13 @@
  * $Id$
  */
 
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 typedef long long int64;
 typedef unsigned long long uint64;
 
 #define NOP_MASK 03777777777767777LL
 #define O_BINARY 0
-#endif /* LINUX */
+#endif /* __linux__ */
 
 
 #ifdef WIN32

@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-#if defined(linux) || defined(osx)
+#if defined(__linux__) || defined(osx)
 #include <unistd.h>
 #endif
 

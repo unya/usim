@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <sys/time.h>
 #define uint8_t __uint8_t
 #define uint16_t __uint16_t

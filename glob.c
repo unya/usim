@@ -13,7 +13,7 @@
 #include "Files.h"
 #include "glob.h"
 
-#if defined(linux) || defined(OSX)
+#if defined(__linux__) || defined(OSX)
 #include <dirent.h>
 #include <stdlib.h>
 #endif
@@ -255,12 +255,12 @@ matchdir(char *pattern)
 	struct stat stb;
 	register int dirf;
 	register struct direct *dp;
-#if defined(BSD42) || defined(linux) || defined(OSX)
+#if defined(BSD42) || defined(__linux__) || defined(OSX)
 	DIR *dirp;
     
 	dirp = opendir(gpath);
 	if (dirp != NULL)
-#if defined(linux) || defined(OSX) || defined(BSD42)
+#if defined(__linux__) || defined(OSX) || defined(BSD42)
 		dirf = dirfd(dirp);
 #else
     dirf = ((struct DIR *)dirp)->dd_fd;
@@ -298,7 +298,7 @@ matchdir(char *pattern)
         errstring = PATHNOTDIR;
         return;
     }
-#if defined(BSD42) || defined(linux) || defined(OSX)
+#if defined(BSD42) || defined(__linux__) || defined(OSX)
     while ((dp = readdir(dirp)) != NULL)
 #else
     while ((cnt = read(dirf, (char *)dirbuf, sizeof dirbuf)) >= sizeof dirbuf[0])
@@ -310,7 +310,7 @@ matchdir(char *pattern)
                   (dp->d_name[1] == '.' && dp->d_name[2] == '\0'))))
                 continue;
             else {
-#if defined(BSD42) || defined(linux) || defined(OSX)
+#if defined(BSD42) || defined(__linux__) || defined(OSX)
                 if (match(dp->d_name, pattern)) {
                     Gcat(gpath, dp->d_name);
 #else
@@ -325,7 +325,7 @@ matchdir(char *pattern)
                         goto out;
                 }
             out:
-#if defined(BSD42) || defined(linux) || defined(OSX)
+#if defined(BSD42) || defined(__linux__) || defined(OSX)
                 (void)closedir(dirp);
 #else
                 (void)close(dirf);

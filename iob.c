@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <signal.h>
 
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <sys/time.h>
 #endif
 
@@ -119,7 +119,7 @@ csr - read
 */
 
 #define US_CLOCK_IS_WALL_CLOCK
-#if defined(linux) || defined(osx)
+#if defined(__linux__) || defined(osx)
 #define USE_SIGVTARLM_FOR_60HZ
 #endif
 

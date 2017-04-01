@@ -74,7 +74,7 @@
 #include "glob.h"
 #include "chaos.h"
 
-#ifdef linux
+#ifdef __linux__
 #include <sys/vfs.h>
 #endif
 
@@ -85,7 +85,7 @@
 /* use utimes instead of "outmoded" utime */
 #endif
 
-#if defined(__NetBSD__) || defined(OSX) || defined(linux)
+#if defined(__NetBSD__) || defined(OSX) || defined(__linux__)
 #include <utime.h>
 #include <sys/statvfs.h>
 #endif
@@ -1588,7 +1588,7 @@ login(register struct transaction *t)
 		cwd = savestr(home);
 #if 0
 		umask(0);
-#if defined(BSD42) || defined(linux) || defined(OSX)
+#if defined(BSD42) || defined(__linux__) || defined(OSX)
 		(void)initgroups(p->pw_name, (int)p->pw_gid);
 #else /*!BSD42*/
 		(void)setgid(p->pw_gid);
@@ -2704,7 +2704,7 @@ xclose(struct xfer *ax)
             
 			log(LOG_INFO, "xclose (3c)\n");
             
-#if defined(OSX) || defined(BSD42) || defined(linux)
+#if defined(OSX) || defined(BSD42) || defined(__linux__)
 			if (utimes(x->x_realname, timep)) {
                 log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
@@ -2724,7 +2724,7 @@ xclose(struct xfer *ax)
 #if TRUNCATE_DATES
             if (tm->tm_year > 99) tm->tm_year += 1900;
 			(void)sprintf(response,
-#if defined(linux)
+#if defined(__linux__)
                           "%02d/%02d/%04d %02d:%02d:%02d %ld%c%s%c",
 #else
                           "%02d/%02d/%04d %02d:%02d:%02d %lld%c%s%c",
@@ -2732,7 +2732,7 @@ xclose(struct xfer *ax)
 #else
             if (tm->tm_year > 99) tm->tm_year = 99;
             (void)sprintf(response,
-#if defined(linux)
+#if defined(__linux__)
                           "%02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
 #else
                           "%02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
@@ -2748,7 +2748,7 @@ xclose(struct xfer *ax)
         {
             if (tm->tm_year > 99) tm->tm_year = 99;
 			(void)sprintf(response,
-#if defined(linux)
+#if defined(__linux__)
                           "%d %02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
 #else
                           "%d %02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
@@ -2772,7 +2772,7 @@ void
 backfile(register char *file)
 {
     register char *back;
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
 	register char *name = rindex(file, '/');
 	register char *end;
 
@@ -2786,7 +2786,7 @@ backfile(register char *file)
     if (back)
     {
         strcpy(back, file);
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
         end = name + strlen(name);
         if (end - name >= DIRSIZ - 1)
             back[name - file + DIRSIZ - 1] = '\0';
@@ -3177,7 +3177,7 @@ complete(register struct transaction *t)
 	register char *cp, *tp;
 	int errcode, nstate, tstate;
 	struct stat sbuf;
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
 	int dfd;
 #else
 	DIR *dfd;
@@ -3274,7 +3274,7 @@ complete(register struct transaction *t)
 			log(LOG_INFO, "adir:'%s'\n",
 			    adir ? adir : "!");
 		}
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
 		if ((dfd = open(adir, 0)) < 0) {
 #else
         if( (dfd = opendir(adir)) == NULL ) {
@@ -3306,7 +3306,7 @@ complete(register struct transaction *t)
         }
         
         nstate = tstate = SNONE;
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
         while (read(dfd, (char *)&d.de, sizeof(d.de)) == sizeof(d.de))
         {
             char *ename, *etype;
@@ -3412,7 +3412,7 @@ complete(register struct transaction *t)
             }
         }
     gotit:
-#if !defined(BSD42) && !defined(linux) && !defined(OSX)
+#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
         (void)close(dfd);
 #else
         closedir(dfd);
@@ -3744,7 +3744,7 @@ getspace(struct stat *s, char *cp)
     used = total - free;
     
     (void)
-#if defined(linux)
+#if defined(__linux__)
     sprintf(cp, "%s (%s): %ld free, %ld/%ld used (%ld%%)", mtab.path, mtab.spec,
 #else
     sprintf(cp, "%s (%s): %lld free, %lld/%lld used (%lld%%)", mtab.path, mtab.spec,
@@ -3760,7 +3760,7 @@ getspace(struct stat *s, char *cp)
 static char *
 xgetbsize(struct stat *s, char *cp)
 {
-#if defined(linux)
+#if defined(__linux__)
     (void)sprintf(cp, "%ld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
 #else
     (void)sprintf(cp, "%lld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
@@ -3783,7 +3783,7 @@ getbyte(struct stat *s, char *cp)
 char *
 getsize(register struct stat *s, register char *cp)
 {
-#if defined(linux)
+#if defined(__linux__)
     (void)sprintf(cp, "%ld", s->st_size);
 #else
     (void)sprintf(cp, "%lld", s->st_size);

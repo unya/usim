@@ -3,7 +3,7 @@
  * $Id$
  */
 
-#if defined(linux)
+#if defined(__linux__)
 #define LINUX
 #endif
 

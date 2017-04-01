@@ -16,7 +16,7 @@
 #include <string.h>
 #include <limits.h>
 
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #include <sys/time.h>
 #endif
@@ -139,7 +139,7 @@ usage(void)
 	fprintf(stderr, "-n		run with no SDL video window\n");
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
-#if defined(OSX) || defined(linux)
+#if defined(OSX) || defined(__linux__)
 	fprintf(stderr, "-r		map /tree to ../../lisp\n");
 #endif
 	fprintf(stderr, "-t		turn on microcode tracing\n");

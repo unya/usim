@@ -17,7 +17,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #endif
 

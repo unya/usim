@@ -10,7 +10,7 @@
 #include "usim.h"
 
  /* until I split out the unix socket code */
-#if defined(LINUX) || defined(OSX) || defined(BSD)
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 
 #include <stdio.h>
 #include <unistd.h>
@@ -36,7 +36,7 @@
 #include "endian.h"
 #include "chaos.h"
 
-#if defined(OSX) || defined(linux) // || defined(BSD)
+#if defined(OSX) || defined(__linux__) // || defined(BSD)
 #define USE_LOCAL_CHAOS     1
 #endif
 
@@ -1753,7 +1753,7 @@ chaos_reconnect(void)
 
 #endif // defined(OSX)
 
-#endif /* linux || osx */
+#endif /* __linux__ || osx */
 
 /* these are stubs; eventually I'll fix the code work with win32 sockets */
 #ifdef WIN32
