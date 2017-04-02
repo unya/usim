@@ -37,11 +37,13 @@ DBGFLAGS = -g3
 #DBGFLAGS += -DCHAOS_DEBUG=1
 CFLAGS = -std=c99 -D_XOPEN_SOURCE=600
 CFLAGS += $(OPTFLAGS) $(DBGFLAGS) $(DEFINES)
+
+# built-in CHAOS FILE: server at 0404
 DEFINES += -DMAP_SITE_TREE_DIRECTORY
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
 
-#DEFINES=-DLASHUP
+# CADR2 machine (ethernet &)
 DEFINES += -DCADR2
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
