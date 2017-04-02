@@ -264,7 +264,9 @@ main(int argc, char *argv[])
 
 	iob_init();
 	chaos_init();
+#ifdef CADR2
 	ether_init();
+#endif /* CADR2 */
 
 #if 0
 	show_prom();
