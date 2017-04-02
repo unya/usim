@@ -16,10 +16,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef _WIN32
-typedef unsigned long off_t;
-#endif
-
 char *img_filename;
 char *mcr_filename;
 char *lod1_filename;

@@ -26,10 +26,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef _WIN32
-typedef unsigned long off_t;
-#endif
-
 #ifdef __BIG_ENDIAN__
 #define NEED_SWAP
 #endif
