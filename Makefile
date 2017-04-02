@@ -53,7 +53,7 @@ SRC = $(USIM_SRC) $(DISPLAY_SRC) $(KEYBOARD_SRC)
 all: usim readmcr diskmaker lod lmfs disk.img
 
 usim: $(USIM_OBJ)
-	$(CC) -o $@ $(USIM_OBJ) $(LFLAGS) $(DISPLAY_LIBS)
+	$(CC) $(CFLAGS) -o $@ $(USIM_OBJ) $(LFLAGS) $(DISPLAY_LIBS)
 
 run:
 	./usim >xx
