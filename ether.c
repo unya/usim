@@ -12,13 +12,15 @@
 #include <sys/types.h>
 #include <sys/param.h>
 
+#include <stdint.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/ioctl.h>
 
 #if defined(__linux__) || defined(OSX) || defined(BSD)
+#include <sys/ioctl.h>
 #include <sys/time.h>
 #define uint8_t __uint8_t
 #define uint16_t __uint16_t
