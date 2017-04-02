@@ -12,7 +12,7 @@ USIM_HDR = ucode.h config.h
 ifeq ($(DISPLAY), SDL)
 DISPLAY_SRC = sdl.c
 DISPLAY_LIBS = $(shell sdl-config --libs)
-DISPLAY_DEFINES =  $(shell sdl-config --cflags) -DDISPLAY_SDL -U_GNU_SOURCE
+DISPLAY_DEFINES =  $(shell sdl-config --cflags) -DDISPLAY_SDL
 endif
 
 ifeq ($(DISPLAY), X11)
@@ -30,7 +30,7 @@ KEYBOARD_SRC = kbd_new.c
 endif
 
 # Linux / BSD / OS X
-LFLAGS = -ldl -L/usr/lib -lpthread
+LFLAGS = -L/usr/lib -lpthread
 OPTFLAGS = -mtune=native -O2 -flto
 DBGFLAGS = -g3
 #DBGFLAGS += -DKBD_DEBUG=1
