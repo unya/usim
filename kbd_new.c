@@ -245,7 +245,7 @@ read_kbd_shiftpress_config(FILE *cf, char *buf, int buflen) {
       buf[--i] = '\0';
     if (buf[0] == '%' || buf[0] == ';')
       continue;
-    else if ((eq = index(buf,'=')) != NULL) {
+    else if ((eq = strchr(buf,'=')) != NULL) {
       *eq = '\0';
       if ((sk = find_sdl_key_name(buf)) != -1) {
 	lk = find_lm_key_name(eq+1,1);
@@ -278,7 +278,7 @@ read_kbd_keypress_config(FILE *cf, char *buf, int buflen) {
       buf[--i] = '\0';
     if (buf[0] == '%' || buf[0] == ';')
       continue;
-    else if ((eq = index(buf,'=')) != NULL) {
+    else if ((eq = strchr(buf,'=')) != NULL) {
       *eq = '\0';
       if ((sk = find_sdl_key_name(buf)) != -1) {
 	lk = find_lm_key_name(eq+1,0);
