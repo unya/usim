@@ -1803,4 +1803,10 @@ chaos_set_csr(int v)
 {
 	return 0;
 }
-#endif
+
+int
+chaos_poll(int v)
+{
+	return 0;
+}
+#endif /* _WIN32 */
