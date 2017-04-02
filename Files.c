@@ -134,7 +134,7 @@ int log_verbose = 0;
 int log_stderr_tofile = 0;
 
 static void
-log(int level, char *fmt, ...)
+chaosfile_log(int level, char *fmt, ...)
 {
 	va_list ap;
     
@@ -828,7 +828,7 @@ getwork(chaos_connection *conn)
         
 		packet->data[length] = '\0';
 #if 1
-		log(LOG_INFO, "FILE: pkt(%d):%.*s\n", ((packet->opcode & 0xff00) >> 8), length-1,
+		chaosfile_log(LOG_INFO, "FILE: pkt(%d):%.*s\n", ((packet->opcode & 0xff00) >> 8), length-1,
 			packet->data);
 #endif
 		switch (((packet->opcode & 0xff00) >> 8)) {
@@ -837,7 +837,7 @@ getwork(chaos_connection *conn)
                 return TNULL;
             case CLSOP:
             case LOSOP:
-                log(LOG_INFO, "FILE: Close pkt: '%s'\n", packet->data);
+                chaosfile_log(LOG_INFO, "FILE: Close pkt: '%s'\n", packet->data);
                 t->t_connection->state = cs_closed;
                 tfree(t);
                 return TNULL;
@@ -888,7 +888,7 @@ getwork(chaos_connection *conn)
 			goto cmderr;
 		}
         
-		log(LOG_INFO, "FILE: command %s\n", cname);
+		chaosfile_log(LOG_INFO, "FILE: command %s\n", cname);
 		for (c = commands; c->c_name; c++)
 			if (strcmp(cname, c->c_name) == 0)
 				break;
@@ -930,7 +930,7 @@ getwork(chaos_connection *conn)
 		if ((errcode = parseargs(cp, c, t)) == 0)
 			return t;
 	cmderr:
-		log(LOG_INFO, "FILE: %s\n", errstring);
+		chaosfile_log(LOG_INFO, "FILE: %s\n", errstring);
 		error(t, fhname, errcode);
 	}
 	return t;
@@ -1057,7 +1057,7 @@ parseargs(unsigned char *args, struct command *c, register struct transaction *t
                         if (strcmp(oname, o->o_name) == 0)
                             break;
                     if (o->o_name == NOSTR) {
-                        log(LOG_ERR, "FILE: UOO:'%s'\n",
+                        chaosfile_log(LOG_ERR, "FILE: UOO:'%s'\n",
                             oname);
                         (void)sprintf(errstring = errbuf,
                                       "Unknown open option: %s",
@@ -1304,11 +1304,11 @@ fatal(char *fmt, ...)
 {
 	va_list ap;
     
-	log(LOG_ERR, "Fatal error in chaos file server: ");
+	chaosfile_log(LOG_ERR, "Fatal error in chaos file server: ");
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
-	log(LOG_ERR, "\n");
+	chaosfile_log(LOG_ERR, "\n");
 	fflush(stderr);
     
 	if (getpid() != mypid)
@@ -1360,7 +1360,7 @@ error(struct transaction *t, char *fh, int code)
     error = chaos_allocate_packet(t->t_connection, CHAOS_OPCODE_DATA, (int)strlen(data));
 
 #if 1
-	log(LOG_INFO, "FILE: error; %s\n", data);
+	chaosfile_log(LOG_INFO, "FILE: error; %s\n", data);
 #endif
 	errstring = NOSTR;
 	errtype = 0;
@@ -1387,7 +1387,7 @@ syncmark(register struct file_handle *f)
     chaos_connection_queue(f->f_connection, packet);
     
 	if (log_verbose) {
-		log(LOG_INFO, "FILE: wrote syncmark to net\n");
+		chaosfile_log(LOG_INFO, "FILE: wrote syncmark to net\n");
 	}
 	return 0;
 }
@@ -1533,7 +1533,7 @@ login(register struct transaction *t)
 	char *name;
 	char response[CHMAXDATA];
     
-    log(LOG_INFO, "FILE: login()\n");
+    chaosfile_log(LOG_INFO, "FILE: login()\n");
     
 #ifdef PRIVHOSTS
     /* 4/29/85 Cory Myers
@@ -1553,7 +1553,7 @@ login(register struct transaction *t)
     
 	a = t->t_args;
 	if ((name = a->a_strings[0]) == NOSTR) {
-		log(LOG_INFO, "FILE exiting due to logout\n");
+		chaosfile_log(LOG_INFO, "FILE exiting due to logout\n");
 		finish(0);
 #if 0
 	} else if (home != NOSTR) {
@@ -1561,7 +1561,7 @@ login(register struct transaction *t)
 //		error(t, "", BUG);
 #endif
 	} else if (*name == '\0' || (p = getpwnam(downcase(name))) == (struct passwd *)0) {
-        log(LOG_INFO, "FILE: login() no user '%s'\n", name);
+        chaosfile_log(LOG_INFO, "FILE: login() no user '%s'\n", name);
 		errstring = "Login incorrect.";
 		error(t, "", UNK);
 	} else if (p->pw_passwd == NOSTR || *p->pw_passwd == '\0') {
@@ -1574,15 +1574,15 @@ login(register struct transaction *t)
                !privileged_host &&
 #endif
                (a->a_strings[1] == NOSTR || pwok(p, a->a_strings[1]) == 0)) {
-        log(LOG_INFO, "FILE: %s %s failed", name, a->a_strings[1]);
-        log(LOG_INFO, "p->pw_passwd %p, *p->pw_passwd %02x\n",
+        chaosfile_log(LOG_INFO, "FILE: %s %s failed", name, a->a_strings[1]);
+        chaosfile_log(LOG_INFO, "p->pw_passwd %p, *p->pw_passwd %02x\n",
             p->pw_passwd, p->pw_passwd ? *p->pw_passwd : 0);
 		error(t, "", IP);
 	} else if (p->pw_uid != 0 && access(NOLOGIN, F_OK) == 0) {
 		errstring = "All logins are disabled, system shutting down";
 		error(t, "", MSC);
 	} else {
-        log(LOG_INFO, "FILE: login() pw ok\n");
+        chaosfile_log(LOG_INFO, "FILE: login() pw ok\n");
 		home = savestr(p->pw_dir);
 		cwd = savestr(home);
 #if 0
@@ -1610,10 +1610,10 @@ login(register struct transaction *t)
 			(void)close(ufd);
 		}
 #endif
-        log(LOG_INFO, "FILE: login() responding\n");
+        chaosfile_log(LOG_INFO, "FILE: login() responding\n");
 		respond(t, response);
 #if 0
-		log(LOG_NOTICE, "FILE: logged in as %s from host %s\n",
+		chaosfile_log(LOG_NOTICE, "FILE: logged in as %s from host %s\n",
             p->pw_name, chaos_name(mylogin.cl_haddr));
 #endif
 #if 0
@@ -1628,7 +1628,7 @@ login(register struct transaction *t)
 		}
 #endif
 	}
-    log(LOG_INFO, "FILE: login() done\n");
+    chaosfile_log(LOG_INFO, "FILE: login() done\n");
 }
 /*
  * Generate the full name from the password file entry, according to
@@ -1707,13 +1707,13 @@ fileopen(register struct transaction *t)
 	struct tm *tm;
 	struct stat sbuf;
     
-    log(LOG_INFO, "FILE: fileopen\n");
+    chaosfile_log(LOG_INFO, "FILE: fileopen\n");
 
     memset(&sbuf, 0, sizeof(sbuf));
 	if ((errcode = parsepath(pathname, &dirname, &realname, 0)) != 0)
 		goto openerr;
 	if (foptions & ~(O_RAW|O_READ|O_WRITE|O_PROBE|O_DEFAULT|O_PRESERVE|O_BINARY|O_CHARACTER|O_PROBEDIR)) {
-		log(LOG_ERR, "FILE:UOO: 0%O\n", foptions);
+		chaosfile_log(LOG_ERR, "FILE:UOO: 0%O\n", foptions);
 		errcode = ICO;
 		goto openerr;
 	}
@@ -1794,7 +1794,7 @@ fileopen(register struct transaction *t)
             break;
         case O_WRITE:
             fd = 0;	/* Impossible value */
-            log(0, "stat(%s)\n", realname);
+            chaosfile_log(0, "stat(%s)\n", realname);
             if (stat(realname, &sbuf) == 0) {
                 /*
                  * The file exists.  Disallow writing directories.
@@ -1811,16 +1811,16 @@ fileopen(register struct transaction *t)
                         break;
                     case O_XTRUNCATE:
                         fd = creat(realname, 0644);
-                        log(0, "creat(%s) fd %d\n", realname, fd);
+                        chaosfile_log(0, "creat(%s) fd %d\n", realname, fd);
                         break;
                     case O_XOVERWRITE:
                         fd = open(realname, 1);
-                        log(0, "open(%s) fd %d\n", realname, fd);
+                        chaosfile_log(0, "open(%s) fd %d\n", realname, fd);
                         break;
                     case O_XAPPEND:
                         if ((fd = open(realname, 1)) > 0)
                             lseek(fd, 0, 2);
-                        log(0, "open(%s) fd %d\n", realname, fd);
+                        chaosfile_log(0, "open(%s) fd %d\n", realname, fd);
                         break;
                     case O_XSUPERSEDE:
                     case O_XRENDEL:
@@ -1831,14 +1831,14 @@ fileopen(register struct transaction *t)
                         break;
                 }
             } else {
-                log(0, "stat(%s) failed\n", realname);
+                chaosfile_log(0, "stat(%s) failed\n", realname);
                 /*
                  * The stat above failed. Make sure the file really doesn't
                  * exist. Otherwise fall through to the error processing
                  * below.
                  */
-                log(0, "errno %d, access() %d\n", errno, access(dirname, X_OK));
-                log(0, "ifnexists %d, ifexists %d\n", ifnexists, ifexists);
+                chaosfile_log(0, "errno %d, access() %d\n", errno, access(dirname, X_OK));
+                chaosfile_log(0, "ifnexists %d, ifexists %d\n", ifnexists, ifexists);
                 
                 if (errno != ENOENT || access(dirname, X_OK) != 0)
                     fd = -1;
@@ -1851,12 +1851,12 @@ fileopen(register struct transaction *t)
                             ifexists == O_XOVERWRITE ||
                             ifexists == O_XTRUNCATE) {
                             fd = creat(realname, 0644);
-                            log(0, "creat('%s') %d\n", realname, fd);
+                            chaosfile_log(0, "creat('%s') %d\n", realname, fd);
                         }
                         break;
                 }
             }
-            log(0, "errcode %d\n", errcode);
+            chaosfile_log(0, "errcode %d\n", errcode);
             if (errcode)
                 break;
             if (fd == 0) {
@@ -1868,7 +1868,7 @@ fileopen(register struct transaction *t)
                     fd = -1;
                 else
                     fd = creat(tempname, 0644);
-                log(0, "create %s %d\n", tempname, fd);
+                chaosfile_log(0, "create %s %d\n", tempname, fd);
             }
             /*
              * An error occurred either in stat, creat or open on the
@@ -1917,9 +1917,9 @@ fileopen(register struct transaction *t)
                 fatal(FSTAT);
             break;
         case O_READ:
-            log(0, "open(%s) \n", realname);
+            chaosfile_log(0, "open(%s) \n", realname);
             if ((fd = open(realname, 0)) < 0) {
-                log(0, "open error\n");
+                chaosfile_log(0, "open error\n");
                 switch (errno) {
                     case EACCES:
                         if (access(dirname, X_OK) == 0) {
@@ -2011,7 +2011,7 @@ fileopen(register struct transaction *t)
             x->x_state = X_PROCESS;
             x->x_bytesize = bytesize;
             x->x_fd = fd;
-            log(0, "xfer %p fd %d\n", x, fd);
+            chaosfile_log(0, "xfer %p fd %d\n", x, fd);
             x->x_realname = realname;
             x->x_dirname = dirname;
             x->x_atime = sbuf.st_atime;
@@ -2221,7 +2221,7 @@ directory(register struct transaction *t)
 	char *dirname = 0, *realname = 0;
     
 	if (a->a_options & ~(O_DELETED|O_FAST|O_SORTED)) {
-		log(LOG_ERR, "FILE:UOO: 0%o\n", a->a_options);
+		chaosfile_log(LOG_ERR, "FILE:UOO: 0%o\n", a->a_options);
 		errcode = ICO;
 	} else if (t->t_fh->f_xfer != XNULL) {
 		errstring = "File handle already in use";
@@ -2473,7 +2473,7 @@ xcommand(register struct transaction *t)
 	register struct file_handle *f;
 	register struct xfer *x;
     
-	log(LOG_INFO, "FILE: transfer command: %s\n", t->t_command->c_name);
+	chaosfile_log(LOG_INFO, "FILE: transfer command: %s\n", t->t_command->c_name);
 	if ((f = t->t_fh) == FNULL || (x = f->f_xfer) == XNULL) {
 		errstring = "No transfer in progress on this file handle";
 		error(t, f ? f->f_name : "", BUG);
@@ -2563,7 +2563,7 @@ xfree(register struct xfer *x)
 void
 fileclose(register struct xfer *x, register struct transaction *t)
 {
-    log(LOG_INFO, "FILE: fileclose\n");
+    chaosfile_log(LOG_INFO, "FILE: fileclose\n");
 	x->x_flags |= X_CLOSE;
 	switch (x->x_options & (O_READ | O_WRITE | O_DIRECTORY | O_PROPERTIES)) {
         case O_READ:
@@ -2619,7 +2619,7 @@ xclose(struct xfer *ax)
 	int errcode = 0;
 	struct tm *tm;
 
-    log(LOG_INFO, "FILE: xclose\n");
+    chaosfile_log(LOG_INFO, "FILE: xclose\n");
 
     if (x->x_options & (O_DIRECTORY|O_PROPERTIES)) {
 		respond(t, NOSTR);
@@ -2665,14 +2665,14 @@ xclose(struct xfer *ax)
 	if (errcode == 0) {
         struct stat sbuf;
 		if (fstat(x->x_fd, &sbuf) < 0) {
-			log(LOG_ERR, "fd:%d, pid:%d, mypid:%d, errno:%d\n", x->x_fd,
+			chaosfile_log(LOG_ERR, "fd:%d, pid:%d, mypid:%d, errno:%d\n", x->x_fd,
                 getpid(), mypid, errno);
 			fatal("Fstat in xclose 1");
 		}
 		if (x->x_options & O_PRESERVE ||
 		    x->x_flags & (X_ATIME|X_MTIME)) {
 			
-			log(LOG_INFO, "xclose (3b)\n");
+			chaosfile_log(LOG_INFO, "xclose (3b)\n");
 			
 #if defined(OSX) || defined(BSD42)
 			struct timeval timep[2];
@@ -2701,17 +2701,17 @@ xclose(struct xfer *ax)
 			 * can't really fail anyway.
 			 */
             
-			log(LOG_INFO, "xclose (3c)\n");
+			chaosfile_log(LOG_INFO, "xclose (3c)\n");
             
 #if defined(OSX) || defined(BSD42) || defined(__linux__)
 			if (utimes(x->x_realname, timep)) {
-                log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
+                chaosfile_log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
 #else
 			utime(x->x_realname, timep);
 #endif
 			
-			log(LOG_INFO, "xclose (3d)\n");
+			chaosfile_log(LOG_INFO, "xclose (3d)\n");
 			
 			if (fstat(x->x_fd, &sbuf) < 0)
 				fatal("Fstat in xclose 2");
@@ -2760,7 +2760,7 @@ xclose(struct xfer *ax)
 		respond(t, response);
 	} else
 		error(t, x->x_fh->f_name, errcode);
-    log(0, "close fd %d\n", x->x_fd);
+    chaosfile_log(0, "close fd %d\n", x->x_fd);
 	(void)close(x->x_fd);
 }
 /*
@@ -2842,7 +2842,7 @@ filepos(register struct xfer *x, register struct transaction *t)
 			if (syncmark(x->x_fh) < 0)
 				fatal("Broken data connection");
 			if (log_verbose) {
-				log(LOG_INFO,
+				chaosfile_log(LOG_INFO,
 				    "pid: %ld, x: %X, fd: %ld, size: %ld, "
 				    "old: %ld, new: %ld, pos: %ld\n",
 				    getpid(), x, x->x_fd, size,
@@ -3256,21 +3256,21 @@ complete(register struct transaction *t)
 			}
         }
 		if (log_verbose) {
-			log(LOG_INFO, "ifile:'%s'\nireal:'%s'\nidir:'%s'\n",
+			chaosfile_log(LOG_INFO, "ifile:'%s'\nireal:'%s'\nidir:'%s'\n",
 			    ifile ? ifile : "!",
 			    ireal ? ireal : "!",
 			    idir ? idir : "!");
-			log(LOG_INFO, "dfile:'%s'\ndreal:'%s'\nddir:'%s'\n",
+			chaosfile_log(LOG_INFO, "dfile:'%s'\ndreal:'%s'\nddir:'%s'\n",
 			    dfile ? dfile : "!",
 			    dreal ? dreal : "!",
 			    ddir ? ddir : "!");
-			log(LOG_INFO, "iname:'%s'\nitype:'%s'\n",
+			chaosfile_log(LOG_INFO, "iname:'%s'\nitype:'%s'\n",
 			    iname ? iname : "!",
 			    itype ? itype : "!");
-			log(LOG_INFO, "dname:'%s'\ndtype:'%s'\n",
+			chaosfile_log(LOG_INFO, "dname:'%s'\ndtype:'%s'\n",
 			    dname ? dname : "!",
 			    dtype ? dtype : "!");
-			log(LOG_INFO, "adir:'%s'\n",
+			chaosfile_log(LOG_INFO, "adir:'%s'\n",
 			    adir ? adir : "!");
 		}
 #if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
@@ -3323,7 +3323,7 @@ complete(register struct transaction *t)
             int namematch, typematch;
             
             if (log_verbose) {
-                log(LOG_INFO, "top of readdir loop; '%s'\n",
+                chaosfile_log(LOG_INFO, "top of readdir loop; '%s'\n",
                     dirp->d_name);
             }
             
@@ -3340,10 +3340,10 @@ complete(register struct transaction *t)
                 (typematch = prefix(itype, etype)) == SNONE)
                 continue;
             if (log_verbose) {
-                log(LOG_INFO, "ename:'%s' etype:'%s'\n",
+                chaosfile_log(LOG_INFO, "ename:'%s' etype:'%s'\n",
                     ename ? ename : "!",
                     etype ? etype : "!");
-                log(LOG_INFO, "nm:%d, tm:%d, ns:%d, ts:%d\n",
+                chaosfile_log(LOG_INFO, "nm:%d, tm:%d, ns:%d, ts:%d\n",
                     namematch, typematch, nstate, tstate);
             }
             if (namematch == SEXACT) {
@@ -3403,10 +3403,10 @@ complete(register struct transaction *t)
                 }
             }
             if (log_verbose) {
-                log(LOG_INFO, "aname:'%s', atype:'%s'\n",
+                chaosfile_log(LOG_INFO, "aname:'%s', atype:'%s'\n",
                     aname ? aname : "!",
                     atype ? atype : "!");
-                log(LOG_INFO, "nstate: %d, tstate: %d\n",
+                chaosfile_log(LOG_INFO, "nstate: %d, tstate: %d\n",
                     nstate, tstate);
             }
         }
@@ -4398,10 +4398,10 @@ dowork(register struct xfer *x)
         case O_DIRECTORY:
             switch (x->x_state) {
                 case X_DERROR:
-                    log(0, "X_DERROR\n");
+                    chaosfile_log(0, "X_DERROR\n");
                     return X_FLUSH;
                 case X_DONE:
-                    log(0, "X_DONE\n");
+                    chaosfile_log(0, "X_DONE\n");
                     /*
                      * Note we must respond to the close before sending the
                      * SYNCMARK since otherwise we would likely block on
@@ -4411,13 +4411,13 @@ dowork(register struct xfer *x)
                     xclose(x);
                     return X_SYNCMARK;
                 case X_BROKEN:
-                    log(0, "X_BROKEN\n"); return X_HANG;
+                    chaosfile_log(0, "X_BROKEN\n"); return X_HANG;
                 case X_ABORT:
-                    log(0, "X_ABORT\n"); return X_HANG;
+                    chaosfile_log(0, "X_ABORT\n"); return X_HANG;
                 case X_SEOF:
-                    log(0, "X_SEOF\n"); return X_HANG;
+                    chaosfile_log(0, "X_SEOF\n"); return X_HANG;
                 case X_IDLE:
-                    log(0, "X_IDLE\n");
+                    chaosfile_log(0, "X_IDLE\n");
                     return X_HANG;
                 case X_REOF:
                     /*
@@ -4428,13 +4428,13 @@ dowork(register struct xfer *x)
                      */			
                     if (xpweof(x) < 0) {
                         x->x_state = X_BROKEN;
-                        log(0, "xpweof(x) == %d, X_BROKEN\n", xpweof(x));
+                        chaosfile_log(0, "xpweof(x) == %d, X_BROKEN\n", xpweof(x));
                     } else
                         x->x_state = X_SEOF;
-                    log(0, "X_REOF\n");
+                    chaosfile_log(0, "X_REOF\n");
                     return X_CONTINUE;
                 case X_PROCESS:
-                    log(0, "X_PROCESS\n");
+                    chaosfile_log(0, "X_PROCESS\n");
                     break;
                 default:
                     fatal("Bad state of transfer process");
@@ -4444,7 +4444,7 @@ dowork(register struct xfer *x)
                     register ssize_t n;
                     
                     if (log_verbose) {
-                        log(LOG_INFO,
+                        chaosfile_log(LOG_INFO,
                             "Before read pos: %ld\n",
                             tell(x->x_fd));
                     }
@@ -4453,7 +4453,7 @@ dowork(register struct xfer *x)
                         read(x->x_fd, x->x_bbuf, FSBSIZE);
                     
                     if (log_verbose) {
-                        log(LOG_INFO,
+                        chaosfile_log(LOG_INFO,
                             "pid: %ld, x: %X, fd: %ld, "
                             "Read: %ld\n",
                             getpid(), x, x->x_fd, n);
@@ -4529,7 +4529,7 @@ dowork(register struct xfer *x)
                 case X_ERROR:
                     return X_HANG;
                 case X_WSYNC:
-                    log(0, "X_WSYNC\n");
+                    chaosfile_log(0, "X_WSYNC\n");
                     switch (xpread(x)) {
                         case -1:
                             x->x_state = x->x_flags & X_CLOSE ? X_DONE : X_BROKEN;
@@ -4553,23 +4553,23 @@ dowork(register struct xfer *x)
                 {
                     register ssize_t n;
                     
-                    log(0, "X_PROCESS\n");
+                    chaosfile_log(0, "X_PROCESS\n");
                     switch (n = xpread(x)) {
                         case 0:
-                            log(0, "xpread 0\n");
+                            chaosfile_log(0, "xpread 0\n");
                             x->x_flags |= X_EOF;
                             if (xbwrite(x) < 0)
                                 goto writerr;
                             x->x_state = X_WSYNC;
                             return X_CONTINUE;
                         case -1:
-                            log(0, "xpread -1\n");
+                            chaosfile_log(0, "xpread -1\n");
                             (void)fherror(x->x_fh, NET, E_FATAL,
                                           "Data connection error");
                             x->x_state = x->x_flags & X_CLOSE ? X_DONE : X_BROKEN;
                             return X_CONTINUE;
                         case -2:
-                            log(0, "xpread -2\n");
+                            chaosfile_log(0, "xpread -2\n");
                             /*
                              * SYNCMARK before EOF, don't bother
                              * flushing disk buffer.
@@ -4577,7 +4577,7 @@ dowork(register struct xfer *x)
                             x->x_state = x->x_flags & X_CLOSE ? X_DONE : X_RSYNC;
                             return X_CONTINUE;
                         default:
-                            log(0, "xpread default\n");
+                            chaosfile_log(0, "xpread default\n");
                             x->x_left = n;
                             x->x_pptr = x->x_pbuf;
                             break;
@@ -4626,7 +4626,7 @@ dowork(register struct xfer *x)
                         from_lispm(x);
                         break;
                 }
-                log(0, "x %p, x->x_room %d\n", x, x->x_room);
+                chaosfile_log(0, "x %p, x->x_room %d\n", x, x->x_room);
                 if (x->x_room == 0) {
                     if (xbwrite(x) >= 0) {
                         x->x_bptr = x->x_bbuf;
@@ -4647,7 +4647,7 @@ dowork(register struct xfer *x)
                     }
                 }
             }
-            log(0, "X_CONTINUE\n");
+            chaosfile_log(0, "X_CONTINUE\n");
             return X_CONTINUE;
     }
     /* NOTREACHED */
@@ -4752,13 +4752,13 @@ xbwrite(register struct xfer *x)
     if ((n = x->x_bptr - x->x_bbuf) == 0)
         return 0;
     if ((ret = write(x->x_fd, x->x_bbuf, (size_t)n)) <= 0) {
-        log(LOG_ERR, "FILE: xbwrite error %d (%d) to file\n",
+        chaosfile_log(LOG_ERR, "FILE: xbwrite error %d (%d) to file\n",
             ret, errno);
         return -1;
     }
     if (log_verbose) {
-        log(LOG_INFO,"FILE: wrote %d bytes to file\n", ret);
-        log(LOG_INFO,"FILE: fd %d\n", x->x_fd);
+        chaosfile_log(LOG_INFO,"FILE: wrote %d bytes to file\n", ret);
+        chaosfile_log(LOG_INFO,"FILE: fd %d\n", x->x_fd);
     }
     return 0;
 }
@@ -4790,7 +4790,7 @@ xpwrite(register struct xfer *x)
     
     x->x_op = x->x_options & O_BINARY ? DWDOP : DATOP;
     if (log_verbose) {
-        log(LOG_INFO, "FILE: writing (%d) %d bytes to net\n",
+        chaosfile_log(LOG_INFO, "FILE: writing (%d) %d bytes to net\n",
             x->x_op & 0377, len);
         if (0) dumpbuffer((u_char *)x->x_pkt.cp_data, len);
     }
@@ -4821,7 +4821,7 @@ loop:
     switch ((packet->opcode & 0xff00) >> 8) {
         case EOFOP:
         {
-            log(LOG_INFO, "xpread: EOF\n");
+            chaosfile_log(LOG_INFO, "xpread: EOF\n");
             chaos_packet *status = chaos_allocate_packet(x->x_fh->f_connection, CHAOS_OPCODE_STS, 2 * sizeof(unsigned short));
             
             status->number = packet->number;
@@ -4834,7 +4834,7 @@ loop:
         }
         case SYNOP:
         {
-            log(LOG_INFO, "xpread: SYNOP\n");
+            chaosfile_log(LOG_INFO, "xpread: SYNOP\n");
             chaos_packet *status = chaos_allocate_packet(x->x_fh->f_connection, CHAOS_OPCODE_STS, 2 * sizeof(unsigned short));
             
             *(unsigned short *)&status->data[0] = x->x_fh->f_connection->lastreceived;
@@ -4847,17 +4847,17 @@ loop:
         case DATOP:
         case DWDOP:
             if (packet->length == 0) {
-                log(LOG_ERR, "FILE: zero size data packet\n");
+                chaosfile_log(LOG_ERR, "FILE: zero size data packet\n");
                 goto loop;	/* Zero size data packet!? */
             }
-            log(LOG_INFO, "xpread: DATA length=%d\n", packet->length);
+            chaosfile_log(LOG_INFO, "xpread: DATA length=%d\n", packet->length);
             n = packet->length;
             x->x_pkt.cp_op = (packet->opcode & 0xff00) >> 8;
             memcpy(x->x_pkt.cp_data, packet->data, packet->length);
             free(packet);
             return n;
         default:
-            log(LOG_ERR, "FILE: bad opcode in data connection: %d\n",
+            chaosfile_log(LOG_ERR, "FILE: bad opcode in data connection: %d\n",
                 x->x_op & 0377);
             free(packet);
             packet = 0;
@@ -4900,11 +4900,11 @@ startxfer(struct xfer *ax)
     register struct xfer *x = ax;
     
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        log(LOG_INFO, "startxfer: entering\n");
+        chaosfile_log(LOG_INFO, "startxfer: entering\n");
 
          for (;;) {
             if (log_verbose) {
-                log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
+                chaosfile_log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
                     tell(x->x_fd), x->x_state);
             }
 
@@ -4915,7 +4915,7 @@ startxfer(struct xfer *ax)
                      
                      t = x->x_work;
                      x->x_work = t->t_next;
-                     log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
+                     chaosfile_log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
                      (*t->t_command->c_func)(x, t);
                  }
                  else
@@ -4931,12 +4931,12 @@ startxfer(struct xfer *ax)
                 case X_CONTINUE:	/* In process */
                     continue;
                 case X_HANG:		/* Need more instructions */
-                    log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
+                    chaosfile_log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
                     dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
                     continue;
             }
             xflush(x);
-            log(LOG_INFO, "startxfer: exiting\n");
+            chaosfile_log(LOG_INFO, "startxfer: exiting\n");
             return;
         }
     });
@@ -4950,10 +4950,10 @@ _startxfer(void *ax)
 {
     register struct xfer *x = (struct xfer *)ax;
     
-    log(LOG_INFO, "startxfer: entering\n");
+    chaosfile_log(LOG_INFO, "startxfer: entering\n");
     for (;;) {
        if (log_verbose) {
-            log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
+            chaosfile_log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
                 tell(x->x_fd), x->x_state);
         }
 
@@ -4964,7 +4964,7 @@ _startxfer(void *ax)
                      
                  t = x->x_work;
                  x->x_work = t->t_next;
-                 log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
+                 chaosfile_log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
                  (*t->t_command->c_func)(x, t);
              }
              else
@@ -4980,7 +4980,7 @@ _startxfer(void *ax)
             case X_CONTINUE:	/* In process */
                 continue;
             case X_HANG:		/* Need more instructions */
-                log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
+                chaosfile_log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
 #if defined(OSX)
                 dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
 #else
@@ -4991,7 +4991,7 @@ _startxfer(void *ax)
                 continue;
         }
         xflush(x);
-        log(LOG_INFO, "startxfer: exiting\n");
+        chaosfile_log(LOG_INFO, "startxfer: exiting\n");
         return 0;
     }
     return 0;
@@ -5051,7 +5051,7 @@ void
 processmini(chaos_connection *conn)
 {
     
-//    log(LOG_INFO, "MINI: %s\n", argv[1]);
+//    chaosfile_log(LOG_INFO, "MINI: %s\n", argv[1]);
     printf("processmini:\n");
     
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
@@ -5112,7 +5112,7 @@ processmini(chaos_connection *conn)
                         output->length = (unsigned short)length;
                         chaos_connection_queue(conn, output);
                         binary = (packet->opcode >> 8) & 1;
-                        log(LOG_INFO, "MINI: binary = %d\n", binary);
+                        chaosfile_log(LOG_INFO, "MINI: binary = %d\n", binary);
                     }
                     free(packet);
 
@@ -5120,7 +5120,7 @@ processmini(chaos_connection *conn)
                         char buffer[CHMAXDATA];
                         
                         length = read(fd, buffer, CHMAXDATA);
-                        /*log(LOG_INFO, "MINI: read %d\n", length);*/
+                        /*chaosfile_log(LOG_INFO, "MINI: read %d\n", length);*/
                         if (length == 0)
                             break;
                         output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
@@ -5136,7 +5136,7 @@ processmini(chaos_connection *conn)
                     close(fd);
                     break;
                 default:
-                    log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
+                    chaosfile_log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
                     break;
             }
         }
@@ -5206,7 +5206,7 @@ _processmini(void *conn)
                     output->length = (unsigned short)length;
                     chaos_connection_queue(conn, output);
                     binary = (packet->opcode >> 8) & 1;
-                    log(LOG_INFO, "MINI: binary = %d\n", binary);
+                    chaosfile_log(LOG_INFO, "MINI: binary = %d\n", binary);
                 }
                 free(packet);
                 
@@ -5214,7 +5214,7 @@ _processmini(void *conn)
                     char buffer[CHMAXDATA];
                     
                     length = read(fd, buffer, CHMAXDATA);
-                    /*log(LOG_INFO, "MINI: read %d\n", length);*/
+                    /*chaosfile_log(LOG_INFO, "MINI: read %d\n", length);*/
                     if (length == 0)
                         break;
                     output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
@@ -5230,7 +5230,7 @@ _processmini(void *conn)
                 close(fd);
                 break;
             default:
-                log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
+                chaosfile_log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
                 break;
         }
     }
