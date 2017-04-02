@@ -24,6 +24,11 @@ extern int run_ucode_flag;
 # define VIDEO_WIDTH 768
 #endif
 
+/* missing from mingw signals.h for whatever reason */
+#if defined(_WIN32)
+#define SIGQUIT 3
+#endif
+
 static SDL_Surface *screen;
 static int video_width = VIDEO_WIDTH;
 static int video_height = VIDEO_HEIGHT;
