@@ -46,6 +46,8 @@ static DisplayState *ds = &display_state;
 #define MOUSE_EVENT_MBUTTON 2
 #define MOUSE_EVENT_RBUTTON 4
 
+extern void iob_sdl_mouse_poll(int x, int y);
+
 extern void sdl_process_key(SDL_KeyboardEvent *ev, int keydown);
 extern int mouse_sync_flag;
 
