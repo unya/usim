@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <strings.h>
 
 #if defined(LINUX) || defined(OSX) || defined(BSD)
 #include <unistd.h>
