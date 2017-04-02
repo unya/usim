@@ -13,7 +13,10 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+
+#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <sys/ioctl.h>
+#endif
 
 extern int trace;
 
