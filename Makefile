@@ -31,7 +31,7 @@ endif
 
 # Linux / BSD / OS X
 LFLAGS = -L/usr/lib -lpthread
-OPTFLAGS = -mtune=native -O2 -flto
+OPTFLAGS = -mtune=native -O2
 DBGFLAGS = -g3
 #DBGFLAGS += -DKBD_DEBUG=1
 #DBGFLAGS += -DCHAOS_DEBUG=1
