@@ -15,7 +15,7 @@ static char *disk_filename;
 const char *
 config_get_promsym_filename(void)
 {
-	return "promh.sym.9";
+	return "../l/lispm1/promh.sym.9";
 }
 
 const char *
@@ -24,7 +24,7 @@ config_get_mcrsym_filename(void)
 	if (mcrsym_filename)
 		return mcrsym_filename;
 
-	return "ucadr.sym.841";
+	return "../l/lispm1/ucadr.sym.841";
 }
 
 void

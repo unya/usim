@@ -71,7 +71,7 @@ lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 disk.img:
-	./diskmaker -c -f disk.img -t template.disk9
+	./diskmaker -c -f disk.img -t disk.cfg
 
 clean:
 	rm -f *.o usim lod readmcr diskmaker lmfs xx
@@ -83,4 +83,3 @@ iob.o: DEFINES+=$(DISPLAY_DEFINES)
 kbd_new.o: DEFINES+=$(DISPLAY_DEFINES)
 kbd_old.o: DEFINES+=$(DISPLAY_DEFINES)
 main.o: DEFINES+=$(DISPLAY_DEFINES)
-
