@@ -140,8 +140,7 @@ usage(void)
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
 #if defined(OSX) || defined(__linux__)
-	fprintf(stderr, "-r		map /tree to ../../lisp\n");
-#endif
+	fprintf(stderr, "-r		map /tree to ../l\n");
 	fprintf(stderr, "-t		turn on microcode tracing\n");
 	fprintf(stderr, "-T<flags>	turn on tracing\n");
 	fprintf(stderr, "   d - disk\n");
@@ -212,9 +211,14 @@ main(int argc, char *argv[])
 #if defined(MAP_SITE_TREE_DIRECTORY)
 		case 'r':
 			{			
-				char *p = "../../lisp";
-				char newpath[PATH_MAX];
-				realpath (p, newpath);
+				char *p = "../l";
+				char *newpath = malloc(strlen(argv[0]) + strlen(p) + 2);
+				char *q = &argv[0][strlen(argv[0])];
+				
+				while (*q != '/') q--;
+				*(q+1) = '\0';
+				strcpy(newpath, argv[0]);
+				strcat(newpath, p);
 				dcanon(newpath, 0);
 				settreeroot(newpath);
 			}
