@@ -6,7 +6,7 @@
 DISPLAY = SDL
 KEYBOARD = NEW
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c ether.c uart.c syms.c config.c
+USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c
 USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
@@ -42,9 +42,6 @@ CFLAGS += $(OPTFLAGS) $(DBGFLAGS) $(DEFINES)
 DEFINES += -DMAP_SITE_TREE_DIRECTORY
 USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
-
-# CADR2 machine (ethernet &)
-DEFINES += -DCADR2
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 

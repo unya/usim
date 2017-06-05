@@ -44,7 +44,6 @@ extern int read_prom_files(void);
 extern int read_sym_files(void);
 extern int iob_init(void);
 extern int chaos_init(void);
-extern int ether_init(void);
 extern void iob_warm_boot_key(void);
 extern void run(void);
 extern int dcanon(char *cp, int blankok);
@@ -276,9 +275,6 @@ main(int argc, char *argv[])
 
 	iob_init();
 	chaos_init();
-#ifdef CADR2
-	ether_init();
-#endif /* CADR2 */
 
 #if 0
 	show_prom();
