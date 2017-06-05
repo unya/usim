@@ -133,23 +133,31 @@ usage(void)
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "-a		use alternate prom file\n");
 	fprintf(stderr, "-b <sym-name>	set breakpoint in microcode\n");
+	fprintf(stderr, "-B <number>	start tracing after # microcode cycles\n");
 	fprintf(stderr, "-c <number>	set max # of microcode cycles to run\n");
 	fprintf(stderr, "-C <number>	set max # of traced microcode cycles to run\n");
+	fprintf(stderr, "-d 		dump state\n");
+	fprintf(stderr, "-i <file>	set disk image\n");
 	fprintf(stderr, "-l <sym-name>	start tracing at symbol\n");
 	fprintf(stderr, "-n		run with no SDL video window\n");
+	fprintf(stderr, "-m 		mouse sync\n");
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
 #if defined(OSX) || defined(__linux__)
 	fprintf(stderr, "-r		map /tree to ../l\n");
+	fprintf(stderr, "-S 		save state\n");
 	fprintf(stderr, "-t		turn on microcode tracing\n");
 	fprintf(stderr, "-T<flags>	turn on tracing\n");
+	fprintf(stderr, "   a - enable tracing after # cycles (see -B flag)\n");
 	fprintf(stderr, "   d - disk\n");
 	fprintf(stderr, "   i - interrupts\n");
 	fprintf(stderr, "   o - i/o\n");
 	fprintf(stderr, "   p - prom\n");
 	fprintf(stderr, "   c - microcode\n");
 	fprintf(stderr, "   m - microcode labels\n");
+	fprintf(stderr, "   n - network\n");
 	fprintf(stderr, "   l - lod labels\n");
+	fprintf(stderr, "   v - virtual memory\n");
 	fprintf(stderr, "-s		halt after prom runs\n");
 	fprintf(stderr, "-w		warm boot\n");
 
