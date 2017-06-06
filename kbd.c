@@ -17,7 +17,6 @@
 #include "keyboard.h"
 #include "ucode.h"
 
-#ifdef DISPLAY_X11
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
@@ -48,7 +47,6 @@
 #define SDLK_UP		XK_Up
 #define SDLK_TAB	XK_Tab
 #define SDLK_ESC	XK_Escape
-#endif /* DISPLAY_X11 */
 
 #ifdef DISPLAY_OSX
 #define SDLK_LSHIFT	56

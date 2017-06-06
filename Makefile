@@ -6,7 +6,7 @@
 DISPLAY = SDL
 KEYBOARD = NEW
 
-USIM_SRC = main.c decode.c ucode.c disk.c iob.c chaos.c syms.c config.c
+USIM_SRC = main.c decode.c ucode.c x11.c kbd.c disk.c iob.c chaos.c syms.c config.c 
 USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
@@ -44,8 +44,6 @@ USIM_SRC += Files.c glob.c
 USIM_HDR += Files.h glob.h
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
-
-SRC = $(USIM_SRC) $(DISPLAY_SRC) $(KEYBOARD_SRC)
 
 all: usim readmcr diskmaker lod lmfs disk.img
 
