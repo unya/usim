@@ -1,8 +1,3 @@
-/*
- * decode.h
- * $Id$
- */
-
 int read_prom_files(void);
 int show_prom(void);
 

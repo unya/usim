@@ -1,10 +1,3 @@
-/*
- * chaos.h
- * $Id$
- */
-
-#include <sys/types.h>
-
 #include <pthread.h>
 
 typedef unsigned char u_char;

@@ -1,12 +1,3 @@
-/*
- * syms.c
- *
- * really simple symbol table routines to keep a sorted list of
- * prom and mcr load symbols.
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

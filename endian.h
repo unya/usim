@@ -1,11 +1,3 @@
-/* 
- * endian.h
- * Some macros to handle endian-ness issues in usim CADR emulation
- *
- * $Id$
- *
- */
-
 #ifndef _USIM_ENDIAN_H_
 #define _USIM_ENDIAN_H_
 

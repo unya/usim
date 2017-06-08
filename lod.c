@@ -1,16 +1,3 @@
-/*
- * feeble program to pull information out of CADR load band 
- * works with raw load bands (-l) or full disk images (-i)
- *
- * 10/2004
- * brad@heeltoe.com
- *
- * 8/2006
- * added support for partition table
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

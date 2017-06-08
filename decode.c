@@ -1,12 +1,3 @@
-/*
- * decode.c
- *
- * disassemble CADR microcode
- * or at least, try to :-)
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

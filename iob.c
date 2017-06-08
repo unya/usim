@@ -1,12 +1,3 @@
-/*
- * iob.c
- *
- * simple CADR i/o board simulation
- * support for mouse, keyboard, clock
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

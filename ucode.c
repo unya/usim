@@ -1,16 +1,3 @@
-/*
- * ucode.c
- *
- * very brute-force CADR simulator
- * from AIM-528, "CADR"
- *
- * please remember this is not ment to be fast or pretty.
- * it's ment to be accurate, however.
- * 
- * Brad Parker <brad@heeltoe.com>
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

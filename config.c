@@ -1,8 +1,3 @@
-/*
- * config.c
- * $Id$
- */
-
 #include "usim.h"
 
 #include <string.h>

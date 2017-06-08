@@ -1,12 +1,3 @@
-/*
- * read cadr .mcr file on a little endian linux box
- *
- * just a simple hack to see if we can decode the binary file
- * before we try to turn it into a microcode band.
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

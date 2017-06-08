@@ -1,12 +1,3 @@
-/*
- * main.c
- *
- * CADR simulator
- * main;
- * 
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

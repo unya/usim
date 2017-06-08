@@ -1,12 +1,3 @@
-/*
- * disk.c
- *
- * simple CADR disk emulation
- * attempts to emulate the disk controller on a CADR
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

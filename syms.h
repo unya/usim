@@ -1,8 +1,3 @@
-/*
- * syms.h
- * $Id$
- */
-
 struct sym_s {
 	struct sym_s *next;
 	char *name;

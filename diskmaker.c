@@ -1,20 +1,3 @@
-/*
- * diskmaker.c
- *
- * make a disk image for the CADR simulator
- * reads template file or internal default disk partition
- *
- * NOTE:
- * Disk images are interpreted by the CADR as blocks of 32 bit values.
- * 32 bit values stored in disk images are kept in little endian
- * format.  usim will compensate when run on big endian machines.
- *
- * This program should be "byte order safe" and produce identical disk
- * images when run on big and little endian machines.
- *
- * $Id$
- */
-
 #include "usim.h"
 
 #include <stdio.h>

@@ -1,13 +1,3 @@
-/*
- * keyboard.h
- *
- * $Id$
- */
-
-#ifdef DISPLAY_SDL
-#include <SDL_keysym.h>
-#endif /* USE_SDL */
-
 /* keycodes produced by LM keyboard */
 #define LM_K_BREAK	0201
 #define LM_K_CLEAR	0202

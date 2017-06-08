@@ -1,8 +1,3 @@
-/*
- * usim.h
- * $Id$
- */
-
 void assert_unibus_interrupt(int vector);
 void assert_xbus_interrupt(void);
 void deassert_xbus_interrupt(void);

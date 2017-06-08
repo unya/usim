@@ -1,9 +1,3 @@
-/*
- * CADR macroinstruction disassembly
- * brad@heeltoe.com
- * $Id$
- */
-
 char *op_names[16] = {
 	"CALL",
 	"CALL0",

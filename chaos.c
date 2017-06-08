@@ -1,12 +1,3 @@
-/*
- * chaosnet adapter emulation
- * $Id$
- */
-
-/* TODO:
-   - desynchronize network process from CPU
- */
-
 #include "usim.h"
 
 #include <stdio.h>
