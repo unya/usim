@@ -6,7 +6,7 @@
 DISPLAY = SDL
 KEYBOARD = NEW
 
-USIM_SRC = main.c decode.c ucode.c x11.c kbd.c disk.c iob.c chaos.c syms.c config.c 
+USIM_SRC = usim.c decode.c ucode.c x11.c kbd.c disk.c iob.c chaos.c syms.c config.c 
 USIM_HDR = ucode.h config.h
 
 ifeq ($(DISPLAY), SDL)
