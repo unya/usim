@@ -44,10 +44,6 @@
 #include <sys/timeb.h>
 #include <sys/socket.h>
 
-#if defined(OSX)
-#import <dispatch/dispatch.h>
-#endif
-
 #include <time.h>
 #include <sys/dir.h>
 
@@ -73,21 +69,10 @@
 #include "glob.h"
 #include "chaos.h"
 
-#ifdef __linux__
 #include <sys/vfs.h>
-#endif
 
-#ifdef OSX
-#include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/time.h>
-/* use utimes instead of "outmoded" utime */
-#endif
-
-#if defined(__NetBSD__) || defined(OSX) || defined(__linux__)
 #include <utime.h>
 #include <sys/statvfs.h>
-#endif
 
 #define TRUNCATE_DATES  0
 
@@ -201,12 +186,8 @@ struct xfer		{
 #define x_pbuf			x_pkt.cp_data	/* Packet data buffer */
 	char			**x_glob;	/* Files for DIRECTORY */
 	char			**x_gptr;	/* Ptr into x_glob vector */
-#if defined(OSX)
-	dispatch_semaphore_t x_hangsem;
-#else
 	pthread_mutex_t x_hangsem;
 	pthread_cond_t x_hangcond;
-#endif
     pthread_mutex_t x_xfersem;
 	struct transaction	*x_work;	/* Queued transactions */
 } *xfers;
@@ -731,24 +712,6 @@ dumpbuffer(u_char *buf, ssize_t cnt)
     fflush(stderr);
 }
 
-#if defined(OSX)
-
-void processdata(chaos_connection *conn)
-{
-    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        register struct transaction *t;
-        
-        while ((t = getwork(conn))) {
-            if (t->t_command->c_flags & C_XFER)
-                xcommand(t);
-            else
-                (*t->t_command->c_func)(t);
-        }
-    });
-}
-
-#else // !defined(OSX)
-
 static void *_processdata(void *conn)
 {
         register struct transaction *t;
@@ -768,8 +731,6 @@ void processdata(chaos_connection *conn)
 {
     pthread_create(&processdata_thread, NULL, _processdata, (void *)conn);
 }
-
-#endif // defined(OSX)
 
 /*
  00000000 00 80 18 00 04 01 00 01 01 01 45 37 01 00 01 00  ..........E7....
@@ -1587,11 +1548,7 @@ login(register struct transaction *t)
 		cwd = savestr(home);
 #if 0
 		umask(0);
-#if defined(BSD42) || defined(__linux__) || defined(OSX)
 		(void)initgroups(p->pw_name, (int)p->pw_gid);
-#else /*!BSD42*/
-		(void)setgid(p->pw_gid);
-#endif /*!BSD42*/
 		(void)setuid(p->pw_uid);
 #endif
 
@@ -2349,25 +2306,17 @@ diropen(struct xfer *ax, register struct transaction *t)
 		x->x_left = x->x_bptr - x->x_bbuf;
 		x->x_bptr = x->x_bbuf;
 		x->x_state = X_PROCESS;
-#if defined(OSX)
-		dispatch_semaphore_signal(x->x_hangsem);
-#else
 		pthread_mutex_lock(&x->x_hangsem);
 		pthread_cond_signal(&x->x_hangcond);
 		pthread_mutex_unlock(&x->x_hangsem);
-#endif
 		return;
 	}
 derror:
 	error(t, t->t_fh->f_name, errcode);
 	x->x_state = X_DERROR;
-#if defined(OSX)
-    dispatch_semaphore_signal(x->x_hangsem);
-#else
     pthread_mutex_lock(&x->x_hangsem);
     pthread_cond_signal(&x->x_hangcond);
     pthread_mutex_unlock(&x->x_hangsem);
-#endif
 }
 /*
  * Assemble a directory entry record in the buffer for this transfer.
@@ -2436,12 +2385,8 @@ makexfer(register struct transaction *t, long foptions)
         x->x_next = xfers;
         x->x_realname = x->x_dirname = x->x_tempname = NOSTR;
         x->x_glob = (char **)0;
-#if defined(OSX)
-        x->x_hangsem = dispatch_semaphore_create(0);
-#else
         pthread_mutex_init(&x->x_hangsem, NULL);
         pthread_cond_init(&x->x_hangcond, NULL);
-#endif
         pthread_mutex_init(&x->x_xfersem, NULL);
 
         xfers = x;
@@ -2486,13 +2431,9 @@ xcommand(register struct transaction *t)
         if ((t->t_command->c_func == fileclose || t->t_command->c_func == filepos) && x->x_options & O_READ)
             chaos_interrupt_connection(x->x_fh->f_connection);
         
-#if defined(OSX)
-	    dispatch_semaphore_signal(x->x_hangsem);
-#else
 	    pthread_mutex_lock(&x->x_hangsem);
 	    pthread_cond_signal(&x->x_hangcond);
 	    pthread_mutex_unlock(&x->x_hangsem);
-#endif
 	}
 }
 
@@ -2534,12 +2475,8 @@ xfree(register struct xfer *x)
     if (x->x_glob)
         gfree(x->x_glob);
 
-#if defined(OSX)
-    dispatch_release(x->x_hangsem);
-#else
     pthread_mutex_destroy(&x->x_hangsem);
     pthread_cond_destroy(&x->x_hangcond);
-#endif
     pthread_mutex_destroy(&x->x_xfersem);
     sfree(x);
 }
@@ -2597,13 +2534,9 @@ fileclose(register struct xfer *x, register struct transaction *t)
 	(void)signal(SIGHUP, SIG_IGN);
 #endif
 
-#if defined(OSX)
-    dispatch_semaphore_signal(x->x_hangsem);
-#else
     pthread_mutex_lock(&x->x_hangsem);
     pthread_cond_signal(&x->x_hangcond);
     pthread_mutex_unlock(&x->x_hangsem);
-#endif
 }
 
 /*
@@ -2674,19 +2607,6 @@ xclose(struct xfer *ax)
 			
 			chaosfile_log(LOG_INFO, "xclose (3b)\n");
 			
-#if defined(OSX) || defined(BSD42)
-			struct timeval timep[2];
-            
-			timep[0].tv_sec = (x->x_options&O_PRESERVE ||
-                               x->x_flags&X_ATIME) ? x->x_atime :
-            sbuf.st_atime;
-			timep[1].tv_sec = (x->x_options&O_PRESERVE ||
-                               x->x_flags&X_MTIME) ? x->x_mtime :
-            sbuf.st_mtime;
-            /*	timep[0].tv_nsec = 0; */
-            /*	timep[1].tv_nsec = 0; */
-            
-#else
 			time_t timep[2];
             
 			timep[0] = (x->x_options&O_PRESERVE ||
@@ -2695,7 +2615,6 @@ xclose(struct xfer *ax)
 			timep[1] = (x->x_options&O_PRESERVE ||
                         x->x_flags&X_MTIME) ? x->x_mtime :
             sbuf.st_mtime;
-#endif
 			/*
 			 * No error checking is done here since CLOSE
 			 * can't really fail anyway.
@@ -2703,13 +2622,9 @@ xclose(struct xfer *ax)
             
 			chaosfile_log(LOG_INFO, "xclose (3c)\n");
             
-#if defined(OSX) || defined(BSD42) || defined(__linux__)
 			if (utimes(x->x_realname, timep)) {
                 chaosfile_log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
-#else
-			utime(x->x_realname, timep);
-#endif
 			
 			chaosfile_log(LOG_INFO, "xclose (3d)\n");
 			
@@ -2723,19 +2638,11 @@ xclose(struct xfer *ax)
 #if TRUNCATE_DATES
             if (tm->tm_year > 99) tm->tm_year += 1900;
 			(void)sprintf(response,
-#if defined(__linux__)
                           "%02d/%02d/%04d %02d:%02d:%02d %ld%c%s%c",
-#else
-                          "%02d/%02d/%04d %02d:%02d:%02d %lld%c%s%c",
-#endif
 #else
             if (tm->tm_year > 99) tm->tm_year = 99;
             (void)sprintf(response,
-#if defined(__linux__)
                           "%02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
-#else
-                          "%02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
-#endif
 #endif
                           
                           tm->tm_mon+1, tm->tm_mday, tm->tm_year,
@@ -2747,11 +2654,7 @@ xclose(struct xfer *ax)
         {
             if (tm->tm_year > 99) tm->tm_year = 99;
 			(void)sprintf(response,
-#if defined(__linux__)
                           "%d %02d/%02d/%02d %02d:%02d:%02d %ld%c%s%c",
-#else
-                          "%d %02d/%02d/%02d %02d:%02d:%02d %lld%c%s%c",
-#endif
                           -1, tm->tm_mon+1, tm->tm_mday,
                           tm->tm_year, tm->tm_hour, tm->tm_min,
                           tm->tm_sec, sbuf.st_size, CHNL,
@@ -2771,25 +2674,11 @@ void
 backfile(register char *file)
 {
     register char *back;
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-	register char *name = strrchr(file, '/');
-	register char *end;
-
-	if (name == NOSTR)
-		name = file;
-	else
-		name++;
-#endif
     
 	back = malloc((unsigned)(strlen(file) + 2));
     if (back)
     {
         strcpy(back, file);
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-        end = name + strlen(name);
-        if (end - name >= DIRSIZ - 1)
-            back[name - file + DIRSIZ - 1] = '\0';
-#endif
         strcat(back, "~");
         /*
          * Get rid of the previous backup copy.
@@ -2907,13 +2796,9 @@ delete(register struct transaction *t)
 			respond(t, NOSTR);
             
             f->f_xfer->x_flags |= X_DELETE;
-#if defined(OSX)
-            dispatch_semaphore_signal(x->x_hangsem);
-#else
 	    pthread_mutex_lock(&x->x_hangsem);
 	    pthread_cond_signal(&x->x_hangcond);
 	    pthread_mutex_unlock(&x->x_hangsem);
-#endif
 		}
         else if (t->t_args == ANULL ||
                  (file = t->t_args->a_strings[0]) == NOSTR) {
@@ -3059,13 +2944,9 @@ xrename(register struct transaction *t)
 				x->x_realname = real1;
 				real1 = NOSTR;
 				respond(t, NOSTR);
-#if defined(OSX)
-                dispatch_semaphore_signal(x->x_hangsem);
-#else
 	    pthread_mutex_lock(&x->x_hangsem);
 	    pthread_cond_signal(&x->x_hangcond);
 	    pthread_mutex_unlock(&x->x_hangsem);
-#endif
                 }
 		}
         else if (file2 == NOSTR) {
@@ -3176,12 +3057,8 @@ complete(register struct transaction *t)
 	register char *cp, *tp;
 	int errcode, nstate, tstate;
 	struct stat sbuf;
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-	int dfd;
-#else
 	DIR *dfd;
 	struct direct *dirp;
-#endif
     
 	char *dfile, *ifile, *ddir, *idir, *dreal, *ireal, *dname, *iname,
     *dtype, *itype, *adir, *aname, *atype;
@@ -3273,12 +3150,7 @@ complete(register struct transaction *t)
 			chaosfile_log(LOG_INFO, "adir:'%s'\n",
 			    adir ? adir : "!");
 		}
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-		if ((dfd = open(adir, 0)) < 0) {
-#else
         if( (dfd = opendir(adir)) == NULL ) {
-#endif
-            
             switch(errno) {
                 case ENOENT:
                     errcode = DNF;
@@ -3305,19 +3177,6 @@ complete(register struct transaction *t)
         }
         
         nstate = tstate = SNONE;
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-        while (read(dfd, (char *)&d.de, sizeof(d.de)) == sizeof(d.de))
-        {
-            char *ename, *etype;
-            int namematch, typematch;
-            
-            if (d.de.d_ino == 0 ||
-                (d.de.d_name[0] == '.' &&
-                 (d.de.d_name[1] == '\0' ||
-                  (d.de.d_name[1] == '.' && d.de.d_name[2] == '\0'))))
-                continue;
-            ename = d.de.d_name;
-#else
         while( (dirp = readdir(dfd)) != NULL ) {
             char *ename, *etype;
             int namematch, typematch;
@@ -3333,8 +3192,7 @@ complete(register struct transaction *t)
                   (dirp->d_name[1] == '.' && dirp->d_name[2] == '\0'))))
                 continue;
             ename = dirp->d_name;
-#endif
-            if ((etype = strrchr(ename, '.')) != NOSTR)
+            if ((etype = rindex(ename, '.')) != NOSTR)
                 *etype++ = '\0';
             if ((namematch = prefix(iname, ename)) == SNONE ||
                 (typematch = prefix(itype, etype)) == SNONE)
@@ -3411,11 +3269,7 @@ complete(register struct transaction *t)
             }
         }
     gotit:
-#if !defined(BSD42) && !defined(__linux__) && !defined(OSX)
-        (void)close(dfd);
-#else
         closedir(dfd);
-#endif
         if (tstate != SEXACT && tstate != SNONE) {
             if (itype) free(itype);
             if (tstate == SDEFAULT) {
@@ -3704,11 +3558,7 @@ getspace(struct stat *s, char *cp)
     int	fd;
     ssize_t len;
     struct stat mstbuf;
-#ifdef __NetBSD__
-    struct statvfs sblock;
-#else
     struct statfs sblock;
-#endif
     struct mtab {
         char path[32];
         char spec[32];
@@ -3731,23 +3581,14 @@ getspace(struct stat *s, char *cp)
     if(len != sizeof(mtab))
         return 0;
     
-#ifdef __NetBSD__
-    if (statvfs(mtab.path, &sblock) == -1)
-        return 0;
-#else
     if (statfs(dev, &sblock))
         return 0;
-#endif
     total = (off_t)(sblock.f_bsize * (sblock.f_blocks - sblock.f_bfree));
     free = (off_t)(sblock.f_bsize * sblock.f_bfree);
     used = total - free;
     
     (void)
-#if defined(__linux__)
     sprintf(cp, "%s (%s): %ld free, %ld/%ld used (%ld%%)", mtab.path, mtab.spec,
-#else
-    sprintf(cp, "%s (%s): %lld free, %lld/%lld used (%lld%%)", mtab.path, mtab.spec,
-#endif
             free, used, total, (100L * used + total / 2) / total);
     while (*cp)
         cp++;
@@ -3759,11 +3600,7 @@ getspace(struct stat *s, char *cp)
 static char *
 xgetbsize(struct stat *s, char *cp)
 {
-#if defined(__linux__)
     (void)sprintf(cp, "%ld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
-#else
-    (void)sprintf(cp, "%lld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
-#endif
     
     while (*cp)
         cp++;
@@ -3782,11 +3619,7 @@ getbyte(struct stat *s, char *cp)
 char *
 getsize(register struct stat *s, register char *cp)
 {
-#if defined(__linux__)
     (void)sprintf(cp, "%ld", s->st_size);
-#else
-    (void)sprintf(cp, "%lld", s->st_size);
-#endif
     while (*cp)
         cp++;
     return cp;
@@ -3976,13 +3809,9 @@ putmdate(register struct stat *s, char *file, char *newtime, register struct xfe
         } else if (x) {
             x->x_mtime = mtime;
             x->x_flags |= X_MTIME;
-#if defined(OSX)
-            dispatch_semaphore_signal(x->x_hangsem);
-#else
 	    pthread_mutex_lock(&x->x_hangsem);
 	    pthread_cond_signal(&x->x_hangcond);
 	    pthread_mutex_unlock(&x->x_hangsem);
-#endif
         }
     }
     return 0;
@@ -4008,13 +3837,9 @@ putrdate(register struct stat *s, char *file, char *newtime, register struct xfe
         } else if (x) {
             x->x_mtime = atime;
             x->x_flags |= X_ATIME;
-#if defined(OSX)
-            dispatch_semaphore_signal(x->x_hangsem);
-#else
 	    pthread_mutex_lock(&x->x_hangsem);
 	    pthread_cond_signal(&x->x_hangcond);
 	    pthread_mutex_unlock(&x->x_hangsem);
-#endif
         }
     }
     return 0;
@@ -4892,59 +4717,6 @@ void finish(int arg)
  * Returns errcode if an error occurred, else 0
  */
 
-#if defined(OSX)
-
-int
-startxfer(struct xfer *ax)
-{
-    register struct xfer *x = ax;
-    
-    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        chaosfile_log(LOG_INFO, "startxfer: entering\n");
-
-         for (;;) {
-            if (log_verbose) {
-                chaosfile_log(LOG_INFO, "Switch pos: %ld, status: %ld\n",
-                    tell(x->x_fd), x->x_state);
-            }
-
-            while ((x->x_flags & X_CLOSE) == 0) {
-                 if (x->x_work)
-                 {
-                     struct transaction *t;
-                     
-                     t = x->x_work;
-                     x->x_work = t->t_next;
-                     chaosfile_log(LOG_INFO, "FILE: startxfer command: %s\n", t->t_command->c_name);
-                     (*t->t_command->c_func)(x, t);
-                 }
-                 else
-                     break;
-            }
-             
-            switch (dowork(x)) {
-                case X_SYNCMARK:
-                    syncmark(x->x_fh);	/* Ignore errors */
-                    break;
-                case X_FLUSH:		/* Totally done */
-                    break;
-                case X_CONTINUE:	/* In process */
-                    continue;
-                case X_HANG:		/* Need more instructions */
-                    chaosfile_log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
-                    dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
-                    continue;
-            }
-            xflush(x);
-            chaosfile_log(LOG_INFO, "startxfer: exiting\n");
-            return;
-        }
-    });
-    return 0;
-}
-
-#else // !defined(OSX)
-
 void *
 _startxfer(void *ax)
 {
@@ -4981,13 +4753,9 @@ _startxfer(void *ax)
                 continue;
             case X_HANG:		/* Need more instructions */
                 chaosfile_log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
-#if defined(OSX)
-                dispatch_semaphore_wait(x->x_hangsem, DISPATCH_TIME_FOREVER);
-#else
                 pthread_mutex_lock(&x->x_hangsem);
                 pthread_cond_wait(&x->x_hangcond, &x->x_hangsem);
                 pthread_mutex_unlock(&x->x_hangsem);
-#endif
                 continue;
         }
         xflush(x);
@@ -5005,8 +4773,6 @@ startxfer(struct xfer *ax)
     pthread_create(&startxfer_thread, NULL, _startxfer, (void *)ax);
     return 0;
 }
-
-#endif // defined(OSX)
 
 /*
  * Character set conversion routines.
@@ -5044,106 +4810,6 @@ buffer_to_lispm(unsigned char *data, ssize_t length)
         data[i] = (unsigned char)c;
     }
 }
-
-#if defined(OSX)
-
-void
-processmini(chaos_connection *conn)
-{
-    
-//    chaosfile_log(LOG_INFO, "MINI: %s\n", argv[1]);
-    printf("processmini:\n");
-    
-    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-
-        int binary = 0;
-        chaos_packet *packet;
-        chaos_packet *output;
-        ssize_t length;
-        int fd;
-        char tbuf[20];
-        struct stat sbuf;
-        struct tm *ptm;
-        char *dirname;
-        char *realname;
-        int errcode;
-                
-        for (;;) {
-            
-            packet = chaos_connection_dequeue(conn);
-            if (packet == 0)
-                break;
-
-            switch (packet->opcode >> 8) {
-                case 0200:
-                case 0201:
-                    output = chaos_allocate_packet(conn, DWDOP, CHMAXDATA);
-
-                    packet->data[packet->length] = '\0';
-                    printf("MINI: op %o %s\n", packet->opcode, packet->data);
-                    dirname = 0;
-                    realname = 0;
-                    if ((errcode = parsepath((char *)packet->data, &dirname, &realname, 0)) != 0)
-                    {
-                        output->opcode = 0203 << 8;
-                        printf("MINI: open failed %s\n", strerror(errno));
-                        chaos_connection_queue(conn, output);
-                        continue;
-                    }
-                    if ((fd = open(realname, O_RDONLY)) < 0) {
-                        output->opcode = 0203 << 8;
-                        printf("MINI: open failed %s\n", strerror(errno));
-                        chaos_connection_queue(conn, output);
-                        if (dirname)
-                            free(dirname);
-                        if (realname)
-                            free(realname);
-                        continue;
-                    } else {
-                        if (dirname)
-                            free(dirname);
-                        if (realname)
-                            free(realname);
-                        output->opcode = 0202 << 8;
-                        fstat(fd, &sbuf);
-                        ptm = localtime(&sbuf.st_mtime);
-                        strftime(tbuf, sizeof(tbuf), "%D %T", ptm);
-                        length = sprintf((char *)output->data, "%s%c%s", packet->data, 0215, tbuf);
-                        output->length = (unsigned short)length;
-                        chaos_connection_queue(conn, output);
-                        binary = (packet->opcode >> 8) & 1;
-                        chaosfile_log(LOG_INFO, "MINI: binary = %d\n", binary);
-                    }
-                    free(packet);
-
-                    do {
-                        char buffer[CHMAXDATA];
-                        
-                        length = read(fd, buffer, CHMAXDATA);
-                        /*chaosfile_log(LOG_INFO, "MINI: read %d\n", length);*/
-                        if (length == 0)
-                            break;
-                        output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
-                        memcpy(output->data, buffer, length);
-                        if (binary == 0)
-                            buffer_to_lispm((unsigned char *)output->data, length);
-                        chaos_connection_queue(conn, output);
-                     } while (length > 0);
-                    
-                    printf("MINI: before eof\n");
-                    output = chaos_allocate_packet(conn, EOFOP, 0);
-                    chaos_connection_queue(conn, output);
-                    close(fd);
-                    break;
-                default:
-                    chaosfile_log(LOG_INFO, "MINI: op %o\n", packet->opcode >> 8);
-                    break;
-            }
-        }
-    });
-}
-
-#else // !defined(OSX)
 
 void *
 _processmini(void *conn)
@@ -5243,5 +4909,3 @@ processmini(chaos_connection *conn)
 {
     pthread_create(&processmini_thread, NULL, _processmini, (void *)conn);
 }
-
-#endif // defined(OSX)

@@ -23,11 +23,6 @@
 
 #include "ucode.h"
 
-#if defined(OSX)
-#include "Breakpoints.h"
-#define STAT_PC_HISTORY
-#endif
-
 //#define STAT_PC_HISTORY
 //#define STAT_ALU_USE
 //#define STAT_PC_HISTOGRAM
@@ -142,10 +137,6 @@ extern int tv_xbus_write(int offset, unsigned int v);
 extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
 void reset_pc_histogram(void);
-#if defined(OSX)
-static void record_lc_history(void);
-static void show_lc_history(void);
-#endif
 
 extern void timing_start();
 extern void timing_stop();
@@ -955,18 +946,6 @@ advance_lc(int *ppc)
 			/* set need-fetch */
 			lc |= (1 << 31);
 	}
-
-#if defined(OSX)
-        {
-            extern int macromicro;
-            extern void step_poll(unsigned int p0_pc);
-            
-            record_lc_history();
-            if (macromicro)
-                step_poll(lc);
-        }
-#endif
-
 }
 
 void
@@ -1027,17 +1006,6 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			printf("\n");
 		}
 
-#if defined(OSX)
-                {
-                    extern int macromicro;
-                    extern void step_poll(unsigned int p0_pc);
-                    
-                    record_lc_history();
-                    if (macromicro)
-                        step_poll(lc);
-                }
-#endif
-                
 /* isn't this pretty? :-) XXX add main option to trace on macro function name */
 #if 0
 { char *s;
@@ -1350,93 +1318,7 @@ show_pc_history(void)
 	}
 
 	printf("\n");
-    
-#if defined(OSX)
-        show_lc_history();
-#endif
 }
-
-#if defined(OSX)
-
-#define MAX_LC_HISTORY 200
-struct {
-    unsigned short instr;
-    unsigned int lc;
-} lc_history[MAX_LC_HISTORY];
-int lc_history_ptr, lc_history_max, lc_history_stores;
-
-static void
-record_lc_history()
-{
-    int index;
-    unsigned int instr;
-    
-    lc_history_stores++;
-    
-    if (lc_history_max < MAX_LC_HISTORY) {
-        index = lc_history_max;
-        lc_history_max++;
-    } else {
-        index = lc_history_ptr;
-        lc_history_ptr++;
-        if (lc_history_ptr == MAX_LC_HISTORY)
-            lc_history_ptr = 0;
-    }
-    
-    read_mem(lc >> 2, &instr);
-    lc_history[index].instr = (lc & 2) ? (instr >> 16) & 0xffff : (instr & 0xffff);
-    lc_history[index].lc = lc;
-    
-    if (breakpoint_count)
-    {
-        char *name = find_function_name(lc);
-        if (name)
-        {
-            for (int i = 0; i < breakpoint_count; i++)
-            {
-                if (breakpoints[i].identifier && strcasecmp(name, breakpoints[i].identifier) == 0)
-                {
-                    extern int runpause;
-                    
-                    runpause = 0;
-                    printf("found it\n");
-                }
-            }
-        }
-    }
-}
-
-static void
-show_lc_history(void)
-{
-    extern int wide_integer;
-    char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width);
-    int i;
-    unsigned short instr;
-    char *decoded;
-    
-    printf("lc history:\n");
-    if (0) printf("lc_history_ptr %d, lc_history_max %d, lc_history_stores %d\n",
-                  lc_history_ptr, lc_history_max, lc_history_stores);
-    
-    for (i = 0; i < MAX_LC_HISTORY; i++) {
-        instr = lc_history[lc_history_ptr].instr;
-        if (lc_history_max < MAX_LC_HISTORY && lc_history_ptr == lc_history_max)
-            break;
-        
-        decoded = disass(0, lc_history[lc_history_ptr].lc & 0377777777, 0, instr, wide_integer ? 25 : 24);
-        
-        printf("%s\n", decoded);
-        
-        lc_history_ptr++;
-        if (lc_history_ptr == MAX_LC_HISTORY)
-            lc_history_ptr = 0;
-        
-    }
-    
-    printf("\n");
-}
-#endif // defined(OSX)
 
 struct pc_histogram_s {
   unsigned int pc;
@@ -2166,16 +2048,6 @@ run(void)
 
 #ifdef LASHUP
 		lashup_start(&p0_pc, &p0, &p1_pc, &p1, &u_pc, &trace);
-#endif
-
-#if defined(OSX)
-                {
-                    extern int macromicro;
-                    extern void step_poll(unsigned int);
-
-                    if (!macromicro)
-                        step_poll((unsigned int)p0_pc);
-                }
 #endif
 
 		/* ----------- trace ------------- */

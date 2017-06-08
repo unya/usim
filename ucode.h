@@ -3,29 +3,11 @@
  * $Id$
  */
 
-#if defined(__linux__) || defined(OSX) || defined(BSD)
 typedef long long int64;
 typedef unsigned long long uint64;
 
 #define NOP_MASK 03777777777767777LL
 #define O_BINARY 0
-#endif /* __linux__ */
-
-
-#ifdef _WIN32
-typedef __int64 int64;
-typedef __int64 uint64;
-
-struct timeval {
-	unsigned int tv_sec;
-	unsigned int tv_usec;
-};
-
-typedef unsigned char u_char;
-
-#define inline 
-#define NOP_MASK 03777777777767777
-#endif /* _WIN32 */
 
 typedef uint64_t ucw_t;
 

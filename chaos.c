@@ -9,9 +9,6 @@
 
 #include "usim.h"
 
- /* until I split out the unix socket code */
-#if defined(__linux__) || defined(OSX) || defined(BSD)
-
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -28,17 +25,11 @@
 #include <sys/poll.h>
 #include <sys/uio.h>
 
-#if defined(OSX)
-#include <dispatch/dispatch.h>
-#endif
-
 #include "ucode.h"
 #include "endian.h"
 #include "chaos.h"
 
-#if defined(OSX) || defined(__linux__) // || defined(BSD)
 #define USE_LOCAL_CHAOS     1
-#endif
 
 #ifndef CHAOS_MY_ADDRESS
 # define CHAOS_MY_ADDRESS 0401
@@ -524,37 +515,13 @@ static packet_queue *queuehead;
 static packet_queue *queuetail;
 int connectionstate = 0;
 
-#if defined(OSX)
-static dispatch_queue_t recvqueue;
-#else
 static pthread_mutex_t recvqueue;
-#endif
 
 chaos_connection *connections[256];
 
 #define CONNECTION_RFC      1
 #define CONNECTION_RFC_OPN  2
 #define CONNECTION_RFC_STS  3
-
-#if defined(OSX)
-
-void
-chaos_queue(chaos_packet *packet)
-{
-    packet_queue *node = malloc(sizeof(packet_queue));
-
-    node->next = 0;
-    node->packet = packet;
-    dispatch_sync(recvqueue, ^{
-        if (queuetail)
-            queuetail->next = node;
-        queuetail = node;
-        if (queuehead == 0)
-            queuehead = node;
-    });
-}
-
-#else // !defined(OSX)
 
 void
 chaos_queue(chaos_packet *packet)
@@ -571,8 +538,6 @@ chaos_queue(chaos_packet *packet)
             queuehead = node;
     pthread_mutex_unlock(&recvqueue);
 }
-
-#endif // defined(OSX)
 
 chaos_connection *
 chaos_make_connection(void)
@@ -599,15 +564,11 @@ chaos_make_connection(void)
  
             pthread_mutex_init(&conn->queuelock, NULL);
             
-#if defined(OSX)
-            conn->queuesem = dispatch_semaphore_create(0);
-            conn->twsem = dispatch_semaphore_create(0);
-#else
             pthread_mutex_init(&conn->queuesem, NULL);
             pthread_cond_init(&conn->queuecond, NULL);
             pthread_mutex_init(&conn->twsem, NULL);	
             pthread_cond_init(&conn->twcond, NULL);
-#endif
+
             conn->lastreceived = 0;
             conn->lastsent = 0;
             conn->remotelastreceived = 0;
@@ -656,28 +617,19 @@ chaos_delete_connection(chaos_connection *conn)
         }
     
     pthread_mutex_destroy(&conn->queuelock);
-#if defined(OSX)
-    dispatch_release(conn->queuesem);
-    dispatch_release(conn->twsem);
-#else
     pthread_mutex_destroy(&conn->queuesem);
     pthread_cond_destroy(&conn->queuecond);
     pthread_mutex_destroy(&conn->twsem);
     pthread_cond_destroy(&conn->twcond);
-#endif
     free(conn);
 }
 
 void chaos_interrupt_connection(chaos_connection *conn)
 {
     conn->remotelastreceived = conn->lastsent;
-#if defined(OSX)
-    dispatch_semaphore_signal(conn->twsem);
-#else
     pthread_mutex_lock(&conn->twsem);
     pthread_cond_signal(&conn->twcond);
     pthread_mutex_unlock(&conn->twsem);
-#endif    
 }
 
 int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
@@ -696,18 +648,6 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
                 printf("waiting for remote ack packet=%d\n", packet->number);
                 printf("lastsent = %d  remotelastreceived = %d  twsize = %d\n", conn->lastsent, conn->remotelastreceived, conn->twsize);
 #endif
-#if defined(OSX)
-                if (dispatch_semaphore_wait(conn->twsem, dispatch_time(DISPATCH_TIME_NOW, 5LL * NSEC_PER_SEC)))
-                {
-                    if (conn->lastpacket)
-                    {
-                        printf("re-transmit last packet\n");
-                        chaos_packet *retransmit = conn->lastpacket;
-                        conn->lastpacket = 0;
-                        chaos_queue(retransmit);
-                    }
-                }
-#else // !defined(OSX)
                 pthread_mutex_lock(&conn->twsem);
                 struct timespec ts;
 
@@ -724,7 +664,6 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
                     }
                 }
                 pthread_mutex_unlock(&conn->twsem);
-#endif // defined(OSX)
             }
             else
                 break;
@@ -765,13 +704,9 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
             conn->queuehead = node;
         pthread_mutex_unlock(&conn->queuelock);
     }
-#if defined(OSX)
-    dispatch_semaphore_signal(conn->queuesem);
-#else
     pthread_mutex_lock(&conn->queuesem);
     pthread_cond_signal(&conn->queuecond);
     pthread_mutex_unlock(&conn->queuesem);
-#endif
     return 0;
 }
 
@@ -840,13 +775,9 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
             return packet;
         }
        
-#if defined(OSX)
-        dispatch_semaphore_wait(conn->queuesem, DISPATCH_TIME_FOREVER);
-#else
         pthread_mutex_lock(&conn->queuesem);
         pthread_cond_wait(&conn->queuecond, &conn->queuesem);
         pthread_mutex_unlock(&conn->queuesem);
-#endif
         
         if (conn->state == cs_closed)
             return 0;
@@ -996,20 +927,6 @@ chaos_poll(void)
         return 0;
     }
     
-#if defined(OSX)
-
-    __block chaos_packet *packet;
-    __block packet_queue *node;
-
-    dispatch_sync(recvqueue, ^{
-        node = queuehead;
-        packet = queuehead->packet;
-        queuehead = node->next;
-        if (queuehead == 0)
-            queuetail = 0;
-    });
-
-#else // !defined(OSX)
     chaos_packet *packet;
     packet_queue *node;
 
@@ -1021,8 +938,6 @@ chaos_poll(void)
             queuetail = 0;
      pthread_mutex_unlock(&recvqueue);
 
-#endif // defined(OSX)
-    
     int size = ((packet->length & 0x0fff) + CHAOS_PACKET_HEADER_SIZE + 1) / 2;
     unsigned short dest_addr = packet->destaddr;
     unsigned short source_addr = packet->sourceaddr;
@@ -1292,13 +1207,9 @@ chaos_send_to_chaosd(char *buffer, int size)
 #if CHAOS_DEBUG
                 printf("STS: twsize = %d\n", conn->twsize);
 #endif
-#if defined(OSX)
-                dispatch_semaphore_signal(conn->twsem);
-#else
                 pthread_mutex_lock(&conn->twsem);
                 pthread_cond_signal(&conn->twcond);
                 pthread_mutex_unlock(&conn->twsem);
-#endif
             }
             return 0;
         }
@@ -1309,13 +1220,9 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
             conn->state = cs_closed;
             
-#if defined(OSX)
-            dispatch_semaphore_signal(conn->queuesem);
-#else
             pthread_mutex_lock(&conn->queuesem);
             pthread_cond_signal(&conn->queuecond);
             pthread_mutex_unlock(&conn->queuesem);
-#endif
             usleep(100000);      // wait for queue to wake up
             chaos_delete_connection(conn);
             return 0;
@@ -1363,11 +1270,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 int
 chaos_init(void)
 {
-#if defined(OSX)
-    recvqueue = dispatch_queue_create("com.xxx.yyy", NULL);
-#else
     pthread_mutex_init(&recvqueue, NULL);
-#endif
 
     chaos_rcv_buffer_empty = 1;
 
@@ -1750,63 +1653,4 @@ chaos_reconnect(void)
 
 	return 0;
 }
-
-#endif // defined(OSX)
-
-#endif /* __linux__ || osx */
-
-/* these are stubs; eventually I'll fix the code work with win32 sockets */
-#ifdef _WIN32
-int
-chaos_init(void)
-{
-	return 0;
-}
-
-void
-chaos_xmit_pkt(void)
-{
-}
- 
-int
-chaos_get_bit_count(void)
-{
-	return 0;
-}
- 
-int
-chaos_get_rcv_buffer(void)
-{
-	return 0;
-}
- 
-int
-chaos_get_csr(void)
-{
-	return 0;
-}
- 
-int
-chaos_put_xmit_buffer(int v)
-{
-	return 0;
-}
- 
-int
-chaos_get_addr(void)
-{
-	return 0;
-}
-
-int
-chaos_set_csr(int v)
-{
-	return 0;
-}
-
-int
-chaos_poll(int v)
-{
-	return 0;
-}
-#endif /* _WIN32 */
+#endif

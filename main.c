@@ -16,17 +16,11 @@
 #include <string.h>
 #include <limits.h>
 
-#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #include <sys/time.h>
-#endif
 
 #include "ucode.h"
 #include "config.h"
-
-#ifdef DISPLAY_SDL
-#include <SDL.h>
-#endif /* DISPLAY_SDL */
 
 #include "Files.h"
 
@@ -113,9 +107,6 @@ void
 signal_init(void)
 {
 	signal(SIGINT, sigint_handler);
-#ifndef _WIN32
-	signal(SIGHUP, sighup_handler);
-#endif
 }
 
 void
@@ -142,7 +133,6 @@ usage(void)
 	fprintf(stderr, "-m 		mouse sync\n");
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
-#if defined(OSX) || defined(__linux__)
 	fprintf(stderr, "-r		map /tree to ../l\n");
 	fprintf(stderr, "-S 		save state\n");
 	fprintf(stderr, "-t		turn on microcode tracing\n");

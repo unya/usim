@@ -3,18 +3,6 @@
  * $Id$
  */
 
-#if defined(__linux__)
-#define LINUX
-#endif
-
-#if defined(__APPLE__)
-#define OSX
-#endif
-
-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-#define BSD
-#endif
-
 void assert_unibus_interrupt(int vector);
 void assert_xbus_interrupt(void);
 void deassert_xbus_interrupt(void);

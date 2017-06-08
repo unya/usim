@@ -6,9 +6,6 @@
 #include <sys/types.h>
 
 #include <pthread.h>
-#if defined(OSX)
-#include <dispatch/dispatch.h>
-#endif
 
 typedef unsigned char u_char;
 
@@ -27,8 +24,6 @@ int chaos_poll(void);
 int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_init(void);
 int chaos_reconnect(void);
-
-#if defined(OSX) || defined(__linux__) || defined(BSD)
 
 #define CHAOS_SERVER_ADDRESS 0404
 #define CHAOS_SERVER_NAME    "server"
@@ -117,15 +112,10 @@ typedef struct chaos_connection
     packet_queue *queuehead;
     packet_queue *queuetail;
     pthread_mutex_t queuelock;
-#if defined(OSX)
-    dispatch_semaphore_t queuesem;
-    dispatch_semaphore_t twsem;
-#else
     pthread_mutex_t queuesem;
     pthread_cond_t queuecond;
     pthread_mutex_t twsem;
     pthread_cond_t twcond;
-#endif
     packet_queue *orderhead;
     packet_queue *ordertail;
     chaos_packet *lastpacket;
@@ -141,6 +131,3 @@ chaos_connection *chaos_open_connection(int co_host, char *contact, int mode, in
 chaos_packet *chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len);
 void chaos_dump_connection(chaos_connection *conn);
 void chaos_interrupt_connection(chaos_connection *conn);
-
-
-#endif // OSX

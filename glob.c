@@ -13,10 +13,8 @@
 #include "Files.h"
 #include "glob.h"
 
-#if defined(__linux__) || defined(OSX)
 #include <dirent.h>
 #include <stdlib.h>
-#endif
 
 #define QUOTE 0200
 #define TRIM 0177
@@ -255,24 +253,12 @@ matchdir(char *pattern)
 	struct stat stb;
 	register int dirf;
 	register struct direct *dp;
-#if defined(BSD42) || defined(__linux__) || defined(OSX)
 	DIR *dirp;
     
 	dirp = opendir(gpath);
 	if (dirp != NULL)
-#if defined(__linux__) || defined(OSX) || defined(BSD42)
 		dirf = dirfd(dirp);
-#else
-    dirf = ((struct DIR *)dirp)->dd_fd;
-#endif
 	else {
-#else
-        
-    struct direct dirbuf[BUFSIZ / sizeof (struct direct)];
-    int cnt;
-    
-    if ((dirf = open(gpath, 0)) < 0) {
-#endif
         switch(errno) {
             case ENOENT:
                 globerr = DNF;
@@ -298,38 +284,22 @@ matchdir(char *pattern)
         errstring = PATHNOTDIR;
         return;
     }
-#if defined(BSD42) || defined(__linux__) || defined(OSX)
     while ((dp = readdir(dirp)) != NULL)
-#else
-    while ((cnt = read(dirf, (char *)dirbuf, sizeof dirbuf)) >= sizeof dirbuf[0])
-        for (dp = dirbuf, cnt /= sizeof (struct direct); cnt > 0; cnt--, dp++)
-#endif
             if (dp->d_ino == 0 ||
                 (dp->d_name[0] == '.' &&
                  (dp->d_name[1] == '\0' ||
                   (dp->d_name[1] == '.' && dp->d_name[2] == '\0'))))
                 continue;
             else {
-#if defined(BSD42) || defined(__linux__) || defined(OSX)
                 if (match(dp->d_name, pattern)) {
                     Gcat(gpath, dp->d_name);
-#else
-                    char dname[DIRSIZ+1];
-                    strncpy(dname, dp->d_name, DIRSIZ);
-                    if (match(dname, pattern)) {
-                        Gcat(gpath, dname);
-#endif
                         globcnt++;
                     }
                     if (globerr != 0)
                         goto out;
                 }
             out:
-#if defined(BSD42) || defined(__linux__) || defined(OSX)
                 (void)closedir(dirp);
-#else
-                (void)close(dirf);
-#endif
             }
 
 static int

@@ -9,9 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#if !defined(DISPLAY_X11) && !defined(DISPLAY_OSX)
-#include <SDL.h>
-#endif
+#include <SDL/SDL.h>
 
 #include "usim.h"
 #include "keyboard.h"
@@ -47,104 +45,6 @@
 #define SDLK_UP		XK_Up
 #define SDLK_TAB	XK_Tab
 #define SDLK_ESC	XK_Escape
-
-#ifdef DISPLAY_OSX
-#define SDLK_LSHIFT	56
-#define SDLK_RSHIFT	56
-#define SDLK_LCTRL	59
-#define SDLK_RCTRL	59
-#define SDLK_LALT	55
-#define SDLK_RALT	55
-#define SDLK_F1		122
-#define SDLK_F2 	120
-#define SDLK_F3		99
-#define SDLK_F4		118
-#define SDLK_F5		96
-#define SDLK_F6		97
-#define SDLK_F7		98
-#define SDLK_END	119
-#define SDLK_F12	111
-#define SDLK_BACKSPACE	51
-#define SDLK_BREAK	71
-#define SDLK_RETURN	36
-#define SDLK_DOWN	125
-#define SDLK_LEFT	123
-#define SDLK_RIGHT	124
-#define SDLK_UP		126
-#define SDLK_TAB	48
-#define SDLK_ESC	53
-#define SDLK_a      0
-#define SDLK_b      11
-#define SDLK_c      8
-#define SDLK_d      2
-#define SDLK_e      14
-#define SDLK_f      3
-#define SDLK_g      5
-#define SDLK_h      4
-#define SDLK_i      34
-#define SDLK_j      38
-#define SDLK_k      40
-#define SDLK_l      37
-#define SDLK_m      46
-#define SDLK_n      45
-#define SDLK_o      31
-#define SDLK_p      35
-#define SDLK_q      12
-#define SDLK_r      15
-#define SDLK_s      1
-#define SDLK_t      17
-#define SDLK_u      32
-#define SDLK_v      9
-#define SDLK_w      13
-#define SDLK_x      7
-#define SDLK_y      16
-#define SDLK_z      6
-#define SDLK_0      29
-#define SDLK_1      18
-#define SDLK_2      19
-#define SDLK_3      20
-#define SDLK_4      21
-#define SDLK_5      23
-#define SDLK_6      22
-#define SDLK_7      26
-#define SDLK_8      28
-#define SDLK_9      25
-#define SDLK_EQUALS 24
-#define SDLK_MINUS  27
-#define SDLK_RIGHTBRACKET   30
-#define SDLK_LEFTBRACKET    33
-#define SDLK_QUOTE 39
-#define SDLK_SEMICOLON 41
-#define SDLK_SLASH  44
-#define SDLK_COMMA  43
-#define SDLK_BACKSLASH 42
-#define SDLK_PERIOD 47
-#define SDLK_BACKQUOTE 50
-#define SDLK_SPACE  49
-#define SDLK_COLON  41
-#define SDLK_LEFTPAREN  25
-#define SDLK_RIGHTPAREN 29
-#define SDLK_CARET  22
-#define SDLK_QUESTION 44
-#define SDLK_LESS   43
-#define SDLK_GREATER 47
-#define SDLK_PLUS   24
-#define SDLK_ASTERISK 28
-#define SDLK_HASH   20
-#define SDLK_EXCLAIM 18
-#define SDLK_QUOTEDBL 39
-#define SDLK_AT     19
-#define SDLK_LEFTBRACKET 33
-#define SDLK_RIGHTBRACKET 30
-#define SDLK_LEFTBRACE 33
-#define SDLK_RIGHTBRACE 30
-#define SDLK_BAR    42
-#define SDLK_UNDERSCORE 27
-#define SDLK_TILDE  50
-#define SDLK_AMPERSAND 26
-
-#endif
-
 
 extern unsigned int iob_key_scan;
 extern unsigned int iob_kbd_csr;
@@ -345,48 +245,6 @@ iob_sdl_key_event(int code, int extra)
 	assert_unibus_interrupt(0260);
 }
 
-#ifdef DISPLAY_SDL
-/*
- * called by sdl.c:sdl_refresh() with key up/down events
- */
-void sdl_process_key(SDL_KeyboardEvent *ev, int updown)
-{
-	int mod_state, extra;
-
-	mod_state = SDL_GetModState();
-
-	extra = 0;
-	if (mod_state & (KMOD_LMETA | KMOD_LALT))
-		extra |= 2 << 12;
-	if (mod_state & (KMOD_RMETA | KMOD_RALT))
-		extra |= 1 << 12;
-
-	if (mod_state & KMOD_LSHIFT)
-		extra |= 2 << 6;
-	if (mod_state & KMOD_RSHIFT)
-		extra |= 1 << 6;
-
-	if (mod_state & KMOD_LCTRL)
-		extra |= 2 << 10;
-	if (mod_state & KMOD_RCTRL)
-		extra |= 1 << 10;
-
-	if (updown) {
-#if 0
-		printf("scancode %x, sym %x, mod %x, "
-		       "modstate %x, extra %x, unicode %x\n",
-		       ev->keysym.scancode,
-		       ev->keysym.sym,
-		       ev->keysym.mod,
-		       mod_state,
-		       extra,
-		       ev->keysym.unicode);
-#endif
-		iob_sdl_key_event(ev->keysym.sym, extra);
-	}
-}
-#endif /* DISPLAY_SDL */
-
 void
 iob_warm_boot_key(void)
 {
@@ -418,7 +276,6 @@ kbd_init(void)
 		kb_sdl_to_scancode[k][0] = i;
 	}
 
-#ifdef DISPLAY_X11
 	/* Modify mapping to match present-day US kbd */
 	kb_sdl_to_scancode['`'][0] = 015 | (3 << 6); /* ` = Shift @ = ` */
 	kb_sdl_to_scancode['`'][1] = 016 | (3 << 6); /* Sh-` = Sh-^ = ~*/
@@ -501,78 +358,6 @@ kbd_init(void)
     
     /* map arrows */
 //    kb_sdl_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
-#endif // DISPLAY_X11
-
-#if DISPLAY_OSX
-    kb_sdl_to_scancode[SDLK_a][0] = 39;
-    kb_sdl_to_scancode[SDLK_b][0] = 57;
-    kb_sdl_to_scancode[SDLK_c][0] = 55;
-    kb_sdl_to_scancode[SDLK_d][0] = 41;
-    kb_sdl_to_scancode[SDLK_e][0] = 22;
-    kb_sdl_to_scancode[SDLK_f][0] = 42;
-    kb_sdl_to_scancode[SDLK_g][0] = 43;
-    kb_sdl_to_scancode[SDLK_h][0] = 44;
-    kb_sdl_to_scancode[SDLK_i][0] = 27;
-    kb_sdl_to_scancode[SDLK_j][0] = 45;
-    kb_sdl_to_scancode[SDLK_k][0] = 46;
-    kb_sdl_to_scancode[SDLK_l][0] = 47;
-    kb_sdl_to_scancode[SDLK_m][0] = 59;
-    kb_sdl_to_scancode[SDLK_n][0] = 58;
-    kb_sdl_to_scancode[SDLK_o][0] = 28;
-    kb_sdl_to_scancode[SDLK_p][0] = 29;
-    kb_sdl_to_scancode[SDLK_q][0] = 20;
-    kb_sdl_to_scancode[SDLK_r][0] = 23;
-    kb_sdl_to_scancode[SDLK_s][0] = 40;
-    kb_sdl_to_scancode[SDLK_t][0] = 24;
-    kb_sdl_to_scancode[SDLK_u][0] = 26;
-    kb_sdl_to_scancode[SDLK_v][0] = 56;
-    kb_sdl_to_scancode[SDLK_w][0] = 21;
-    kb_sdl_to_scancode[SDLK_x][0] = 54;
-    kb_sdl_to_scancode[SDLK_y][0] = 25;
-    kb_sdl_to_scancode[SDLK_z][0] = 53;
-    
-    kb_sdl_to_scancode[SDLK_1][0] = 2;
-    kb_sdl_to_scancode[SDLK_2][0] = 3;
-    kb_sdl_to_scancode[SDLK_3][0] = 4;
-    kb_sdl_to_scancode[SDLK_4][0] = 5;
-    kb_sdl_to_scancode[SDLK_5][0] = 6;
-    kb_sdl_to_scancode[SDLK_6][0] = 7;
-    kb_sdl_to_scancode[SDLK_7][0] = 8;
-    kb_sdl_to_scancode[SDLK_8][0] = 9;
-    kb_sdl_to_scancode[SDLK_9][0] = 10;
-    kb_sdl_to_scancode[SDLK_0][0] = 11;
-    kb_sdl_to_scancode[SDLK_SLASH][0] = 33;
-    kb_sdl_to_scancode[SDLK_SPACE][0] = 63;
-    kb_sdl_to_scancode[SDLK_SEMICOLON][0] = 48;
-    kb_sdl_to_scancode[SDLK_COLON][1] = 49;
-    kb_sdl_to_scancode[SDLK_LEFTPAREN][1] = 9 | (3 << 6);
-    kb_sdl_to_scancode[SDLK_RIGHTPAREN][1] = 10 | (3 << 6);
-    kb_sdl_to_scancode[SDLK_MINUS][0] = 12;
-    kb_sdl_to_scancode[SDLK_AT][1] = 13;
-    kb_sdl_to_scancode[SDLK_CARET][1] = 14;
-    kb_sdl_to_scancode[SDLK_QUESTION][1] = 62 | (3<<6);
-    kb_sdl_to_scancode[SDLK_LESS][1] =  60 | (3<<6);
-    kb_sdl_to_scancode[SDLK_GREATER][1] =  61 | (3<<6);
-    kb_sdl_to_scancode[SDLK_PLUS][1] = 48 | (3<<6);
-    kb_sdl_to_scancode[SDLK_ASTERISK][1] = 061 | (3<<6);
-    kb_sdl_to_scancode[SDLK_HASH][1] = 4 | (3<<6);
-    kb_sdl_to_scancode[SDLK_EXCLAIM][1] = 2 | (3<<6);
-    kb_sdl_to_scancode[SDLK_QUOTEDBL][1] = 3 | (3<<6);
-    kb_sdl_to_scancode[SDLK_LEFTBRACKET][0] = 30;
-    kb_sdl_to_scancode[SDLK_RIGHTBRACKET][0] = 31;
-    kb_sdl_to_scancode[SDLK_LEFTBRACE][1] = 30 | (3<<6);
-    kb_sdl_to_scancode[SDLK_RIGHTBRACE][1] = 31 | (3<<6);
-    kb_sdl_to_scancode[SDLK_BAR][1] = 32 | (3<<6);
-    kb_sdl_to_scancode[SDLK_UNDERSCORE][1] = 013 | (3<<6);
-    kb_sdl_to_scancode[SDLK_BACKQUOTE][0] = 015 | (3 << 6);
-    kb_sdl_to_scancode[SDLK_TILDE][1] = 016 | (3 << 6);
-    kb_sdl_to_scancode[SDLK_EQUALS][0] = 014 | (3<<6);
-    kb_sdl_to_scancode[SDLK_BACKSLASH][0] = 32;
-    kb_sdl_to_scancode[SDLK_COMMA][0] = 60;
-    kb_sdl_to_scancode[SDLK_PERIOD][0] = 61;
-    kb_sdl_to_scancode[SDLK_AMPERSAND][1] = 7 | (3<<6);
-    kb_sdl_to_scancode[SDLK_QUOTE][0] = 8 | (3 << 6);
-#endif // DISPLAY_OSX
 
 	/* Add shifts */
 	for (i = 0; i < 256; i++) {

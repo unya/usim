@@ -14,13 +14,7 @@
 #include <stdint.h>
 #include <signal.h>
 
-#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <sys/time.h>
-#endif
-
-#ifdef DISPLAY_SDL
-#include <SDL_keysym.h>
-#endif /* DISPLAY_SDL */
 
 #include "ucode.h"
 #include "chaos.h"
@@ -119,13 +113,7 @@ csr - read
 */
 
 #define US_CLOCK_IS_WALL_CLOCK
-#if defined(__linux__) || defined(osx)
 #define USE_SIGVTARLM_FOR_60HZ
-#endif
-
-#ifdef _WIN32
-#define USE_US_CLOCK_FOR_60HZ
-#endif
 
 unsigned long
 get_us_clock()
@@ -444,9 +432,6 @@ tv_xbus_write(int offset, unsigned int v)
 {
 	if (0) printf("tv register write, offset %o, v %o\n", offset, v);
 	if ((tv_csr & 4) != (v & 4)) {
-#ifdef DISPLAY_SDL
-		sdl_set_bow_mode((v & 4)>>2);
-#endif
 	}
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);

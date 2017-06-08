@@ -156,12 +156,4 @@ extern char errbuf[ERRSIZE + 1];	/* Buffer for building error messages */
 extern int globerr;			/* Error return from glob() */
 //  extern char *sys_errlist[];		/* System error messages */
 
-#if defined(__APPLE__) && defined(__MACH__)
-#define OSX
-#endif
-
-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-#define BSD42
-#endif
-
 void settreeroot(const char *root);
