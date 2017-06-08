@@ -196,7 +196,6 @@ main(int argc, char *argv[])
 		case 'q':
 			breakpoint_set_count(atoi(optarg));
 			break;
-#if defined(MAP_SITE_TREE_DIRECTORY)
 		case 'r':
 			{			
 				char *p = "../l";
@@ -211,7 +210,6 @@ main(int argc, char *argv[])
 				settreeroot(newpath);
 			}
 			break;
-#endif
 		case 'S':
 			save_state_flag = 1;
 			break;

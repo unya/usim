@@ -59,33 +59,6 @@ void chaos_force_reconect(void);
 int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_reconnect(void);
 
-
-/*
-chaos csr 
-	TIMER-INTERRUPT-ENABLE 1<<0
-	LOOP-BACK 1<<1
-	RECEIVE-ALL 1<<2
-	RECEIVER-CLEAR 1<<3
-	RECEIVE-ENABLE 1<<4
-	TRANSMIT-ENABLE 1<<5
-	INTERRUPT-ENABLES 3<<4
-	TRANSMIT-ABORT 1<<6
-	TRANSMIT-DONE 1<<7
-	TRANSMITTER-CLEAR 1<<8
-	LOST-COUNT 017<<9
-	RESET 1<<13
-	CRC-ERROR 1<<14
-	RECEIVE-DONE 1<<15
-
-;;; Offsets of other registers from CSR
-;;; These are in words, not bytes
-
-	MY-NUMBER-OFFSET 1
-	WRITE-BUFFER-OFFSET 1
-	READ-BUFFER-OFFSET 2
-	BIT-COUNT-OFFSET 3
-	START-TRANSMIT-OFFSET 5
-*/
 #define CHAOS_CSR_TIMER_INTERRUPT_ENABLE (1<<0)
 #define	CHAOS_CSR_LOOP_BACK		(1<<1)
 #define	CHAOS_CSR_RECEIVE_ALL		(1<<2)
@@ -100,7 +73,6 @@ chaos csr
 #define	CHAOS_CSR_RESET			(1<<13)
 #define	CHAOS_CSR_CRC_ERROR		(1<<14)
 #define	CHAOS_CSR_RECEIVE_DONE		(1<<15)
-
 
 static unsigned short
 ch_checksum(const unsigned char *addr, int count)

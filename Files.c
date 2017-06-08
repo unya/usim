@@ -611,19 +611,20 @@ void from_lispm(register struct xfer *x);
 void processdata(chaos_connection *conn);
 void processmini(chaos_connection *conn);
 
-#if defined(MAP_SITE_TREE_DIRECTORY)
+
 static char *treeroot;
 
 void
 settreeroot(const char *root)
 {
+#if defined(MAP_SITE_TREE_DIRECTORY)
     treeroot = strdup(root);
     if (treeroot[strlen(treeroot)] == '/')
         treeroot[strlen(treeroot)] = '\0';
     
     printf("settreeroot: '%s'\n", treeroot);
-}
 #endif
+}
 
 static void
 dumpbuffer(u_char *buf, ssize_t cnt)
