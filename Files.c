@@ -38,6 +38,7 @@
 #include <sys/statvfs.h>
 
 #define TRUNCATE_DATES  0
+#define MAP_SITE_TREE_DIRECTORY 1
 
 #define CHSP	(040)
 #define CHNL	(0200|015)
