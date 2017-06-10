@@ -6,7 +6,6 @@
 #include <SDL/SDL.h>
 
 #include "usim.h"
-#include "keyboard.h"
 #include "ucode.h"
 
 #include <X11/Xlib.h>
@@ -14,31 +13,47 @@
 #include <X11/Xos.h>
 #include <X11/keysym.h>
 
-/* this is a hack, but it works */
-#define SDLK_LSHIFT	XK_Shift_L
-#define SDLK_RSHIFT	XK_Shift_R
-#define SDLK_LCTRL	XK_Control_L
-#define SDLK_RCTRL	XK_Control_R
-#define SDLK_LALT	XK_Alt_L
-#define SDLK_RALT	XK_Alt_R
-#define SDLK_F1		XK_F1
-#define SDLK_F2 	XK_F2
-#define SDLK_F3		XK_F3
-#define SDLK_F4		XK_F4
-#define SDLK_F5		XK_F5
-#define SDLK_F6		XK_F6
-#define SDLK_F7		XK_F7
-#define SDLK_END	XK_F11
-#define SDLK_F12	XK_F12
-#define SDLK_BACKSPACE	XK_BackSpace
-#define SDLK_BREAK	XK_Break
-#define SDLK_RETURN	XK_Return
-#define SDLK_DOWN	XK_Down
-#define SDLK_LEFT	XK_Left
-#define SDLK_RIGHT	XK_Right
-#define SDLK_UP		XK_Up
-#define SDLK_TAB	XK_Tab
-#define SDLK_ESC	XK_Escape
+/* keycodes produced by LM keyboard */
+#define LM_K_BREAK	0201
+#define LM_K_CLEAR	0202
+#define LM_K_CALL	0203
+#define LM_K_ESC	0204
+#define LM_K_BACK	0205
+#define LM_K_HELP	0206
+#define LM_K_RUBOUT	0207
+#define LM_K_CR		0215
+#define LM_K_ALTMODE 033
+#define LM_K_BREAK 0201 
+#define LM_K_CLEAR_INPUT 0202
+#define LM_K_CALL 0203 
+#define LM_K_TERMINAL 0204 
+#define LM_K_MACRO 0205 
+#define LM_K_HELP 0206 
+#define LM_K_RUBOUT 0207 
+#define LM_K_OVERSTRIKE 0210 
+#define LM_K_TAB 0211 
+#define LM_K_LINE 0212 
+#define LM_K_DELETE 0213 
+#define LM_K_PAGE 0214 
+#define LM_K_CLEAR_SCREEN 0214 
+#define LM_K_RETURN 0215 
+#define LM_K_QUOTE 0216 
+#define LM_K_HOLD_OUTPUT 0217 
+#define LM_K_STOP_OUTPUT 0220
+#define LM_K_ABORT 0221 
+#define LM_K_RESUME 0222 
+#define LM_K_STATUS 0223 
+#define LM_K_END 0224 
+#define LM_K_ROMAN_I 0225 
+#define LM_K_ROMAN_II 0226 
+#define LM_K_ROMAN_III 0227 
+#define LM_K_ROMAN_IV 0230 
+#define LM_K_HAND_UP 0231 
+#define LM_K_HAND_DOWN 0232 
+#define LM_K_HAND_LEFT 0233 
+#define LM_K_HAND_RIGHT 0234 
+#define LM_K_SYSTEM 0235 
+#define LM_K_NETWORK 0236 
 
 extern unsigned int iob_key_scan;
 extern unsigned int iob_kbd_csr;
@@ -135,12 +150,12 @@ iob_sdl_key_event(int code, int extra)
 
 	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
 
-	if (code == SDLK_LSHIFT ||
-	    code == SDLK_RSHIFT ||
-	    code == SDLK_LCTRL ||
-	    code == SDLK_RCTRL ||
-	    code == SDLK_LALT ||
-	    code == SDLK_RALT)
+	if (code == XK_Shift_L ||
+	    code == XK_Shift_R ||
+	    code == XK_Control_L ||
+	    code == XK_Control_R ||
+	    code == XK_Alt_L ||
+	    code == XK_Alt_R)
 		return;
 
 	/*
@@ -169,31 +184,31 @@ iob_sdl_key_event(int code, int extra)
 	case SDLK_F6:
 		iob_key_scan = 44 | (3 << 8); /* help */
 		break;
-	case SDLK_END:
+	case XK_F11:
 		iob_key_scan = 50 | (3 << 8); /* end */
 		break;
 	case SDLK_F7:
 		iob_key_scan = 16; /* call */
 		break;
-	case SDLK_F12:
-	case SDLK_BREAK:
+	case XK_F12:
+	case XK_Break:
 		iob_key_scan = 0; /* break */
 		break;
-	case SDLK_BACKSPACE:
+	case XK_BackSpace:
 		iob_key_scan = 046; /* rubout */
 		break;
-	case SDLK_RETURN:
+	case XK_Return:
 		iob_key_scan = 50; /* CR */
 		break;
-	case SDLK_DOWN:
+	case XK_Down:
         iob_key_scan = 0176;
         newkbd = 1;
 		break;
-	case SDLK_LEFT:
+	case XK_Left:
         iob_key_scan = 0117;
         newkbd = 1;
 		break;
-	case SDLK_RIGHT:
+	case XK_Right:
         iob_key_scan = 017;
         newkbd = 1;
         break;
@@ -201,10 +216,10 @@ iob_sdl_key_event(int code, int extra)
         iob_key_scan = 0106;
         newkbd = 1;
         break;
-	case SDLK_TAB:
+	case XK_Tab:
 		iob_key_scan = 18;
 		break;
-	case SDLK_ESC:
+	case XK_Escape:
 		iob_key_scan = 1;
 		break;
 	default:
@@ -242,7 +257,7 @@ iob_sdl_key_event(int code, int extra)
 void
 iob_warm_boot_key(void)
 {
-	iob_sdl_key_event(SDLK_RETURN, 0);
+	iob_sdl_key_event(XK_Return, 0);
 }
 
 
