@@ -78,3 +78,6 @@ iob.o: DEFINES+=$(DISPLAY_DEFINES)
 kbd_new.o: DEFINES+=$(DISPLAY_DEFINES)
 kbd_old.o: DEFINES+=$(DISPLAY_DEFINES)
 main.o: DEFINES+=$(DISPLAY_DEFINES)
+
+TAGS:
+	find . -type f -iname "*.[ch]" | etags -
