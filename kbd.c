@@ -3,8 +3,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <SDL/SDL.h>
-
 #include "usim.h"
 #include "ucode.h"
 
@@ -166,28 +164,28 @@ iob_sdl_key_event(int code, int extra)
 	  help
 	*/
 	switch(code) {
-	case SDLK_F1:
+	case XK_F1:
 		iob_key_scan = 1;		/* terminal */
 		break;
-	case SDLK_F2:
+	case XK_F2:
 		iob_key_scan = 1 | (3 << 8);	/* system */
 		break;
-	case SDLK_F3:
+	case XK_F3:
 		iob_key_scan = 0 | (3 << 8);	/* network */
 		break;
-	case SDLK_F4:
+	case XK_F4:
 		iob_key_scan = 16 | (3 << 8);	/* abort */
 		break;
-	case SDLK_F5:
+	case XK_F5:
 		iob_key_scan = 17;		/* clear */
 		break;
-	case SDLK_F6:
+	case XK_F6:
 		iob_key_scan = 44 | (3 << 8); /* help */
 		break;
 	case XK_F11:
 		iob_key_scan = 50 | (3 << 8); /* end */
 		break;
-	case SDLK_F7:
+	case XK_F7:
 		iob_key_scan = 16; /* call */
 		break;
 	case XK_F12:
@@ -212,7 +210,7 @@ iob_sdl_key_event(int code, int extra)
         iob_key_scan = 017;
         newkbd = 1;
         break;
-	case SDLK_UP:
+	case XK_Up:
         iob_key_scan = 0106;
         newkbd = 1;
         break;
