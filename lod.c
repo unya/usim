@@ -461,6 +461,7 @@ usage(void)
 	fprintf(stderr, "-g	dump initial stack group\n");
 	fprintf(stderr, "-p <pc> find and disassemble FEF for given pc\n");
 	fprintf(stderr, "-a <addr> find and disassemble FEF for given address\n");
+	fprintf(stderr, "-m <addr> dump memory\n");
 	fprintf(stderr, "-w	decode 25-bit pointers\n");
 	exit(1);
 }
