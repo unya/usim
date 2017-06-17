@@ -927,7 +927,7 @@ set_current_band(const char *filename, const char *partition_name)
     return 0;
 }
 
-/* ---!!! This is a straight duplicate of set_current_band.  */
+/* ---!!! This is a straigh duplicate of set_current_band.  */
 int
 set_current_mcr(const char *filename, const char *partition_name)
 {
@@ -979,13 +979,12 @@ usage(void)
 	fprintf(stderr, "-p	show existing disk image\n");
 	fprintf(stderr, "-c	create new disk image\n");
 	fprintf(stderr, "-l	rewrite label\n");
-	fprintf(stderr, "-t <template-filename>\n");
-	fprintf(stderr, "-f <disk-image-filename>\n");
-	fprintf(stderr, "-x <partition-name>\n");
-	fprintf(stderr, "-m <partition-name>\n");
-	fprintf(stderr, "-b <partition-name>\n");
-	fprintf(stderr, "-B <partition-name>\n");
-
+	fprintf(stderr, "-t <template-filename>	template file\n");
+	fprintf(stderr, "-f <disk-image-filename>	disk image\n");
+	fprintf(stderr, "-x <partition-name>	extract partition\n");
+	fprintf(stderr, "-m <partition-name>	modify partition\n");
+	fprintf(stderr, "-b <partition-name>	mark current partition\n");
+	fprintf(stderr, "-B <partition-name>	mark current mcr\n");
 	exit(1);
 }
 
@@ -1052,7 +1051,7 @@ main(int argc, char *argv[])
 		set_current_mcr(img_filename, boot_mcr_name);
 		exit(0);
 	}
- 
+
 	if (show) {
 		show_partition_info(img_filename);
 		exit(0);
