@@ -589,8 +589,8 @@ default_template(void)
 	heads = 19;
 	blocks_per_track = 17;
 
-#define DEFAULT_MCR_FILE	"ucadr.mcr.841"
-#define DEFAULT_LOD_FILE	"partition-78.48.lod1"
+#define DEFAULT_MCR_FILE	"../l/ubin/ucadr.mcr.841"
+#define DEFAULT_LOD_FILE	"../bands/system-78-42.LOD"
 
 	part_count = 0;
 	add_partition("MCR1", 021,	0224,	0, DEFAULT_MCR_FILE, DEFAULT_MCR_FILE);
