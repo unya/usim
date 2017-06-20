@@ -2579,12 +2579,12 @@ xclose(struct xfer *ax)
 
 			chaosfile_log(LOG_INFO, "xclose (3b)\n");
 
-			time_t timep[2];
+			struct utimbuf *timep;
 
-			timep[0] = (x->x_options&O_PRESERVE ||
+			timep->actime = (x->x_options&O_PRESERVE ||
 				    x->x_flags&X_ATIME) ? x->x_atime :
 				sbuf.st_atime;
-			timep[1] = (x->x_options&O_PRESERVE ||
+			timep->modtime = (x->x_options&O_PRESERVE ||
 				    x->x_flags&X_MTIME) ? x->x_mtime :
 				sbuf.st_mtime;
 			/*
@@ -2594,8 +2594,8 @@ xclose(struct xfer *ax)
 
 			chaosfile_log(LOG_INFO, "xclose (3c)\n");
 
-			if (utimes(x->x_realname, timep)) {
-				chaosfile_log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
+			if (utime(x->x_realname, timep)) {
+				logx(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
 
 			chaosfile_log(LOG_INFO, "xclose (3d)\n");
