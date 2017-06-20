@@ -31,77 +31,77 @@ void tv_post_60hz_interrupt(void);
 void chaos_xmit_pkt(void);
 
 /*
- CADR i/o board
-
- interrupt vectors:
- 260 kdb/mouse
- 264 serial
- 270 chaos int
- 274 clock
- 400 ether xmit done
- 404 ether rcv done
- 410 ether collision
-
-764100
-0	0 read kbd
-2	1 read kbd
-4	2 read mouse y (12 bits)
-6	3 read mouse x (12 bits)
-10	4 click audio
-12	5 kbd/mouse csr
-
-csr - write
-0 remote mouse enable
-1 mouse int enable
-2 kbd int enable
-3 clock int enable
-
-csr - read
-0 remote mouse eable
-1 mouse int enable
-2 kbd int enable
-3 clock int enable
-4 mouse ready
-5 kbd ready
-6 clock ready
-7 ser int enable
-
-keyboard
-; 		5-0	keycode
-; 		7-6	shift
-; 		9-8	top
-; 		11-10	control
-; 		13-12	meta
-; 		14	shift-lock
-; 		15	unused
-
-*/
+ * CADR i/o board
+ *
+ * interrupt vectors:
+ * 260 kdb/mouse
+ * 264 serial
+ * 270 chaos int
+ * 274 clock
+ * 400 ether xmit done
+ * 404 ether rcv done
+ * 410 ether collision
+ *
+ * 764100
+ * 0	0 read kbd
+ * 2	1 read kbd
+ * 4	2 read mouse y (12 bits)
+ * 6	3 read mouse x (12 bits)
+ * 10	4 click audio
+ * 12	5 kbd/mouse csr
+ *
+ * csr - write
+ * 0 remote mouse enable
+ * 1 mouse int enable
+ * 2 kbd int enable
+ * 3 clock int enable
+ *
+ * csr - read
+ * 0 remote mouse eable
+ * 1 mouse int enable
+ * 2 kbd int enable
+ * 3 clock int enable
+ * 4 mouse ready
+ * 5 kbd ready
+ * 6 clock ready
+ * 7 ser int enable
+ *
+ * keyboard
+ * ; 		5-0	keycode
+ * ; 		7-6	shift
+ * ; 		9-8	top
+ * ; 		11-10	control
+ * ; 		13-12	meta
+ * ; 		14	shift-lock
+ * ; 		15	unused
+ *
+ */
 
 /*
-764100
-0 read kbd
-1 read kbd
-2 read mouse y (12 bits)
-3 read mouse x (12 bits)
-4 click audio
-5 kbd/mouse csr
-
-csr - write
-0 remote mouse enable
-1 mouse int enable
-2 kbd int enable
-3 clock int enable
-
-csr - read
-0 remote mouse eable
-1 mouse int enable
-2 kbd int enable
-3 clock int enable
-4 mouse ready
-5 kbd ready
-6 clock ready
-7 ser int enable
-*/
+ * 764100
+ * 0 read kbd
+ * 1 read kbd
+ * 2 read mouse y (12 bits)
+ * 3 read mouse x (12 bits)
+ * 4 click audio
+ * 5 kbd/mouse csr
+ *
+ * csr - write
+ * 0 remote mouse enable
+ * 1 mouse int enable
+ * 2 kbd int enable
+ * 3 clock int enable
+ *
+ * csr - read
+ * 0 remote mouse eable
+ * 1 mouse int enable
+ * 2 kbd int enable
+ * 3 clock int enable
+ * 4 mouse ready
+ * 5 kbd ready
+ * 6 clock ready
+ * 7 ser int enable
+ */
 
 #define US_CLOCK_IS_WALL_CLOCK
 #define USE_SIGVTARLM_FOR_60HZ
@@ -130,7 +130,7 @@ get_us_clock()
 		ds = tv2.tv_sec - tv.tv_sec;
 		du = tv2.tv_usec - tv.tv_usec;
 
-//		v = (ds * 100) + (du / 10000);
+		//		v = (ds * 100) + (du / 10000);
 		v = (ds * 1000*1000) + du;
 		if (0) printf("delta %lu\n", v);
 
@@ -191,21 +191,21 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0104:
 		traceio("unibus: mouse y\n");
-		 *pv = (mouse_tail << 12) |
-			 (mouse_middle << 13) |
-			 (mouse_head << 14) |
-			 (mouse_y & 07777); 
+		*pv = (mouse_tail << 12) |
+			(mouse_middle << 13) |
+			(mouse_head << 14) |
+			(mouse_y & 07777);
 
-		 mouse_tail = 0;
-		 mouse_middle = 0;
-		 mouse_head = 0;
+		mouse_tail = 0;
+		mouse_middle = 0;
+		mouse_head = 0;
 
-		 iob_kbd_csr &= ~(1 << 4);
+		iob_kbd_csr &= ~(1 << 4);
 		break;
 	case 0106:
 		traceio("unibus: mouse x\n");
-		 *pv = (mouse_rawx << 12) | (mouse_rawy << 14) |
-			 (mouse_x & 07777); 
+		*pv = (mouse_rawx << 12) | (mouse_rawy << 14) |
+			(mouse_x & 07777);
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
@@ -278,7 +278,7 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0112:
 		traceio("unibus: kbd csr\n");
-		iob_kbd_csr = 
+		iob_kbd_csr =
 			(iob_kbd_csr & ~017) | (v & 017);
 		break;
 	case 0120:
@@ -292,7 +292,7 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0140:
 		traceio("unibus: chaos write %011o, u_pc %011o ",
-				  v, get_u_pc());
+			v, get_u_pc());
 #ifdef CHAOS_DEBUG
 		show_label_closest(get_u_pc());
 		printf("\n");
@@ -473,7 +473,7 @@ mouse_sync_init(void)
 	int val;
 
 	//A-MOUSE-CURSOR-X A-MEM 516
-	//A-MOUSE-CURSOR-Y A-MEM 517 
+	//A-MOUSE-CURSOR-Y A-MEM 517
 
 	mouse_sync_amem_x = 334;
 	mouse_sync_amem_y = 335;
@@ -521,4 +521,3 @@ iob_init(void)
 
 	return 0;
 }
-

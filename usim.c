@@ -68,8 +68,8 @@ timing_stop()
 
 	printf("\ncycle timing:\n");
 
-//	printf("%lu %lu ; %lu %lu \n",
-//	       tv2.tv_sec, tv1.tv_sec, tv2.tv_usec, tv1.tv_usec);
+	//	printf("%lu %lu ; %lu %lu \n",
+	//	       tv2.tv_sec, tv1.tv_sec, tv2.tv_usec, tv1.tv_usec);
 
 	printf("%lu cycles in %g seconds, %10.8g cycles/second\n",
 	       cycles, t, cps);
@@ -85,8 +85,8 @@ sigint_handler(int arg)
 void
 sighup_handler(int arg)
 {
-//	char *b = "XMMUL";
-//	char *b = "FMPY";
+	//	char *b = "XMMUL";
+	//	char *b = "FMPY";
 	char *b = "MPY";
 	extern int trace_late_set;
 	breakpoint_set_mcr(b);
@@ -103,8 +103,8 @@ signal_init(void)
 void
 signal_shutdown(void)
 {
-    signal(SIGINT, SIG_DFL);
-    fflush(stdout);
+	signal(SIGINT, SIG_DFL);
+	fflush(stdout);
 }
 
 
@@ -159,7 +159,7 @@ main(int argc, char *argv[])
 	mouse_sync_flag = 1;
 
 	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:rtT:sSw")) != -1) {
-		switch (c) { 
+		switch (c) {
 		case 'a':
 			alt_prom_flag = 1;
 			break;
@@ -197,14 +197,14 @@ main(int argc, char *argv[])
 			breakpoint_set_count(atoi(optarg));
 			break;
 		case 'r':
-			{			
-				char *p = "../l";
-				char newpath[PATH_MAX];
-				realpath (p, newpath);
-				dcanon(newpath, 0);
-				settreeroot(newpath);
-			}
-			break;
+		{
+			char *p = "../l";
+			char newpath[PATH_MAX];
+			realpath (p, newpath);
+			dcanon(newpath, 0);
+			settreeroot(newpath);
+		}
+		break;
 		case 'S':
 			save_state_flag = 1;
 			break;

@@ -6,11 +6,9 @@
 #include <string.h>
 #include <fcntl.h>
 
-#if defined(__linux__) || defined(OSX) || defined(BSD)
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#endif
 
 #include "ucode.h"
 #include "config.h"
@@ -24,128 +22,128 @@ extern void assert_xbus_interrupt(void);
 
 
 /*
-  Note: original CADR disk controller wrote LS bit first, LS byte first.
-
-	disk controller registers:
-	  0 read status
-	  1 read ma
-	  2 read da
-	  3 read ecc
-	  4 load cmd
-	  5 load clp (command list pointer)
-	  6 load da (disk address)
-	  7 start
-
-	Commands (cmd reg)
-	  00 read
-	  10 read compare
-	  11 write
-	  02 read all
-	  13 write all
-	  04 seek
-	  05 at ease
-	  1005 recalibreate
-	  405 fault clear
-	  06 offset clear
-	  16 stop,reset
-
-	Command bits
-	  0
-	  1 cmd
-	  2
-	  3 cmd to memory
-	  4 servo offset plus
-	  5 servo offset
-	  6 data strobe early
-	  7 data strobe late
-	  8 fault clear
-	  9 recalibrate
-	  10 attn intr enb
-	  11 done intr enb
-
-	Status bits (status reg)
-	  0 active-
-	  1 any attention
-	  2 sel unit attention
-	  3 intr
-	  4 multiple select
-	  5 no select
-	  6 sel unit fault
-	  7 sel unit read only
-	  8 on cyl sync-
-	  9 sel unit on line-
-	  10 sel unit seek error
-	  11 timeout error
-	  12 start block error
-	  13 stopped by error
-	  14 overrun
-	  15 ecc.soft
-
-	  16 ecc.hard
-	  17 header ecc err
-	  18 header compare err
-	  19 mem parity err
-	  20 nmx error
-	  21 ccw cyc
-	  22 read comp diff
-	  23 internal parity err
-	  
-	  24-31 block.ctr
-
-	Disk address (da reg)
-	  31 n/c
-	  30 unit2
-	  29 unit1
-	  28 unit0
-
-	  27 cyl11
-	  ...
-	  16 cyl0	  
-	  
-	  15 head7
-	  ...
-	  8  head0
-
-	  7  block7
-	  ...
-	  0  block0
-
-	  ---
-
-	  CLP (command list pointer) points to list of CCW's
-	  Each CCW is phy address to write block
-
-	  clp register (22 bits)
-	  [21:16][15:0]
-	  fixed  counts up
-
-	  clp address is used to read in new ccw
-	  ccw's are read (up to 65535)
-
-	  ccw is used to produce dma address
-	  dma address comes from ccw + 8 bit counter
-
-	  ccw
-	  [21:1][1]
-          physr  |
-	  addr   0 = last ccw, 1 = more ccw's
-
-	  ccw   counter
-	  [21:8][7:0]
-
-	  ---
-
-	  read ma register
-	   t0  t1 CLP
-	  [23][22][21:0]
-            |   |
-            |   type 1 (show how controller is strapped; i.e. what type of
-            type 0      disk drive)
-
-	    (trident is type 0)
-
-
-*/
+ *  Note: original CADR disk controller wrote LS bit first, LS byte first.
+ *
+ *	disk controller registers:
+ *	  0 read status
+ *	  1 read ma
+ *	  2 read da
+ *	  3 read ecc
+ *	  4 load cmd
+ *	  5 load clp (command list pointer)
+ *	  6 load da (disk address)
+ *	  7 start
+ *
+ *	Commands (cmd reg)
+ *	  00 read
+ *	  10 read compare
+ *	  11 write
+ *	  02 read all
+ *	  13 write all
+ *	  04 seek
+ *	  05 at ease
+ *	  1005 recalibreate
+ *	  405 fault clear
+ *	  06 offset clear
+ *	  16 stop,reset
+ *
+ *	Command bits
+ *	  0
+ *	  1 cmd
+ *	  2
+ *	  3 cmd to memory
+ *	  4 servo offset plus
+ *	  5 servo offset
+ *	  6 data strobe early
+ *	  7 data strobe late
+ *	  8 fault clear
+ *	  9 recalibrate
+ *	  10 attn intr enb
+ *	  11 done intr enb
+ *
+ *	Status bits (status reg)
+ *	  0 active-
+ *	  1 any attention
+ *	  2 sel unit attention
+ *	  3 intr
+ *	  4 multiple select
+ *	  5 no select
+ *	  6 sel unit fault
+ *	  7 sel unit read only
+ *	  8 on cyl sync-
+ *	  9 sel unit on line-
+ *	  10 sel unit seek error
+ *	  11 timeout error
+ *	  12 start block error
+ *	  13 stopped by error
+ *	  14 overrun
+ *	  15 ecc.soft
+ *
+ *	  16 ecc.hard
+ *	  17 header ecc err
+ *	  18 header compare err
+ *	  19 mem parity err
+ *	  20 nmx error
+ *	  21 ccw cyc
+ *	  22 read comp diff
+ *	  23 internal parity err
+ *
+ *	  24-31 block.ctr
+ *
+ *	Disk address (da reg)
+ *	  31 n/c
+ *	  30 unit2
+ *	  29 unit1
+ *	  28 unit0
+ *
+ *	  27 cyl11
+ *	  ...
+ *	  16 cyl0
+ *
+ *	  15 head7
+ *	  ...
+ *	  8  head0
+ *
+ *	  7  block7
+ *	  ...
+ *	  0  block0
+ *
+ *	  ---
+ *
+ *	  CLP (command list pointer) points to list of CCW's
+ *	  Each CCW is phy address to write block
+ *
+ *	  clp register (22 bits)
+ *	  [21:16][15:0]
+ *	  fixed  counts up
+ *
+ *	  clp address is used to read in new ccw
+ *	  ccw's are read (up to 65535)
+ *
+ *	  ccw is used to produce dma address
+ *	  dma address comes from ccw + 8 bit counter
+ *
+ *	  ccw
+ *	  [21:1][1]
+ *          physr  |
+ *	  addr   0 = last ccw, 1 = more ccw's
+ *
+ *	  ccw   counter
+ *	  [21:8][7:0]
+ *
+ *	  ---
+ *
+ *	  read ma register
+ *	   t0  t1 CLP
+ *	  [23][22][21:0]
+ *            |   |
+ *            |   type 1 (show how controller is strapped; i.e. what type of
+ *            type 0      disk drive)
+ *
+ *	    (trident is type 0)
+ *
+ *
+ */
 
 int disk_fd;
 
@@ -197,17 +195,17 @@ int cur_unit, cur_cyl, cur_head, cur_block;
 void
 _swaplongbytes(unsigned int *buf, int word_count)
 {
-  /* buf contains bytes from the file. Words in that file were written
-   *   as little endian. The macintosh will interpret the word values
-   *   as big-endian, however. This routine will swap bytes around so
-   *   that the DISK_word values in the array will match what would
-   *   have been read on a little-endian machine
-   */
-  int i;
+	/* buf contains bytes from the file. Words in that file were written
+	 *   as little endian. The macintosh will interpret the word values
+	 *   as big-endian, however. This routine will swap bytes around so
+	 *   that the DISK_word values in the array will match what would
+	 *   have been read on a little-endian machine
+	 */
+	int i;
 
-  for (i = 0; i < word_count; i++) {
-    buf[i] = SWAP_LONG(buf[i]);
-  }
+	for (i = 0; i < word_count; i++) {
+		buf[i] = SWAP_LONG(buf[i]);
+	}
 }
 
 /*
@@ -216,7 +214,7 @@ _swaplongbytes(unsigned int *buf, int word_count)
  * Each disk block contains one Lisp machine page worth of data,
  * i.e. 256. words or 1024. bytes.
  */
-   
+
 int
 _disk_read(int block_no, unsigned int *buffer)
 {
@@ -303,16 +301,16 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 
 	if (disk_fd) {
 		if (_disk_read(block_no, buffer) < 0)
-        {
-            printf("disk_read_block: error reading block_no %d\n", block_no);
-            return -1;
-        }
+		{
+			printf("disk_read_block: error reading block_no %d\n", block_no);
+			return -1;
+		}
 #if 0
 		if (block_no == 10312)
-		for (i = 0; i < 32; i++) {
-			tracedio("read; vma %011o <- %011o\n",
-				 vma + i, buffer[i]);
-		}
+			for (i = 0; i < 32; i++) {
+				tracedio("read; vma %011o <- %011o\n",
+					 vma + i, buffer[i]);
+			}
 #endif
 		for (i = 0; i < 256; i++) {
 			write_phy_mem(vma + i, buffer[i]);
@@ -361,10 +359,10 @@ disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 		}
 #if 0
 		if (block_no == 1812)
-		for (i = 0; i < 32; i++) {
-			tracedio("write; vma %011o <- %011o\n",
-				 vma + i, buffer[i]);
-		}
+			for (i = 0; i < 32; i++) {
+				tracedio("write; vma %011o <- %011o\n",
+					 vma + i, buffer[i]);
+			}
 #endif
 		_disk_write(block_no, buffer);
 		return 0;
@@ -388,7 +386,7 @@ void
 disk_future_interrupt()
 {
 	disk_interrupt_delay = 100;
-disk_interrupt_delay = 2500;
+	disk_interrupt_delay = 2500;
 }
 
 void
@@ -408,7 +406,7 @@ void
 disk_show_cur_addr(void)
 {
 	tracedio("disk: unit %d, CHB %o/%o/%o\n",
-	       cur_unit, cur_cyl, cur_head, cur_block);
+		 cur_unit, cur_cyl, cur_head, cur_block);
 }
 
 void
@@ -499,7 +497,7 @@ disk_start_read(void)
 void
 disk_start_read_compare(void)
 {
-printf("disk_start_read_compare!\n");
+	printf("disk_start_read_compare!\n");
 	disk_decode_addr();
 	disk_show_cur_addr();
 }
@@ -539,14 +537,14 @@ disk_start_write(void)
 
 		disk_write_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
 
-//		disk_incr_block();
-			
+		//		disk_incr_block();
+
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");
 			break;
 		}
 
-disk_incr_block();
+		disk_incr_block();
 
 		disk_clp++;
 	}
@@ -682,9 +680,9 @@ int
 disk_init(char *filename)
 {
 	unsigned int label[256];
-    int ret;
+	int ret;
 
-    label[0] = 0;
+	label[0] = 0;
 
 #ifdef __BIG_ENDIAN__
 	disk_set_byteswap(1);
@@ -706,7 +704,7 @@ disk_init(char *filename)
 		printf("label %o\n", label[0]);
 		close(disk_fd);
 		disk_fd = 0;
-        return -1;
+		return -1;
 	}
 
 	cyls = label[2];

@@ -45,73 +45,73 @@ int chaos_reconnect(void);
 
 typedef struct chaos_packet
 {
-    unsigned short opcode;
-    unsigned short length;
-    unsigned short destaddr;
-    unsigned short destindex;
-    unsigned short sourceaddr;
-    unsigned short sourceindex;
-    unsigned short number;
-    unsigned short acknowledgement;
-    unsigned char data[488];
+	unsigned short opcode;
+	unsigned short length;
+	unsigned short destaddr;
+	unsigned short destindex;
+	unsigned short sourceaddr;
+	unsigned short sourceindex;
+	unsigned short number;
+	unsigned short acknowledgement;
+	unsigned char data[488];
 } chaos_packet;
 
 #define CHSTATNAME	32	/* Length of node name in STATUS protocol */
 
 typedef struct chaos_status
 {
-    char name[CHSTATNAME];
-    unsigned short subnetident;
-    unsigned short subnetnumshorts;
-    int received;
-    int transmitted;
-    int abort;
-    int lost;
-    int crcr;
-    int crci;
-    int length;
-    int rejected;
+	char name[CHSTATNAME];
+	unsigned short subnetident;
+	unsigned short subnetnumshorts;
+	int received;
+	int transmitted;
+	int abort;
+	int lost;
+	int crcr;
+	int crci;
+	int length;
+	int rejected;
 } chaos_status;
 
 typedef struct packet_queue
 {
-    struct packet_queue *next;
-    
-    chaos_packet *packet;
+	struct packet_queue *next;
+
+	chaos_packet *packet;
 } packet_queue;
 
 typedef enum connection_state
 {
-    cs_closed,
-    cs_rfc,
-    cs_rfcsent,
-    cs_open,
+	cs_closed,
+	cs_rfc,
+	cs_rfcsent,
+	cs_open,
 } connection_state;
 
 typedef struct chaos_connection
 {
-    unsigned short packetnumber;
-    unsigned short lastacked;
-    unsigned short localaddr;
-    unsigned short localindex;
-    unsigned short remoteaddr;
-    unsigned short remoteindex;
-    unsigned short lastreceived;
-    unsigned short lastsent;
-    unsigned short remotelastreceived;
-    unsigned short rwsize;
-    unsigned short twsize;
-    connection_state state;
-    packet_queue *queuehead;
-    packet_queue *queuetail;
-    pthread_mutex_t queuelock;
-    pthread_mutex_t queuesem;
-    pthread_cond_t queuecond;
-    pthread_mutex_t twsem;
-    pthread_cond_t twcond;
-    packet_queue *orderhead;
-    packet_queue *ordertail;
-    chaos_packet *lastpacket;
+	unsigned short packetnumber;
+	unsigned short lastacked;
+	unsigned short localaddr;
+	unsigned short localindex;
+	unsigned short remoteaddr;
+	unsigned short remoteindex;
+	unsigned short lastreceived;
+	unsigned short lastsent;
+	unsigned short remotelastreceived;
+	unsigned short rwsize;
+	unsigned short twsize;
+	connection_state state;
+	packet_queue *queuehead;
+	packet_queue *queuetail;
+	pthread_mutex_t queuelock;
+	pthread_mutex_t queuesem;
+	pthread_cond_t queuecond;
+	pthread_mutex_t twsem;
+	pthread_cond_t twcond;
+	packet_queue *orderhead;
+	packet_queue *ordertail;
+	chaos_packet *lastpacket;
 } chaos_connection;
 
 void chaos_queue(chaos_packet *packet);

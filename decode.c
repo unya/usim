@@ -24,8 +24,8 @@ ucw_t prom_ucode[512];
 unsigned int
 read16(int fd)
 {
-	unsigned char b[2];
-	int ret;
+	int fd, i;
+	ssize_t ret;
 
 	ret = read(fd, b, 2);
 	if (ret < 2) {
@@ -45,10 +45,13 @@ read32(int fd)
 	unsigned char b[4];
 	int ret;
 
-	ret = read(fd, b, 4);
-	if (ret < 4) {
-		printf("eof!\n");
-		exit(1);
+		ret = read(fd, prom[i], 512);
+		close(fd);
+
+		if (ret != 512) {
+			fprintf(stderr, "read_prom_files: short read\n");
+			exit(1);
+		}
 	}
 
 	if (needswap)
@@ -106,11 +109,25 @@ show_prom(void)
 
 	for (i = 0; i < 16; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
+		printf(" %02x %02x %02x %02x %02x %02x",
+		       prom[0][i],
+		       prom[1][i],
+		       prom[2][i],
+		       prom[3][i],
+		       prom[4][i],
+		       prom[5][i]);
 		printf("\n");
 	}
 
 	for (i = 0; i < 512; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
+		printf(" %02x %02x %02x %02x %02x %02x",
+		       prom[0][i],
+		       prom[1][i],
+		       prom[2][i],
+		       prom[3][i],
+		       prom[4][i],
+		       prom[5][i]);
 		printf("\n");
 	}
 
@@ -163,14 +180,14 @@ char *alu_arith_op[] = {
 char *
 disassemble_m_src(ucw_t u, int m_src)
 {
-    static char buffer[128];
+	static char buffer[128];
 
-    buffer[0] = '\0';
+	buffer[0] = '\0';
 	if (m_src & 040) {
 		switch (m_src & 037) {
 		case 0:
 			strcpy(buffer, "dispatch-constant ");
-            break;
+			break;
 		case 1:
 			strcpy(buffer, "SPC-ptr, spc-data ");
 			break;
@@ -185,7 +202,7 @@ disassemble_m_src(ucw_t u, int m_src)
 			break;
 		case 6:
 			sprintf(buffer, "OPC register %o ",
-			       (int)u & 017777);
+				(int)u & 017777);
 			break;
 		case 7:
 			strcpy(buffer, "Q ");
@@ -198,30 +215,30 @@ disassemble_m_src(ucw_t u, int m_src)
 			break;
 		case 012:
 			strcpy(buffer, "MD ");
-			break; 
+			break;
 		case 013:
 			strcpy(buffer, "LC ");
-			break; 
+			break;
 		case 014:
 			strcpy(buffer, "SPC pointer and data, pop ");
-			break; 
+			break;
 		case 024:
 			strcpy(buffer, "PDL[Pointer], pop ");
 			break;
 		case 025:
 			strcpy(buffer, "PDL[Pointer] ");
-			break; 
+			break;
 		}
 	} else {
 		sprintf(buffer, "m[%o] ", m_src);
 	}
-    return buffer;
+	return buffer;
 }
 
 char *
 disassemble_dest(int dest)
 {
-    static char buffer[128];
+	static char buffer[128];
 
 	if (dest & 04000) {
 		sprintf(buffer, "->a_mem[%o] ", dest & 01777);
@@ -254,14 +271,14 @@ disassemble_dest(int dest)
 
 		sprintf(&buffer[strlen(buffer)], ",m[%o] ", dest & 037);
 	}
-    return buffer;
+	return buffer;
 }
 
 char *
 disassemble_ucode_loc(unsigned int loc, ucw_t u)
 {
-    static char buffer[256];
-    
+	static char buffer[256];
+
 	int a_src, m_src, new_pc, dest, alu_op;
 	int r_bit, p_bit, n_bit, ir8, ir7;
 	int widthm1, pos;
@@ -270,8 +287,8 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 	int disp_cont, disp_addr;
 	int map, len, rot;
 	int out_bus;
-    
-    buffer[0] = '\0';
+
+	buffer[0] = '\0';
 
 	if ((u >> 42) & 1)
 		strcpy(buffer, "popj; ");
@@ -345,10 +362,10 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 		p_bit = (u >> 8) & 1;
 		n_bit = (u >> 7) & 1;
 
-        sprintf(&buffer[strlen(buffer)], "pc %o, %s%s",
-		       new_pc,
-		       r_bit ? "R " : "",
-		       p_bit ? "P " : "");
+		sprintf(&buffer[strlen(buffer)], "pc %o, %s%s",
+			new_pc,
+			r_bit ? "R " : "",
+			p_bit ? "P " : "");
 
 		if (n_bit)
 			/* INHIBIT-XCT-NEXT */
@@ -373,18 +390,18 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 			sprintf(&buffer[strlen(buffer)], "m-rot<< %o", (int)u & 037);
 		}
 
-/*
-  int jump_op;
+		/*
+		  int jump_op;
 
-  jump_op = (u >> 14) & 3;
+		  jump_op = (u >> 14) & 3;
 
-  switch (jump_op) {
-  case 0: printf("jump-xct-next "); break;
-  case 1: printf("jump "); break;
-  case 2: printf("call-xct-next "); break;
-  case 3: printf("call "); break;
-  }
-*/
+		  switch (jump_op) {
+		  case 0: printf("jump-xct-next "); break;
+		  case 1: printf("jump "); break;
+		  case 2: printf("call-xct-next "); break;
+		  case 3: printf("call "); break;
+		  }
+		*/
 		break;
 	case 2: /* dispatch */
 		strcat(buffer, "(dispatch) ");
@@ -402,8 +419,8 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 		sprintf(&buffer[strlen(buffer)], "m=%o ", m_src);
 		strcat(buffer, disassemble_m_src(u, m_src));
 
-        sprintf(&buffer[strlen(buffer)], "disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
-		       disp_cont, disp_addr, map, len, rot);
+		sprintf(&buffer[strlen(buffer)], "disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
+			disp_cont, disp_addr, map, len, rot);
 		break;
 	case 3: /* byte */
 		strcat(buffer, "(byte) ");
@@ -424,15 +441,15 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 			break;
 		case 1: /* ldb */
 			sprintf(&buffer[strlen(buffer)], "ldb pos=%o, width=%o ",
-			       pos, widthm1+1);
+				pos, widthm1+1);
 			break;
 		case 2:
 			sprintf(&buffer[strlen(buffer)], "sel dep (a<-m&mask) pos=%o, width=%o ",
-			       pos, widthm1+1);
+				pos, widthm1+1);
 			break;
 		case 3: /* dpb */
 			sprintf(&buffer[strlen(buffer)], "dpb pos=%o, width=%o ",
-			       pos, widthm1+1);
+				pos, widthm1+1);
 			break;
 		}
 
@@ -440,8 +457,8 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 		break;
 	}
 
- done:
-    return buffer;
+done:
+	return buffer;
 }
 
 void
@@ -665,12 +682,12 @@ show_list(unsigned int lp)
 	unsigned int loc, l1, v;
 	int i;
 
-//	loc = 031602653046;
-//	loc = 001614546634;
+	//	loc = 031602653046;
+	//	loc = 001614546634;
 	loc = 030301442405;
 	read_virt(disk_fd, loc, &v);
-//	printf("%011o %011o\n", loc, v);
-//	loc = v;
+	//	printf("%011o %011o\n", loc, v);
+	//	loc = v;
 
 	for (i = 0; i < 10; i++) {
 		int tag, cdr, addr;
@@ -687,70 +704,70 @@ show_list(unsigned int lp)
 			i = 100;
 
 		if (addr != 0)
-		switch (tag) {
-		case 003:
-			l1 = v;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+			switch (tag) {
+			case 003:
+				l1 = v;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			l1 = v;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+				l1 = v;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			show_string(l1);
-			printf("\n");
-			break;
-		case 004:
-			l1 = v;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+				show_string(l1);
+				printf("\n");
+				break;
+			case 004:
+				l1 = v;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			show_string(l1);
-			printf("\n");
-			break;
+				show_string(l1);
+				printf("\n");
+				break;
 
-		case 016:
-//			loc = v;
-			break;
-		case 021:
-			l1 = v;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
+			case 016:
+				//			loc = v;
+				break;
+			case 021:
+				l1 = v;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("  %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			show_string(l1);
-			printf("\n");
+				show_string(l1);
+				printf("\n");
 #if 0
-			l1 = v;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+				l1 = v;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			l1++;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+				l1++;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
 
-			l1++;
-			read_virt(disk_fd, l1, &v);
-			tag = (v >> 24) & 077;
-			cdr = (v >> 30) & 3;
-			printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
+				l1++;
+				read_virt(disk_fd, l1, &v);
+				tag = (v >> 24) & 077;
+				cdr = (v >> 30) & 3;
+				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
 #endif
-			break;
-		default:
-//			i = 100;
-			break;
-		}
+				break;
+			default:
+				//			i = 100;
+				break;
+			}
 
 		loc++;
 	}
@@ -894,7 +911,7 @@ struct {
 	{ "%STORE-IN-HIGHER-CONTEXT", 0302 },
 	{ "%DATA-TYPE", 0303 },
 	{ "%POINTER", 0304 },
-    /* 305-307 FREE */
+	/* 305-307 FREE */
 	{ "%MAKE-POINTER", 0310 },
 	{ "%SPREAD", 0311 },
 	{ "%P-STORE-CONTENTS", 0312 },
@@ -995,10 +1012,10 @@ struct {
 	{ "%P-STORE-CDR-CODE", 0450 },
 	{ "%P-STORE-DATA-TYPE", 0451 },
 	{ "%P-STORE-POINTER", 0452 },
-    /* 453-455 FREE */
+	/* 453-455 FREE */
 	{ "%CATCH-OPEN", 0456 },
 	{ "%CATCH-OPEN-MV", 0457 },
-    /* 461, 0462 FREE */
+	/* 461, 0462 FREE */
 	{ "%FEXPR-CALL", 0462 },
 	{ "%FEXPR-CALL-MV", 0463 },
 	{ "%LEXPR-CALL", 0464 },
@@ -1167,58 +1184,58 @@ extern int read_mem(int vaddr, unsigned int *pv);
 static char *
 disassemble_address(unsigned int fef, unsigned int reg, unsigned int delta)
 {
-    static char addr[256];
-    
-    if (reg < 4)
-    {
-        sprintf(addr, "FEF|%o;", delta);
-    }
-    else if (reg == 4)
-    {
-        static unsigned int constants_area;
-	static int done = 0;
+	static char addr[256];
 
-	if (!done)
+	if (reg < 4)
 	{
-	    int i;
+		sprintf(addr, "FEF|%o;", delta);
+	}
+	else if (reg == 4)
+	{
+		static unsigned int constants_area;
+		static int done = 0;
 
-            for (i = 0; i < 1024; i++) {
-                char *sym;
-                extern unsigned int a_memory[1024];
-                
-                sym = sym_find_by_type_val(1, 4/*A-MEM*/, i);
-                if (sym && strcasecmp(sym, "A-V-CONSTANTS-AREA") == 0) {
-                    read_mem(a_memory[i], &constants_area);
-                    printf("found %o %-40s %o\n",
-                           i, sym, a_memory[i]);
-                }
-            }
-	    done = 1;
+		if (!done)
+		{
+			int i;
+
+			for (i = 0; i < 1024; i++) {
+				char *sym;
+				extern unsigned int a_memory[1024];
+
+				sym = sym_find_by_type_val(1, 4/*A-MEM*/, i);
+				if (sym && strcasecmp(sym, "A-V-CONSTANTS-AREA") == 0) {
+					read_mem(a_memory[i], &constants_area);
+					printf("found %o %-40s %o\n",
+					       i, sym, a_memory[i]);
+				}
+			}
+			done = 1;
+		}
+
+		unsigned int value;
+
+		read_mem(constants_area + (delta & 077), &value);
+		sprintf(addr, "/%o", value);
+	}
+	else if (delta == 0777)
+	{
+		sprintf(addr, "PDL-POP");
+	}
+	else if (reg == 5)
+	{
+		sprintf(addr, "LOCAL|%o", delta & 077);
+	}
+	else if (reg == 6)
+	{
+		sprintf(addr, "ARG|%o", delta & 077);
+	}
+	else
+	{
+		sprintf(addr, "PDL|%o", delta & 077);
 	}
 
-        unsigned int value;
-        
-        read_mem(constants_area + (delta & 077), &value);
-        sprintf(addr, "/%o", value);
-    }
-    else if (delta == 0777)
-    {
-        sprintf(addr, "PDL-POP");
-    }
-    else if (reg == 5)
-    {
-        sprintf(addr, "LOCAL|%o", delta & 077);
-    }
-    else if (reg == 6)
-    {
-        sprintf(addr, "ARG|%o", delta & 077);
-    }
-    else
-    {
-        sprintf(addr, "PDL|%o", delta & 077);
-    }
-    
-    return addr;
+	return addr;
 }
 
 char *
@@ -1227,35 +1244,35 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	unsigned int op, dest, reg, delta, adr;
 	int to;
 	unsigned int nlc;
-    static char buffer[1024];
-    
-    // search for fefptr
-    {
-        int i, tag = 0;
-        unsigned int addr = (unsigned int)(loc >> 2);
-        unsigned int v;
-        
-        if (0) printf("find %o\n", addr);
-        
-        if (partoff == 0) {
-            find_disk_partition_table(disk_fd);
-        }
-        
-        /* search backward to find the function header */
-        for (i = 0; i < 512; i++) {
-            
-            if (read_virt(disk_fd, addr, &v))
-                break;
-            
-            tag = (v >> width) & 037;
-            if (tag == 7) break;
-            addr--;
-        }
-        
-        fefptr = addr;
-    }
-	
-    if (!misc_inst_vector_setup) {
+	static char buffer[1024];
+
+	// search for fefptr
+	{
+		int i, tag = 0;
+		unsigned int addr = (unsigned int)(loc >> 2);
+		unsigned int v;
+
+		if (0) printf("find %o\n", addr);
+
+		if (partoff == 0) {
+			find_disk_partition_table(disk_fd);
+		}
+
+		/* search backward to find the function header */
+		for (i = 0; i < 512; i++) {
+
+			if (read_virt(disk_fd, addr, &v))
+				break;
+
+			tag = (v >> width) & 037;
+			if (tag == 7) break;
+			addr--;
+		}
+
+		fefptr = addr;
+	}
+
+	if (!misc_inst_vector_setup) {
 		int i, index;
 		for (i = 0; i < 1024; i++) {
 			if (misc_inst[i].name == 0)
@@ -1265,103 +1282,103 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 		}
 		misc_inst_vector_setup = 1;
 	}
-    
+
 	op = (inst >> 011) & 017;
 	dest = (inst >> 015) & 07;
 	reg = (inst >> 6) & 07;
 	delta = (inst >> 0) & 0777;
-//	sprintf(buffer, "%011o%c %06o %s ", loc, even ? 'e':'o', inst, op_names[op]);
-    sprintf(buffer, "%011o%c %06o ", loc, even ? 'e':'o', inst);
-    
+	//	sprintf(buffer, "%011o%c %06o %s ", loc, even ? 'e':'o', inst, op_names[op]);
+	sprintf(buffer, "%011o%c %06o ", loc, even ? 'e':'o', inst);
+
 	switch (op) {
-        case 0: /* call */
-        case 1: /* call0 */
-            sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
-            sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
-            sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
-            
-            {
-                unsigned int v, tag;
-                
-                v = get(fefptr + (delta & 077));
-                tag = (v >> width) & 037;
-                if (0) printf("(tag%o %o) ", tag, v);
-                switch (tag) {
-                    case 3:
-                        v = get(v);
-                        showstr(buffer, v, 0);
-                        break;
-                    case 4:
-                        showstr(buffer, v, 0);
-                        break;
-                    case 027:
-                        break;
-                    default:
-                        v = get(v);
-                        show_fef_func_name(buffer, v, width);
-                }
-            }
-                //		nlc = (loc*2 + (even?0:1)) + delta;
-            //		printf("+%o; %o%c ",
-            //		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
-            
-            break;
-        case 2: /* move */
-        case 3: /* car */
-        case 4: /* cdr */
-        case 5: /* cadr */
-        case 6: /* cddr */
-        case 7: /* cdar */
-        case 010: /* caar */
-            sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
-            sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
-            sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
-            break;
-        case 011: /* nd1 */
-            sprintf(&buffer[strlen(buffer)], "%s ", nd1_names[dest]);
-            sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
-            break;
-        case 012: /* nd2 */
-            sprintf(&buffer[strlen(buffer)], "%s ", nd2_names[dest]);
-            sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
-            break;
-        case 013: /* nd3 */
-            sprintf(&buffer[strlen(buffer)], "%s ", nd3_names[dest]);
-            sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
-            break;
-        case 014: /* branch */
-            sprintf(&buffer[strlen(buffer)], "%s ", branch_names[dest]);
-            to = ((int)inst & 03777) << 1;
-            to |= (inst & 0x8000) ? 1 : 0;
-            
-            if (inst & 0400) {
-                to = inst & 01777;
-                to |= 03000;
-                to |= ~01777;
-            }
-            
-            nlc = (unsigned int)(((int)loc*2 + (even?0:1)) + to);
-            
-            if (to > 0) {
-                sprintf(&buffer[strlen(buffer)], "+%o; %o%c ",
-                        to, nlc/2, (nlc & 1) ? 'o' : 'e');
-            } else {
-                sprintf(&buffer[strlen(buffer)], "-%o; %o%c ",
-                        -to, nlc/2, (nlc & 1) ? 'o' : 'e');
-            }
-            break;
-        case 015: /* misc */
-            sprintf(&buffer[strlen(buffer)], "(MISC) ");
-            adr = inst & 0777;
-            if (adr < 1024 && misc_inst_vector[adr]) {
-                sprintf(&buffer[strlen(buffer)], "%s ", misc_inst[ misc_inst_vector[adr] ].name);
-            } else {
-                sprintf(&buffer[strlen(buffer)], "%o ", adr);
-            }
-            sprintf(&buffer[strlen(buffer)], "%s ", dest_names[dest]);
-            break;
+	case 0: /* call */
+	case 1: /* call0 */
+		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
+		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+
+		{
+			unsigned int v, tag;
+
+			v = get(fefptr + (delta & 077));
+			tag = (v >> width) & 037;
+			if (0) printf("(tag%o %o) ", tag, v);
+			switch (tag) {
+			case 3:
+				v = get(v);
+				showstr(buffer, v, 0);
+				break;
+			case 4:
+				showstr(buffer, v, 0);
+				break;
+			case 027:
+				break;
+			default:
+				v = get(v);
+				show_fef_func_name(buffer, v, width);
+			}
+		}
+		//		nlc = (loc*2 + (even?0:1)) + delta;
+		//		printf("+%o; %o%c ",
+		//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
+
+		break;
+	case 2: /* move */
+	case 3: /* car */
+	case 4: /* cdr */
+	case 5: /* cadr */
+	case 6: /* cddr */
+	case 7: /* cdar */
+	case 010: /* caar */
+		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
+		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		break;
+	case 011: /* nd1 */
+		sprintf(&buffer[strlen(buffer)], "%s ", nd1_names[dest]);
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		break;
+	case 012: /* nd2 */
+		sprintf(&buffer[strlen(buffer)], "%s ", nd2_names[dest]);
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		break;
+	case 013: /* nd3 */
+		sprintf(&buffer[strlen(buffer)], "%s ", nd3_names[dest]);
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		break;
+	case 014: /* branch */
+		sprintf(&buffer[strlen(buffer)], "%s ", branch_names[dest]);
+		to = ((int)inst & 03777) << 1;
+		to |= (inst & 0x8000) ? 1 : 0;
+
+		if (inst & 0400) {
+			to = inst & 01777;
+			to |= 03000;
+			to |= ~01777;
+		}
+
+		nlc = (unsigned int)(((int)loc*2 + (even?0:1)) + to);
+
+		if (to > 0) {
+			sprintf(&buffer[strlen(buffer)], "+%o; %o%c ",
+				to, nlc/2, (nlc & 1) ? 'o' : 'e');
+		} else {
+			sprintf(&buffer[strlen(buffer)], "-%o; %o%c ",
+				-to, nlc/2, (nlc & 1) ? 'o' : 'e');
+		}
+		break;
+	case 015: /* misc */
+		sprintf(&buffer[strlen(buffer)], "(MISC) ");
+		adr = inst & 0777;
+		if (adr < 1024 && misc_inst_vector[adr]) {
+			sprintf(&buffer[strlen(buffer)], "%s ", misc_inst[ misc_inst_vector[adr] ].name);
+		} else {
+			sprintf(&buffer[strlen(buffer)], "%o ", adr);
+		}
+		sprintf(&buffer[strlen(buffer)], "%s ", dest_names[dest]);
+		break;
 	}
-    return buffer;
+	return buffer;
 }
 
 static void
@@ -1370,7 +1387,7 @@ showstr(char *buffer, unsigned int a, int cr)
 	int j;
 	unsigned int i, t, n;
 	char s[256];
-    
+
 	t = get(a) & 0xff;
 	j = 0;
 	for (i = 0; i < t; i += 4) {
@@ -1380,7 +1397,7 @@ showstr(char *buffer, unsigned int a, int cr)
 		s[j++] = (char)(n >> 16);
 		s[j++] = (char)(n >> 24);
 	}
-    
+
 	s[t] = 0;
 	sprintf(&buffer[strlen(buffer)], "'%s' ", s);
 	if (cr) sprintf(&buffer[strlen(buffer)], " <break> ");
@@ -1391,19 +1408,19 @@ show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 {
 	unsigned int n, v;
 	int tag;
-    
+
 	n = get(fefptr+2);
-    
+
 	sprintf(&buffer[strlen(buffer)], " "); v = get(n);
-    
+
 	tag = (v >> width) & 037;
 	if (0) printf("tag %o\n", tag);
-    
+
 	if (tag == 3) {
 		v = get(v);
 		tag = (v >> width) & 037;
 	}
-    
+
 	if (tag == 4) {
 		sprintf(&buffer[strlen(buffer)], " "); showstr(buffer, v, 0);
 	}
@@ -1412,9 +1429,8 @@ show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 static unsigned int
 get(unsigned int a)
 {
-    unsigned int v = 0;
+	unsigned int v = 0;
 
-    read_virt(disk_fd, a, &v);
-    return v;
+	read_virt(disk_fd, a, &v);
+	return v;
 }
-

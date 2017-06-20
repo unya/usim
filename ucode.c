@@ -135,7 +135,7 @@ extern void chaos_poll();
 int
 get_u_pc(void)
 {
-  return u_pc;
+	return u_pc;
 }
 
 void
@@ -241,7 +241,7 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		return (1 << 22) | (1 << 23) | 036000;
 	}
 
-/* this should be move below - I'm not sure it has to happen anymore */
+	/* this should be move below - I'm not sure it has to happen anymore */
 	if ((virt & 077777400) == 077377400) {
 		if (0) traceio("forcing xbus mapping for disk\n");
 		if (poffset)
@@ -249,10 +249,10 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		return (1 << 22) | (1 << 23) | 036777;
 	}
 
-/*
-764000-7641777 i/o board
-764140 chaos (77772060)
-*/
+	/*
+	  764000-7641777 i/o board
+	  764140 chaos (77772060)
+	*/
 
 	/* 11 bit l1 index */
 	l1_index = (virt >> 13) & 03777;
@@ -288,20 +288,20 @@ int page_block_count;
 struct page_s *
 new_page(void)
 {
-  struct page_s *page;
+	struct page_s *page;
 
-  if (page_block == 0) {
-    page_block = malloc(sizeof(struct page_s) * 1024);
-    page_block_count = 1024;
-  }
+	if (page_block == 0) {
+		page_block = malloc(sizeof(struct page_s) * 1024);
+		page_block_count = 1024;
+	}
 
-  page = (struct page_s *)page_block;
-  page_block += sizeof(struct page_s);
-  page_block_count--;
-  if (page_block_count == 0)
-    page_block = 0;
+	page = (struct page_s *)page_block;
+	page_block += sizeof(struct page_s);
+	page_block_count--;
+	if (page_block_count == 0)
+		page_block = 0;
 
-  return page;
+	return page;
 }
 
 /*
@@ -321,7 +321,7 @@ add_new_page_no(int pn)
 
 		page = (struct page_s *)malloc(sizeof(struct page_s));
 		if (page) {
-//#define ZERO_NEW_PAGES
+			//#define ZERO_NEW_PAGES
 #ifdef ZERO_NEW_PAGES
 			memset(page, 0, sizeof(struct page_s));
 #endif
@@ -473,9 +473,9 @@ read_mem(int vaddr, unsigned int *pv)
 	if (pn == 036000) {
 		/* thwart the color probe */
 		if ((vaddr & 077700000) == 077200000) {
-		  if (0) printf("read from %o\n", vaddr);
-		  *pv = 0x0;
-		  return 0;
+			if (0) printf("read from %o\n", vaddr);
+			*pv = 0x0;
+			return 0;
 		}
 
 		offset = vaddr & 077777;
@@ -532,7 +532,7 @@ read_mem(int vaddr, unsigned int *pv)
 		page_fault_flag = 1;
 		opc = pn;
 		tracef("read_mem(vaddr=%o) page fault\n", vaddr);
-        *pv = 0;
+		*pv = 0;
 		return -1;
 	}
 
@@ -610,11 +610,11 @@ write_mem(int vaddr, unsigned int v)
 #endif
 
 	if (pn == 036000) {
-/* thwart the color probe */
-if ((vaddr & 077700000) == 077200000) {
-	if (0) printf("write to %o\n", vaddr);
-	return 0;
-}
+		/* thwart the color probe */
+		if ((vaddr & 077700000) == 077200000) {
+			if (0) printf("write to %o\n", vaddr);
+			return 0;
+		}
 		offset = vaddr & 077777;
 		if (0) traceio("video_write %o %o (%011o)\n", offset, v, vaddr);
 		video_write(offset, v);
@@ -630,7 +630,7 @@ if ((vaddr & 077700000) == 077200000) {
 	if (pn == 037764) {
 		offset <<= 1;
 		traceio("unibus: iob v %o, offset %o\n",
-		       vaddr, offset);
+			vaddr, offset);
 		iob_unibus_write(offset, v);
 		return 0;
 	}
@@ -643,13 +643,13 @@ if ((vaddr & 077700000) == 077200000) {
 
 		if (offset <= 036) {
 			traceio("unibus: spy v %o, offset %o\n",
-			       vaddr, offset);
+				vaddr, offset);
 
 			switch (offset) {
 			case 012:
 				if ((v & 044) == 044) {
 					traceio("unibus: "
-					       "disabling prom enable flag\n");
+						"disabling prom enable flag\n");
 					prom_enabled_flag = 0;
 
 					if (warm_boot_flag) {
@@ -702,7 +702,7 @@ if ((vaddr & 077700000) == 077200000) {
 			}
 
 			traceio("unibus: write? v %o, offset %o\n",
-			       vaddr, offset);
+				vaddr, offset);
 		}
 
 	}
@@ -834,10 +834,10 @@ rotate_left(unsigned int value, int bitstorotate)
 		mask = 0;
 	else
 		mask = (int)0x80000000 >> bitstorotate;
-		
+
 	/* save off the affected bits */
 	tmp = (value & mask) >> (32 - bitstorotate);
-		
+
 	/* perform the actual rotate */
 	/* add the rotated bits back in (in the proper location) */
 	return (value << bitstorotate) | tmp;
@@ -923,7 +923,7 @@ advance_lc(int *ppc)
 
 		lc1 = (lc & 2) ? 1 : 0;
 
-//		last_byte_in_word = ((~lc0b & ~lc1) & 1) ? 1 : 0;
+		//		last_byte_in_word = ((~lc0b & ~lc1) & 1) ? 1 : 0;
 		last_byte_in_word = (~lc0b & ~lc1) & 1;
 
 		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n",
@@ -993,65 +993,65 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			printf("\n");
 		}
 
-/* isn't this pretty? :-) XXX add main option to trace on macro function name */
+		/* isn't this pretty? :-) XXX add main option to trace on macro function name */
 #if 0
-{ char *s;
+		{ char *s;
 
- s = find_function_name(lc);
-//if (s && strcmp(s, "SHEET-PREPARE-FOR-EXPOSE") == 0) 
-//	trace_lod_labels_flag = 1;
+			s = find_function_name(lc);
+			//if (s && strcmp(s, "SHEET-PREPARE-FOR-EXPOSE") == 0)
+			//	trace_lod_labels_flag = 1;
 
- if (trace_lod_labels_flag) {
-	 show_label_closest(u_pc);
-	 printf(": lc <- %o (%o)", lc, lc>>2);
-	 if (s) printf(" '%s'", s);
-	 printf("\n");
- }
+			if (trace_lod_labels_flag) {
+				show_label_closest(u_pc);
+				printf(": lc <- %o (%o)", lc, lc>>2);
+				if (s) printf(" '%s'", s);
+				printf("\n");
+			}
 
-// if (pdl_ptr > 01770) trace = 1;
-// if (lc == 011030114652) trace=1;
+			// if (pdl_ptr > 01770) trace = 1;
+			// if (lc == 011030114652) trace=1;
 
- if (s) {
-//if (strcmp(s, "RECEIVE-ANY-FUNCTION") == 0) 
-//trace = 1;
+			if (s) {
+				//if (strcmp(s, "RECEIVE-ANY-FUNCTION") == 0)
+				//trace = 1;
 
-//if (strcmp(s, "DISK-RUN") == 0) 
-//trace = 1;
-//	 trace_disk_flag = 1;
+				//if (strcmp(s, "DISK-RUN") == 0)
+				//trace = 1;
+				//	 trace_disk_flag = 1;
 
-//if (strcmp(s, "FIND-DISK-PARTITION") == 0) 
-//trace = 1;
-//	 trace = 1;
+				//if (strcmp(s, "FIND-DISK-PARTITION") == 0)
+				//trace = 1;
+				//	 trace = 1;
 
-//if (strcmp(s, "LISP-ERROR-HANDLER") == 0) 
-//trace = 1;
-//	 trace = 0;
- }
-}
+				//if (strcmp(s, "LISP-ERROR-HANDLER") == 0)
+				//trace = 1;
+				//	 trace = 0;
+			}
+		}
 #endif
 
 #if 0
-show_label_closest(u_pc);
-printf(": lc <- %o (%o)", lc, lc>>2);
- { char *s;
-s = find_function_name(lc);
-if (s) printf("%s", s);
-// if (strcmp(s, "INITIALIZATIONS") == 0)
-if (strcmp(s, "CLEAR-UNIBUS-MAP") == 0) trace = 1;
-if (strcmp(s, "INITIALIZATIONS") == 0) {
-dump_pdl_memory();
- show_list(0);
-}
- }
-printf("\n");
+		show_label_closest(u_pc);
+		printf(": lc <- %o (%o)", lc, lc>>2);
+		{ char *s;
+			s = find_function_name(lc);
+			if (s) printf("%s", s);
+			// if (strcmp(s, "INITIALIZATIONS") == 0)
+			if (strcmp(s, "CLEAR-UNIBUS-MAP") == 0) trace = 1;
+			if (strcmp(s, "INITIALIZATIONS") == 0) {
+				dump_pdl_memory();
+				show_list(0);
+			}
+		}
+		printf("\n");
 
-//trace_mcr_labels_flag = 1;
-trace_disk_flag = 1;
+		//trace_mcr_labels_flag = 1;
+		trace_disk_flag = 1;
 
- if (lc == 011007402704) {
-	 trace = 1;
-//	 trace_mcr_labels_flag = 1;
- }
+		if (lc == 011007402704) {
+			trace = 1;
+			//	 trace_mcr_labels_flag = 1;
+		}
 #endif
 
 		break;
@@ -1086,20 +1086,20 @@ trace_disk_flag = 1;
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
-if (0) show_pdl_local();
+		if (0) show_pdl_local();
 		break;
 	case 011: /* PDL (addressed by pointer, push */
 		pdl_ptr = (pdl_ptr + 1) & 01777;
 		tracef("writing pdl[%o] <- %o, push\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
-if (0) show_pdl_local();
+		if (0) show_pdl_local();
 		break;
 	case 012: /* PDL (addressed by index) */
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_index, out_bus);
 		write_pdl_mem(USE_PDL_INDEX, out_bus);
-if (0) show_pdl_local();
+		if (0) show_pdl_local();
 		break;
 	case 013: /* PDL index */
 		tracef("pdl-index <- %o\n", out_bus);
@@ -1147,7 +1147,7 @@ if (0) show_pdl_local();
 		vma = out_bus;
 
 		tracevm("vma-write-map md=%o, vma=%o (addr %o)\n",
-		       md, vma, md >> 13);
+			md, vma, md >> 13);
 
 	write_map:
 		if ((vma >> 26) & 1) {
@@ -1172,7 +1172,7 @@ if (0) show_pdl_local();
 			invalidate_vtop_cache();
 
 #if 0
-			if (l2_index == 0) 
+			if (l2_index == 0)
 				printf("l2_map[%o] <- %o\n",
 				       l2_index, l2_data);
 #endif
@@ -1288,7 +1288,7 @@ show_pc_history(void)
 		       pc_history[pc_history_ptr].m[2],
 		       pc_history[pc_history_ptr].m[3]);
 #endif
-		       
+
 		printf("\n");
 
 #if 1
@@ -1301,77 +1301,77 @@ show_pc_history(void)
 		pc_history_ptr++;
 		if (pc_history_ptr == MAX_PC_HISTORY)
 			pc_history_ptr = 0;
-		
+
 	}
 
 	printf("\n");
 }
 
 struct pc_histogram_s {
-  unsigned int pc;
-  unsigned long long count;
+	unsigned int pc;
+	unsigned long long count;
 } pc_histogram[16*1024];
 
 
 void
 record_pc_histogram(unsigned int pc)
 {
-  pc_histogram[pc].count++;
+	pc_histogram[pc].count++;
 }
 
 void
 reset_pc_histogram(void)
 {
-  unsigned int pc;
-  for (pc = 0; pc < 16*1024; pc++)
-    pc_histogram[pc].count = 0;
+	unsigned int pc;
+	for (pc = 0; pc < 16*1024; pc++)
+		pc_histogram[pc].count = 0;
 }
 
 int pc_histogram_cmp(const void *n1, const void *n2)
 {
-  struct pc_histogram_s *e1 = (struct pc_histogram_s *)n1;
-  struct pc_histogram_s *e2 = (struct pc_histogram_s *)n2;
-  return (int)(e2->count - e1->count);
+	struct pc_histogram_s *e1 = (struct pc_histogram_s *)n1;
+	struct pc_histogram_s *e2 = (struct pc_histogram_s *)n2;
+	return (int)(e2->count - e1->count);
 }
 
 void
 show_pc_histogram(void)
 {
-  unsigned int pc, i, perc;
-  unsigned long long count;
-  unsigned long long total;
+	unsigned int pc, i, perc;
+	unsigned long long count;
+	unsigned long long total;
 
-  printf("microcode pc histogram:\n");
+	printf("microcode pc histogram:\n");
 
-  total = 0;
-  for (i = 0; i < 16*1024; i++) {
-    pc_histogram[i].pc = i;
-    total += pc_histogram[i].count;
-  }
+	total = 0;
+	for (i = 0; i < 16*1024; i++) {
+		pc_histogram[i].pc = i;
+		total += pc_histogram[i].count;
+	}
 
-  printf("total %lld %016llx\n", total, total);
+	printf("total %lld %016llx\n", total, total);
 
-  qsort(pc_histogram, 16*1024,
-	sizeof(struct pc_histogram_s), pc_histogram_cmp);
+	qsort(pc_histogram, 16*1024,
+	      sizeof(struct pc_histogram_s), pc_histogram_cmp);
 
-  for (i = 0; i < 16*1024; i++) {
-    pc = pc_histogram[i].pc;
-    count = pc_histogram[i].count;
-    if (count) {
-      char *sym;
-      int offset;
+	for (i = 0; i < 16*1024; i++) {
+		pc = pc_histogram[i].pc;
+		count = pc_histogram[i].count;
+		if (count) {
+			char *sym;
+			int offset;
 
-      perc = (unsigned int)( (count * 100ULL) / total );
-      if (count < 100)
-	continue;
+			perc = (unsigned int)( (count * 100ULL) / total );
+			if (count < 100)
+				continue;
 
-      sym = sym_find_last(!prom_enabled_flag, pc, &offset);
-      if (offset == 0)
-	printf("%05o %s: %lld %d%%\n", pc, sym, count, perc);
-      else
-	printf("%05o %s+%d: %lld %d%%\n", pc, sym, offset, count, perc);
-    }
-  }
+			sym = sym_find_last(!prom_enabled_flag, pc, &offset);
+			if (offset == 0)
+				printf("%05o %s: %lld %d%%\n", pc, sym, count, perc);
+			else
+				printf("%05o %s+%d: %lld %d%%\n", pc, sym, offset, count, perc);
+		}
+	}
 }
 
 void
@@ -1401,7 +1401,7 @@ dump_l1_map()
 		       l1_map[i+1] == l1_map[i+1+4] &&
 		       l1_map[i+2] == l1_map[i+2+4] &&
 		       l1_map[i+3] == l1_map[i+3+4] &&
-			i < 2048)
+		       i < 2048)
 		{
 			if (skipped++ == 0)
 				printf("...\n");
@@ -1438,7 +1438,7 @@ dump_l2_map()
 		       l2_map[i+1] == l2_map[i+1+4] &&
 		       l2_map[i+2] == l2_map[i+2+4] &&
 		       l2_map[i+3] == l2_map[i+3+4] &&
-			i < 1024)
+		       i < 1024)
 		{
 			if (skipped++ == 0)
 				printf("...\n");
@@ -1468,7 +1468,7 @@ dump_pdl_memory(void)
 		       pdl_memory[i+1] == pdl_memory[i+1+4] &&
 		       pdl_memory[i+2] == pdl_memory[i+2+4] &&
 		       pdl_memory[i+3] == pdl_memory[i+3+4] &&
-			i < 1024)
+		       i < 1024)
 		{
 			if (skipped++ == 0)
 				printf("...\n");
@@ -1602,33 +1602,33 @@ int
 restore_state(void)
 {
 	int fd, i;
-    ssize_t ret;
+	ssize_t ret;
 	unsigned char version[2];
 
 	if (restored)
-	  return 0;
+		return 0;
 	restored = 1;
 
 	fd = open("usim.state", O_RDONLY);
 	if (fd < 0)
-	  return -1;
+		return -1;
 
 	ret = read(fd, version, 2);
 	if (ret < 0 || version[0] != 0 || version[1] != 1) {
-	  close(fd);
-	  return -1;
+		close(fd);
+		return -1;
 	}
-	  
+
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
-	  add_new_page_no(i);
-	  ret = read(fd, (char *)phy_pages[i], sizeof(struct page_s));
-      if (ret < 0)
-      {
-          close(fd);
-          return -1;
-      }
+		add_new_page_no(i);
+		ret = read(fd, (char *)phy_pages[i], sizeof(struct page_s));
+		if (ret < 0)
+		{
+			close(fd);
+			return -1;
+		}
 #ifdef __BIG_ENDIAN__
-	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
+		_swaplongbytes((unsigned int *)phy_pages[i], 256);
 #endif
 	}
 
@@ -1643,32 +1643,32 @@ int
 save_state(void)
 {
 	int fd, i;
-    ssize_t ret;
+	ssize_t ret;
 	unsigned char version[2];
 
 	fd = open("usim.state", O_RDWR | O_CREAT, 0666);
 	if (fd < 0)
-	  return -1;
+		return -1;
 
 	version[0] = 0;
 	version[1] = 1;
 	ret = write(fd, version, 2);
-    if (ret < 0)
-    {
-        close(fd);
-        return -1;
-    }
+	if (ret < 0)
+	{
+		close(fd);
+		return -1;
+	}
 
 	for (i = 0; i < PAGES_TO_SAVE; i++) {
 #ifdef __BIG_ENDIAN__
-	  _swaplongbytes((unsigned int *)phy_pages[i], 256);
+		_swaplongbytes((unsigned int *)phy_pages[i], 256);
 #endif
-	  ret = write(fd, (char *)phy_pages[i], sizeof(struct page_s));
-      if (ret < 0)
-      {
-          close(fd);
-          return -1;
-      }
+		ret = write(fd, (char *)phy_pages[i], sizeof(struct page_s));
+		if (ret < 0)
+		{
+			close(fd);
+			return -1;
+		}
 	}
 
 	close(fd);
@@ -1681,8 +1681,8 @@ save_state(void)
 void
 patch_prom_code(void)
 {
-//#define PATCH_PROM_LOOPS_1
-//#define PATCH_PROM_LOOPS_2
+	//#define PATCH_PROM_LOOPS_1
+	//#define PATCH_PROM_LOOPS_2
 
 #ifdef PATCH_PROM_LOOPS_1
 	/* short out some really long loops */
@@ -1738,7 +1738,7 @@ breakpoint_set_count(int count)
 {
 	printf("breakpoint: max count %d\n", count);
 	breakpoint_count = count;
-	return 0; 
+	return 0;
 }
 
 int
@@ -1866,32 +1866,32 @@ show_label_closest_padded(unsigned int upc)
 }
 
 /*
-For 32-bit integers, (A + B) & (1 << 32)
-will always be zero. Without resorting to 64-bit arithmetic,
-you can find the carry by B > ~A.
-How does it work? ~A (the complement of A) is the largest possible
-number you can add to A without a carry:
-A + ~A = (1 << 32) - 1.
-If B is any larger, then a carry will be generated from the top bit.
+  For 32-bit integers, (A + B) & (1 << 32)
+  will always be zero. Without resorting to 64-bit arithmetic,
+  you can find the carry by B > ~A.
+  How does it work? ~A (the complement of A) is the largest possible
+  number you can add to A without a carry:
+  A + ~A = (1 << 32) - 1.
+  If B is any larger, then a carry will be generated from the top bit.
 */
 
-#define add32(a, b, ci, out, co) \
-		out = (a) + (b) + ((ci) ? 1 : 0); \
-		co = (ci) ? (((b) >= ~(a)) ? 0:1) : (((b) >  ~(a)) ? 0:1) ;
+#define add32(a, b, ci, out, co)		  \
+	out = (a) + (b) + ((ci) ? 1 : 0);				\
+	co = (ci) ? (((b) >= ~(a)) ? 0:1) : (((b) >  ~(a)) ? 0:1) ;
 
-#define sub32(a, b, ci, out, co) \
-		out = (a) - (b) - ((ci) ? 0 : 1); \
-		co = (unsigned)(out) < (unsigned)(a) ? 1 : 0;
+#define sub32(a, b, ci, out, co)		  \
+	out = (a) - (b) - ((ci) ? 0 : 1);			\
+	co = (unsigned)(out) < (unsigned)(a) ? 1 : 0;
 
 #if 0
 /* old, slow, realible version */
-#define add32(a, b, ci, out, co) \
-		lv = (long long)(a) + (b) + ((ci) ? 1 : 0); \
-		out = lv; co = (lv >> 32) ? 1 : 0;
+#define add32(a, b, ci, out, co)			    \
+	lv = (long long)(a) + (b) + ((ci) ? 1 : 0);	    \
+	out = lv; co = (lv >> 32) ? 1 : 0;
 
-#define sub32(a, b, ci, out, co) \
-		lv = (long long)(a) - (b) - ((ci) ? 0 : 1); \
-		out = lv; co = (lv >> 32) ? 1 : 0;
+#define sub32(a, b, ci, out, co)			    \
+	lv = (long long)(a) - (b) - ((ci) ? 0 : 1);	    \
+	out = lv; co = (lv >> 32) ? 1 : 0;
 #endif
 
 
@@ -1922,9 +1922,9 @@ run(void)
 {
 	int trace_pt_prom, trace_pt, trace_pt_count, trace_label_pt;
 	char *sym, *last_sym = 0;
-    ucw_t p1 = 0;
-    int p0_pc = 0, p1_pc= 0;
-    char no_exec_next = 0;
+	ucw_t p1 = 0;
+	int p0_pc = 0, p1_pc= 0;
+	char no_exec_next = 0;
 
 	/* 2Mwords */
 	phys_ram_pages = 8192;
@@ -2056,8 +2056,8 @@ run(void)
 		if (trace_label_pt &&
 		    p0_pc == trace_label_pt)
 		{
-//			show_pc_history();
-//			trace = 1;
+			//			show_pc_history();
+			//			trace = 1;
 			trace_mcr_labels_flag = 1;
 		}
 
@@ -2179,9 +2179,9 @@ run(void)
 				if ((sym = sym_find_last(1, p0_pc, &offset)))
 				{
 					if (offset == 0 && sym != last_sym) {
-					     printf("%s: (lc=%011o %011o)\n",
-						    sym, lc, lc>>2);
-					     last_sym = sym;
+						printf("%s: (lc=%011o %011o)\n",
+						       sym, lc, lc>>2);
+						last_sym = sym;
 					}
 				}
 			}
@@ -2230,8 +2230,8 @@ run(void)
 			case 011: /* MAP[MD] */
 				/* memory-map-data, or "map[MD]" */
 				l2_data = map_vtop(md, (int *)&l1_data, (int *)0);
-				
-				m_src_value = 
+
+				m_src_value =
 					(write_fault_bit << 31) |
 					(access_fault_bit << 30) |
 					((l1_data & 037) << 24) |
@@ -2318,7 +2318,7 @@ run(void)
 			}
 
 			/* (spec) ir7 is backward in memo? */
-		        if (ir8 == 0 && ir7 == 0) {
+			if (ir8 == 0 && ir7 == 0) {
 #ifdef STAT_ALU_USE
 				alu_stat0[alu_op]++;
 #endif
@@ -2351,8 +2351,8 @@ run(void)
 					break;
 				case 010: /* [ANDCB] */
 					alu_out = ~a_src_value & ~m_src_value;
-//new - better?
-//					alu_out = ~(a_src_value | m_src_value);
+					//new - better?
+					//					alu_out = ~(a_src_value | m_src_value);
 					break;
 				case 011: /* [EQV] */
 					alu_out = a_src_value == m_src_value;
@@ -2432,7 +2432,7 @@ run(void)
 					alu_carry = (lv >> 32) ? 1 : 0;
 					break;
 				case 010: /* M|A */
-//?? is this right? check 74181
+					//?? is this right? check 74181
 					lv = (long long)(m_src_value |
 							 a_src_value) +
 						(carry_in ? 1 : 0);
@@ -2491,11 +2491,11 @@ run(void)
 				case 017: /* M+M */
 					add32(m_src_value, m_src_value,
 					      carry_in, alu_out, alu_carry);
-//new - better?
-//					alu_out = (m_src_value << 1) | 
-//						(carry_in ? 1 : 0);
-//					alu_carry = (m_src_value & 0x80000000)
-//						? 1 : 0;
+					//new - better?
+					//					alu_out = (m_src_value << 1) |
+					//						(carry_in ? 1 : 0);
+					//					alu_carry = (m_src_value & 0x80000000)
+					//						? 1 : 0;
 					break;
 				}
 			}
@@ -2512,7 +2512,7 @@ run(void)
 					do_add = q & 1;
 					if (do_add) {
 						add32(a_src_value,
-						      m_src_value, 
+						      m_src_value,
 						      carry_in,
 						      alu_out, alu_carry);
 					} else {
@@ -2631,13 +2631,13 @@ run(void)
 			switch (out_bus) {
 			case 0:
 				printf("out_bus == 0!\n");
-out_bus = rotate_left(m_src_value, u & 037);
+				out_bus = rotate_left(m_src_value, u & 037);
 				break;
 			case 1: out_bus = alu_out;
 				break;
 			case 2:
 #if 0
-				out_bus = (alu_out >> 1) | 
+				out_bus = (alu_out >> 1) |
 					(alu_out & 0x80000000);
 #else
 				/*
@@ -2649,7 +2649,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 					(alu_carry ? 0x80000000 : 0);
 #endif
 				break;
-			case 3: out_bus = (alu_out << 1) | 
+			case 3: out_bus = (alu_out << 1) |
 					((old_q & 0x80000000) ? 1 : 0);
 				break;
 			}
@@ -2658,7 +2658,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 
 			tracef("alu_out 0x%08x, alu_carry %d, q 0x%08x\n",
 			       alu_out, alu_carry, q);
-//		alu_done:
+			//		alu_done:
 			break;
 
 		case 1: /* jump */
@@ -2703,7 +2703,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 				case 3:
 					take_jump = m_src_value == a_src_value;
 					break;
-				case 4: 
+				case 4:
 					take_jump = page_fault_flag;
 					break;
 				case 5:
@@ -2735,7 +2735,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 			if (((u >> 10) & 3) == 3) {
 				printf("jump w/misc-3!\n");
 			}
- 
+
 			if (invert_sense)
 				take_jump = !take_jump;
 
@@ -2766,10 +2766,10 @@ out_bus = rotate_left(m_src_value, u & 037);
 
 			if (take_jump) {
 
-//				if (new_pc == u_pc && n_bit && !p_bit) {
-//					printf("loop detected pc %o\n", u_pc);
-//					run_ucode_flag = 0;
-//				}
+				//				if (new_pc == u_pc && n_bit && !p_bit) {
+				//					printf("loop detected pc %o\n", u_pc);
+				//					run_ucode_flag = 0;
+				//				}
 
 				if (n_bit)
 					no_exec_next = 1;
@@ -2917,7 +2917,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 				advance_lc((int *)0);
 			}
 
-			/* fall-through on dispatch */ 
+			/* fall-through on dispatch */
 			if (p_bit && r_bit) {
 				if (n_bit)
 					no_exec_next = 1;
@@ -2991,7 +2991,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 			       widthm1, pos, mr_sr_bits);
 
 			tracef("left_mask_index %o, right_mask_index %o\n",
-				left_mask_index, right_mask_index);
+			       left_mask_index, right_mask_index);
 
 			tracef("left_mask %o, right_mask %o, mask %o\n",
 			       left_mask, right_mask, mask);
@@ -3010,17 +3010,17 @@ out_bus = rotate_left(m_src_value, u & 037);
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);
 
-				tracef("ldb; m-rot %o, mask %o, result %o\n", 
+				tracef("ldb; m-rot %o, mask %o, result %o\n",
 				       m_src_value, mask, out_bus);
 				break;
 			case 2: /* selective desposit */
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);
-				tracef("sel-dep; a %o, m %o, mask %o -> %o\n", 
+				tracef("sel-dep; a %o, m %o, mask %o -> %o\n",
 				       a_src_value, m_src_value, mask, out_bus);
 				break;
 			case 3: /* dpb */
-				tracef("dpb; m %o, pos %o\n", 
+				tracef("dpb; m %o, pos %o\n",
 				       m_src_value, pos);
 
 				/* mask is already rotated */
@@ -3030,7 +3030,7 @@ out_bus = rotate_left(m_src_value, u & 037);
 				out_bus = (m_src_value & mask) |
 					(a_src_value & ~mask);
 
-				tracef("dpb; mask %o, result %o\n", 
+				tracef("dpb; mask %o, result %o\n",
 				       mask, out_bus);
 				break;
 			}

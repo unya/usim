@@ -44,7 +44,6 @@ struct part_s {
 	int ptype;
 	char label[17];
 	char *filename;
-
 } parts[MAX_PARTITIONS];
 int part_count;
 
@@ -100,7 +99,7 @@ add_partition(char *name, int start, int size, int ptype, char *label, char *fil
 
 	// make sure the label is padded out with spaces
 	for (i = strlen(p->label); i < 16; i++)
-        	p->label[i] = ' ';
+		p->label[i] = ' ';
 
 	p->filename = filename;
 	return 0;
@@ -143,7 +142,7 @@ make_labl(int fd)
 	{
 		int i;
 		int p = 0200;
-		
+
 		printf("%d partitions\n", part_count);
 
 		buffer[p++] = part_count; /* # of partitions */
@@ -169,7 +168,7 @@ make_labl(int fd)
 		}
 	}
 
-//#define LABEL_PAD_CHAR '\200'
+	//#define LABEL_PAD_CHAR '\200'
 #define LABEL_PAD_CHAR '\0'
 	/* pack brand text - offset 010, 32 bytes */
 	memset((char *)&buffer[010], LABEL_PAD_CHAR, 32);
@@ -278,7 +277,7 @@ make_one_partition(int fd, int index)
 
 		printf("copy %s, ", parts[index].filename);
 		fflush(stdout);
-		
+
 		while (1) {
 			ret = read(fd1, b, 256*4);
 			if (ret <= 0)
@@ -472,9 +471,9 @@ create_disk(char *template)
 		return -1;
 	}
 
-//#ifdef __APPLE__
-//	fillout_image_file(fd);
-//#endif
+	//#ifdef __APPLE__
+	//	fillout_image_file(fd);
+	//#endif
 
 	make_labl(fd);
 	make_partitions(fd);
@@ -498,13 +497,13 @@ modify_disk(char *template, char *img_filename, char *part_name)
 	int i, fd, part_index;
 
 	if (template == NULL) {
-	  fprintf(stderr, "missing template filename\n");
-	  return -1;
+		fprintf(stderr, "missing template filename\n");
+		return -1;
 	}
 
 	if (img_filename == NULL) {
-	  fprintf(stderr, "missing image filename\n");
-	  return -1;
+		fprintf(stderr, "missing image filename\n");
+		return -1;
 	}
 
 	if (parse_template(template))
@@ -512,15 +511,15 @@ modify_disk(char *template, char *img_filename, char *part_name)
 
 	part_index = -1;
 	for (i = 0; i < part_count; i++) {
-	  if (strcmp(parts[i].name, part_name) == 0) {
-	    part_index = i;
-	    break;
-	  }
+		if (strcmp(parts[i].name, part_name) == 0) {
+			part_index = i;
+			break;
+		}
 	}
 
 	if (i == part_count) {
-	  fprintf(stderr, "can't find partition '%s'\n", part_name);
-	  return -1;
+		fprintf(stderr, "can't find partition '%s'\n", part_name);
+		return -1;
 	}
 
 	printf("modifying %s\n", img_filename);
@@ -550,13 +549,13 @@ modify_labl(char *template, char *img_filename)
 	int fd;
 
 	if (template == NULL) {
-	  fprintf(stderr, "missing template filename\n");
-	  return -1;
+		fprintf(stderr, "missing template filename\n");
+		return -1;
 	}
 
 	if (img_filename == NULL) {
-	  fprintf(stderr, "missing image filename\n");
-	  return -1;
+		fprintf(stderr, "missing image filename\n");
+		return -1;
 	}
 
 	if (parse_template(template))
@@ -657,17 +656,17 @@ show_partition_info(char *filename)
 
 	part_count = 0;
 	for (i = 0; i < count; i++) {
-	        char label[17];
-        
-	        memcpy(&label[0], unstr4(buffer[p+3]), 4);
-	        memcpy(&label[4], unstr4(buffer[p+4]), 4);
-	        memcpy(&label[8], unstr4(buffer[p+5]), 4);
-	        memcpy(&label[12], unstr4(buffer[p+6]), 4);
-	        label[16] = '\0';
+		char label[17];
+
+		memcpy(&label[0], unstr4(buffer[p+3]), 4);
+		memcpy(&label[4], unstr4(buffer[p+4]), 4);
+		memcpy(&label[8], unstr4(buffer[p+5]), 4);
+		memcpy(&label[12], unstr4(buffer[p+6]), 4);
+		label[16] = '\0';
 
 		add_partition(strdup(unstr4(buffer[p+0])),
-	   		      buffer[p+1], buffer[p+2], 0, label, NULL);
-		
+			      buffer[p+1], buffer[p+2], 0, label, NULL);
+
 		p += size;
 	}
 
@@ -759,17 +758,17 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 
 	part_count = 0;
 	for (i = 0; i < count; i++) {
-	        char label[17];
-        
-	        memcpy(&label[0], unstr4(buffer[p+3]), 4);
-	        memcpy(&label[4], unstr4(buffer[p+4]), 4);
-	        memcpy(&label[8], unstr4(buffer[p+5]), 4);
-	        memcpy(&label[12], unstr4(buffer[p+6]), 4);
-	        label[16] = '\0';
+		char label[17];
+
+		memcpy(&label[0], unstr4(buffer[p+3]), 4);
+		memcpy(&label[4], unstr4(buffer[p+4]), 4);
+		memcpy(&label[8], unstr4(buffer[p+5]), 4);
+		memcpy(&label[12], unstr4(buffer[p+6]), 4);
+		label[16] = '\0';
 
 		add_partition(strdup(unstr4(buffer[p+0])),
 			      buffer[p+1], buffer[p+2], 0, label, NULL);
-		
+
 		p += size;
 	}
 
@@ -780,37 +779,37 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 	offset = 0;
 
 	for (i = 0; i < part_count; i++) {
-	  if (strcmp(parts[i].name, part_name) == 0) {
-	    offset = parts[i].start;
-	    size = parts[i].size;
-	    break;
-	  }
+		if (strcmp(parts[i].name, part_name) == 0) {
+			offset = parts[i].start;
+			size = parts[i].size;
+			break;
+		}
 	}
 
 	if (i == part_count) {
-	  fprintf(stderr, "can't find partition '%s'\n", part_name);
-	  result = -1;
+		fprintf(stderr, "can't find partition '%s'\n", part_name);
+		result = -1;
 	} else {
-	  unsigned char b[256*4];
+		unsigned char b[256*4];
 
-	  printf("extracting partition '%s' at %o from %s\n",
-		 part_name, offset, filename);
+		printf("extracting partition '%s' at %o from %s\n",
+		       part_name, offset, filename);
 
-	  fd_out = open(extract_filename, O_RDWR|O_CREAT, 0666);
-	  if (fd_out < 0) {
-	    perror(filename);
-	    close(fd);
-	    return -1;
-	  }
+		fd_out = open(extract_filename, O_RDWR|O_CREAT, 0666);
+		if (fd_out < 0) {
+			perror(filename);
+			close(fd);
+			return -1;
+		}
 
-	  for (count = 0; count < size; count++) {
-	    if (read_block(fd, offset+count, b))
-	      break;
-	    if (write_block(fd_out, count, b))
-	      break;
-	  }
+		for (count = 0; count < size; count++) {
+			if (read_block(fd, offset+count, b))
+				break;
+			if (write_block(fd_out, count, b))
+				break;
+		}
 
-	  close(fd_out);
+		close(fd_out);
 	}
 
 	close(fd);
@@ -820,155 +819,155 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 int
 read_labl(const char *filename)
 {
-    ssize_t ret;
+	ssize_t ret;
 	int fd, p;
 	unsigned int i, count, size;
-    
+
 	fd = open(filename, O_RDONLY, 0666);
 	if (fd < 0) {
 		perror(filename);
 		return -1;
 	}
-    
+
 	ret = read(fd, buffer, 256*4);
 	if (ret != 256*4) {
 		perror(filename);
 		return -1;
 	}
-    
+
 #ifdef NEED_SWAP
 	/* don't swap the text */
 	_swaplongbytes(&buffer[0], 8);
 	_swaplongbytes(&buffer[0200], 128);
 #endif
-    
+
 	if (buffer[0] != str4("LABL")) {
 		fprintf(stderr, "%s: no valid disk label found\n", filename);
 		return -1;
 	}
-    
+
 	if (buffer[1] != 1) {
 		fprintf(stderr, "%s: label version not 1\n", filename);
 		return -1;
 	}
-    
+
 	cyls = buffer[2];		/* # cyls */
 	heads = buffer[3];		/* # heads */
 	blocks_per_track = buffer[4];	/* # blocks */
 	mcr_name = strdup(unstr4(buffer[6]));	/* name of micr part */
 	lod_name = strdup(unstr4(buffer[7]));	/* name of load part */
-    
+
 	count = buffer[0200];
 	size = buffer[0201];
 	p = 0202;
-    
+
 	part_count = 0;
 	for (i = 0; i < count; i++) {
-        char label[17];
+		char label[17];
 
-        memcpy(&label[0], unstr4(buffer[p+3]), 4);
-        memcpy(&label[4], unstr4(buffer[p+4]), 4);
-        memcpy(&label[8], unstr4(buffer[p+5]), 4);
-        memcpy(&label[12], unstr4(buffer[p+6]), 4);
-        label[16] = '\0';
+		memcpy(&label[0], unstr4(buffer[p+3]), 4);
+		memcpy(&label[4], unstr4(buffer[p+4]), 4);
+		memcpy(&label[8], unstr4(buffer[p+5]), 4);
+		memcpy(&label[12], unstr4(buffer[p+6]), 4);
+		label[16] = '\0';
 		add_partition(strdup(unstr4(buffer[p+0])),
-                      buffer[p+1], buffer[p+2], 0, label, NULL);
-		
+			      buffer[p+1], buffer[p+2], 0, label, NULL);
+
 		p += size;
 	}
-    
+
 	brand = strdup((char *)&buffer[010]);
 	text = strdup((char *)&buffer[020]);
 	comment = strdup((char *)&buffer[030]);
 
 	close(fd);
-    return 0;
+	return 0;
 }
 
 int
 set_current_band(const char *filename, const char *partition_name)
 {
-    int fd;
-    int found = 0;
-    unsigned int i;
+	int fd;
+	int found = 0;
+	unsigned int i;
 
-    if (read_labl(filename) < 0)
-        return -1;
+	if (read_labl(filename) < 0)
+		return -1;
 
-    for (i = 0; i < part_count; i++)
-    {
-        if (strcasecmp(partition_name, parts[i].name) == 0)
-        {
-            if (lod_name)
-                free((void *)lod_name);
-            lod_name = strdup(parts[i].name);
-            found = 1;
-            break;
-        }
-    }
-    
-    if (!found)
-    {
-        printf("can't find band %s\n", partition_name);
-        return -1;
-    }
+	for (i = 0; i < part_count; i++)
+	{
+		if (strcasecmp(partition_name, parts[i].name) == 0)
+		{
+			if (lod_name)
+				free((void *)lod_name);
+			lod_name = strdup(parts[i].name);
+			found = 1;
+			break;
+		}
+	}
 
- 	fd = open(filename, O_RDWR);
+	if (!found)
+	{
+		printf("can't find band %s\n", partition_name);
+		return -1;
+	}
+
+	fd = open(filename, O_RDWR);
 	if (fd < 0) {
 		perror(filename);
 		return -1;
 	}
-    
+
 	printf("re-write label\n");
 	make_labl(fd);
-    
+
 	close(fd);
 
-    return 0;
+	return 0;
 }
 
 /* ---!!! This is a straigh duplicate of set_current_band.  */
 int
 set_current_mcr(const char *filename, const char *partition_name)
 {
-    int fd;
-    int found = 0;
-    unsigned int i;
+	int fd;
+	int found = 0;
+	unsigned int i;
 
-    if (read_labl(filename) < 0)
-        return -1;
-	  
-    for (i = 0; i < part_count; i++)
-    {
+	if (read_labl(filename) < 0)
+		return -1;
 
-        if (strcasecmp(partition_name, parts[i].name) == 0)
-        {
-            if (mcr_name)
-                free((void *)mcr_name);
-            mcr_name = strdup(parts[i].name);
-            found = 1;
-            break;
-        }
-    }
-    
-    if (!found)
-    {
-        printf("can't find band %s\n", partition_name);
-        return -1;
-    }
+	for (i = 0; i < part_count; i++)
+	{
 
- 	fd = open(filename, O_RDWR);
+		if (strcasecmp(partition_name, parts[i].name) == 0)
+		{
+			if (mcr_name)
+				free((void *)mcr_name);
+			mcr_name = strdup(parts[i].name);
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found)
+	{
+		printf("can't find band %s\n", partition_name);
+		return -1;
+	}
+
+	fd = open(filename, O_RDWR);
 	if (fd < 0) {
 		perror(filename);
 		return -1;
 	}
-    
+
 	printf("re-write label\n");
 	make_labl(fd);
-    
+
 	close(fd);
 
-    return 0;
+	return 0;
 }
 
 void

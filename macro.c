@@ -20,9 +20,9 @@ char *op_names[16] = {
 char *reg_names[] = {
 	"FEF",
 	"FEF+100",
-	"FEF+200", 
+	"FEF+200",
 	"FEF+300",
-	"CONSTANTS PAGE", 
+	"CONSTANTS PAGE",
 	"LOCAL BLOCK",
 	"ARG POINTER",
 	"PDL"
@@ -131,7 +131,7 @@ struct {
 	{ "%STORE-IN-HIGHER-CONTEXT", 0302 },
 	{ "%DATA-TYPE", 0303 },
 	{ "%POINTER", 0304 },
-/* 305-307 FREE */
+	/* 305-307 FREE */
 	{ "%MAKE-POINTER", 0310 },
 	{ "%SPREAD", 0311 },
 	{ "%P-STORE-CONTENTS", 0312 },
@@ -232,10 +232,10 @@ struct {
 	{ "%P-STORE-CDR-CODE", 0450 },
 	{ "%P-STORE-DATA-TYPE", 0451 },
 	{ "%P-STORE-POINTER", 0452 },
-/* 453-455 FREE */
+	/* 453-455 FREE */
 	{ "%CATCH-OPEN", 0456 },
 	{ "%CATCH-OPEN-MV", 0457 },
-/* 461, 0462 FREE */
+	/* 461, 0462 FREE */
 	{ "%FEXPR-CALL", 0462 },
 	{ "%FEXPR-CALL-MV", 0463 },
 	{ "%LEXPR-CALL", 0464 },
@@ -397,7 +397,7 @@ static int misc_inst_vector_setup;
 
 void
 disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
-	unsigned int width)
+       unsigned int width)
 
 {
 	int op, dest, reg, delta, adr;
@@ -447,9 +447,9 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 				show_fef_func_name( v , width);
 			}
 		}
-//		nlc = (loc*2 + (even?0:1)) + delta;
-//		printf("+%o; %o%c ",
-//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
+		//		nlc = (loc*2 + (even?0:1)) + delta;
+		//		printf("+%o; %o%c ",
+		//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
 
 		break;
 	case 2: /* move */
@@ -503,4 +503,3 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 
 	printf("\n");
 }
-

@@ -11,10 +11,10 @@
 #define SWAP_LONG(x) CFSwapInt32LittleToHost(x)
 #else /* hand coded versions */
 #define SWAP_SHORT(x) ( (((x) & 0xff00) >> 8) | (((x) & 0x00ff) << 8) )
-#define SWAP_LONG(x) ( (((x) & 0xff000000) >> 24) | \
-(((x) & 0x00ff0000) >> 8) | \
-(((x) & 0x0000ff00) << 8) | \
-(((x) & 0x000000ff) << 24) )
+#define SWAP_LONG(x) ( (((x) & 0xff000000) >> 24) |	\
+		       (((x) & 0x00ff0000) >> 8) |	\
+		       (((x) & 0x0000ff00) << 8) |	\
+		       (((x) & 0x000000ff) << 24) )
 #endif /* def OSX */
 
 #ifdef __BIG_ENDIAN__

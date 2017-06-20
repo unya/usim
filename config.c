@@ -43,4 +43,3 @@ config_set_disk_filename(const char *filename)
 {
 	disk_filename = strdup(filename);
 }
-

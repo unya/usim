@@ -20,11 +20,11 @@ static unsigned int video_height = 897 /*1024*/;
 unsigned int tv_bitmap[(768 * 1024)];
 
 typedef struct DisplayState {
-    unsigned char *data;
-    int linesize;
-    int depth;
-    int width;
-    int height;
+	unsigned char *data;
+	int linesize;
+	int depth;
+	int width;
+	int height;
 } DisplayState;
 
 static DisplayState display_state;
@@ -137,44 +137,44 @@ display_poll(void)
 #if 0
 static void sdl_resize(DisplayState *ds, int w, int h)
 {
-    int flags;
+	int flags;
 
-    flags = SDL_HWSURFACE|SDL_ASYNCBLIT|SDL_HWACCEL;
-//    flags |= SDL_RESIZABLE;
-//    flags |= SDL_FULLSCREEN;
-//    screen = SDL_SetVideoMode(w, h, 0, flags);
-//    screen = SDL_SetVideoMode(w, h, 8, flags);
-    screen = SDL_SetVideoMode(w, h, 8, flags);
+	flags = SDL_HWSURFACE|SDL_ASYNCBLIT|SDL_HWACCEL;
+	//    flags |= SDL_RESIZABLE;
+	//    flags |= SDL_FULLSCREEN;
+	//    screen = SDL_SetVideoMode(w, h, 0, flags);
+	//    screen = SDL_SetVideoMode(w, h, 8, flags);
+	screen = SDL_SetVideoMode(w, h, 8, flags);
 
-    if (!screen) {
-        fprintf(stderr, "Could not open SDL display\n");
-        exit(1);
-    }
+	if (!screen) {
+		fprintf(stderr, "Could not open SDL display\n");
+		exit(1);
+	}
 
-    ds->data = screen->pixels;
-    ds->linesize = screen->pitch;
-    ds->depth = screen->format->BitsPerPixel;
-    ds->width = w;
-    ds->height = h;
+	ds->data = screen->pixels;
+	ds->linesize = screen->pitch;
+	ds->depth = screen->format->BitsPerPixel;
+	ds->width = w;
+	ds->height = h;
 }
 
 static void update_caption(void)
 {
-    char buf[1024];
+	char buf[1024];
 
-    strcpy(buf, "CADR");
-    if (run_ucode_flag) {
-        strcat(buf, " [Running]");
-    } else {
-        strcat(buf, " [Stopped]");
-    }
+	strcpy(buf, "CADR");
+	if (run_ucode_flag) {
+		strcat(buf, " [Running]");
+	} else {
+		strcat(buf, " [Stopped]");
+	}
 
-    SDL_WM_SetCaption(buf, "CADR");
+	SDL_WM_SetCaption(buf, "CADR");
 }
 
-static void sdl_cleanup(void) 
+static void sdl_cleanup(void)
 {
-    SDL_Quit();
+	SDL_Quit();
 }
 
 
@@ -248,32 +248,32 @@ void
 accumulate_update(int h, int v, int hs, int vs)
 {
 #if 0
-        SDL_UpdateRect(screen, h, v, 32, 1);
+	SDL_UpdateRect(screen, h, v, 32, 1);
 #else
-        if (h < u_minh) u_minh = h;
-        if (h+hs > u_maxh) u_maxh = h+hs;
-        if (v < u_minv) u_minv = v;
-        if (v+vs > u_maxv) u_maxv = v+vs;
+	if (h < u_minh) u_minh = h;
+	if (h+hs > u_maxh) u_maxh = h+hs;
+	if (v < u_minv) u_minv = v;
+	if (v+vs > u_maxv) u_maxv = v+vs;
 #endif
 }
 
 void
 send_accumulated_updates(void)
 {
-        int hs, vs;
+	int hs, vs;
 
-        hs = u_maxh - u_minh;
-        vs = u_maxv - u_minv;
-        if (u_minh != 0x7fffffff && u_minv != 0x7fffffff && u_maxh && u_maxv)
+	hs = u_maxh - u_minh;
+	vs = u_maxv - u_minv;
+	if (u_minh != 0x7fffffff && u_minv != 0x7fffffff && u_maxh && u_maxv)
 	{
 		XPutImage(display, window, gc, ximage, u_minh, u_minv, u_minh, u_minv, hs, vs);
 		XFlush(display);
-        }
+	}
 
-        u_minh = 0x7fffffff;
-        u_maxh = 0;
-        u_minv = 0x7fffffff;
-        u_maxv = 0;
+	u_minh = 0x7fffffff;
+	u_maxh = 0;
+	u_minv = 0x7fffffff;
+	u_maxv = 0;
 }
 
 void
@@ -296,8 +296,8 @@ video_write(int offset, unsigned int bits)
 			bits >>= 1;
 		}
 
-	//	XPutImage(display, window, gc, ximage, h, v, h, v, 32, 1);
-	//	XFlush(display);
+		//	XPutImage(display, window, gc, ximage, h, v, h, v, 32, 1);
+		//	XFlush(display);
 		accumulate_update(h, v, 32, 1);
 	}
 }
@@ -305,106 +305,106 @@ video_write(int offset, unsigned int bits)
 int
 display_init(void)
 {
-    char *displayname;
-    unsigned long bg_pixel = 0L;
-    int pad = 0;
-    int xscreen;
-    Window root;
-    XEvent e;
-    XGCValues gcvalues;
-    XSetWindowAttributes attr;
-    XSizeHints *size_hints;
-    XTextProperty windowName;
-    XTextProperty *pWindowName = &windowName;
-    XTextProperty iconName;
-    XTextProperty *pIconName = &iconName;
-    XWMHints *wm_hints;
-  
-    char *window_name = (char *)"CADR Emulator";
-    char *icon_name = (char *)"CADR";
+	char *displayname;
+	unsigned long bg_pixel = 0L;
+	int pad = 0;
+	int xscreen;
+	Window root;
+	XEvent e;
+	XGCValues gcvalues;
+	XSetWindowAttributes attr;
+	XSizeHints *size_hints;
+	XTextProperty windowName;
+	XTextProperty *pWindowName = &windowName;
+	XTextProperty iconName;
+	XTextProperty *pIconName = &iconName;
+	XWMHints *wm_hints;
 
-    displayname = getenv("DISPLAY");
+	char *window_name = (char *)"CADR Emulator";
+	char *icon_name = (char *)"CADR";
 
-    display = XOpenDisplay(displayname);
+	displayname = getenv("DISPLAY");
 
-    if (display == NULL) {
-	fprintf(stderr, "usim: failed to open display.\n");
-	exit(-1);
-    }
+	display = XOpenDisplay(displayname);
 
-    bitmap_order = BitmapBitOrder(display);
-    xscreen = DefaultScreen(display);
-    color_depth = DisplayPlanes(display, xscreen);
+	if (display == NULL) {
+		fprintf(stderr, "usim: failed to open display.\n");
+		exit(-1);
+	}
 
-    Black = BlackPixel(display, xscreen);
-    White = WhitePixel(display, xscreen);
-    root = RootWindow(display, xscreen);
+	bitmap_order = BitmapBitOrder(display);
+	xscreen = DefaultScreen(display);
+	color_depth = DisplayPlanes(display, xscreen);
 
-    attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
-      ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
+	Black = BlackPixel(display, xscreen);
+	White = WhitePixel(display, xscreen);
+	root = RootWindow(display, xscreen);
 
-    window = XCreateWindow(display, root, 0, 0, video_width, video_height,
-			   0, color_depth, InputOutput, visual,
-			   CWBorderPixel |  CWEventMask, &attr);
+	attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
+		ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 
-    if (window == None) {
-	fprintf(stderr, "usim: failed to open window.\n");
-	exit(-1);
-    }
+	window = XCreateWindow(display, root, 0, 0, video_width, video_height,
+			       0, color_depth, InputOutput, visual,
+			       CWBorderPixel |  CWEventMask, &attr);
 
-    if (!XStringListToTextProperty((char **) &window_name, 1, pWindowName)) {
-	pWindowName = NULL;
-    }
-  
-    if (!XStringListToTextProperty((char **) &icon_name, 1, pIconName)) {
-	pIconName = NULL;
-    }
+	if (window == None) {
+		fprintf(stderr, "usim: failed to open window.\n");
+		exit(-1);
+	}
 
-    if ((size_hints = XAllocSizeHints()) != NULL) {
-    
-	/* 
-	 * The window will not be resizable:
+	if (!XStringListToTextProperty((char **) &window_name, 1, pWindowName)) {
+		pWindowName = NULL;
+	}
+
+	if (!XStringListToTextProperty((char **) &icon_name, 1, pIconName)) {
+		pIconName = NULL;
+	}
+
+	if ((size_hints = XAllocSizeHints()) != NULL) {
+
+		/*
+		 * The window will not be resizable:
+		 */
+
+		size_hints->flags = PMinSize | PMaxSize;
+		size_hints->min_width = size_hints->max_width = video_width;
+		size_hints->min_height = size_hints->max_height = video_height;
+	}
+
+	if ((wm_hints = XAllocWMHints()) != NULL) {
+		wm_hints->initial_state = NormalState;
+		wm_hints->input = True;
+		wm_hints->flags = StateHint | InputHint;
+	}
+
+	XSetWMProperties(display, window, pWindowName, pIconName, NULL, 0,
+			 size_hints, wm_hints, NULL);
+
+	XMapWindow(display, window);
+
+	gc = XCreateGC(display, window, 0, &gcvalues);
+
+	/*
+	 * Fill window with the specified background color:
 	 */
 
-	size_hints->flags = PMinSize | PMaxSize;
-	size_hints->min_width = size_hints->max_width = video_width;
-	size_hints->min_height = size_hints->max_height = video_height;
-    }
+	bg_pixel = 0;
+	XSetForeground(display, gc, bg_pixel);
+	XFillRectangle(display, window, gc, 0, 0, video_width, video_height);
 
-    if ((wm_hints = XAllocWMHints()) != NULL) {
-	wm_hints->initial_state = NormalState;
-	wm_hints->input = True;
-	wm_hints->flags = StateHint | InputHint;
-    }
+	/*
+	 * Wait for first Expose event to do any drawing, then flush:
+	 */
 
-    XSetWMProperties(display, window, pWindowName, pIconName, NULL, 0,
-		     size_hints, wm_hints, NULL);
+	do {
+		XNextEvent(display, &e);
+	}
+	while (e.type != Expose || e.xexpose.count);
 
-    XMapWindow(display, window);
+	XFlush(display);
 
-    gc = XCreateGC(display, window, 0, &gcvalues);
-
-    /* 
-     * Fill window with the specified background color:
-     */
-  
-    bg_pixel = 0;
-    XSetForeground(display, gc, bg_pixel);
-    XFillRectangle(display, window, gc, 0, 0, video_width, video_height);
-
-    /*
-     * Wait for first Expose event to do any drawing, then flush:
-     */
-  
-    do {
-	XNextEvent(display, &e);
-    }
-    while (e.type != Expose || e.xexpose.count);
-
-    XFlush(display);
-
-    ximage = XCreateImage(display, visual, (unsigned)color_depth, ZPixmap, 0,
-			  (char *) tv_bitmap, video_width, video_height, 32, 0);
-    ximage->byte_order = LSBFirst;
-    return 0;
+	ximage = XCreateImage(display, visual, (unsigned)color_depth, ZPixmap, 0,
+			      (char *) tv_bitmap, video_width, video_height, 32, 0);
+	ximage->byte_order = LSBFirst;
+	return 0;
 }

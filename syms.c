@@ -117,7 +117,7 @@ _sym_find(struct symtab_s *tab, char *name, int *pval)
 /*
  * read a cadr mcr symbol file
  */
-int 
+int
 _sym_read_file(struct symtab_s *tab, const char *filename)
 {
 	int first = 0;
@@ -212,7 +212,7 @@ _sym_sort(struct symtab_s *tab)
 	return 0;
 }
 
-int 
+int
 read_sym_files(void)
 {
 	_sym_read_file(&sym_prom, config_get_promsym_filename());
@@ -262,5 +262,3 @@ sym_find_last(int mcr, int v, int *poffset)
 
 	return _sym_find_last(&sym_prom, 1/*I-MEM*/, v, poffset);
 }
-
-

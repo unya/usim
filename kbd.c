@@ -21,47 +21,47 @@
 #define LM_K_RUBOUT	0207
 #define LM_K_CR		0215
 #define LM_K_ALTMODE 033
-#define LM_K_BREAK 0201 
+#define LM_K_BREAK 0201
 #define LM_K_CLEAR_INPUT 0202
-#define LM_K_CALL 0203 
-#define LM_K_TERMINAL 0204 
-#define LM_K_MACRO 0205 
-#define LM_K_HELP 0206 
-#define LM_K_RUBOUT 0207 
-#define LM_K_OVERSTRIKE 0210 
-#define LM_K_TAB 0211 
-#define LM_K_LINE 0212 
-#define LM_K_DELETE 0213 
-#define LM_K_PAGE 0214 
-#define LM_K_CLEAR_SCREEN 0214 
-#define LM_K_RETURN 0215 
-#define LM_K_QUOTE 0216 
-#define LM_K_HOLD_OUTPUT 0217 
+#define LM_K_CALL 0203
+#define LM_K_TERMINAL 0204
+#define LM_K_MACRO 0205
+#define LM_K_HELP 0206
+#define LM_K_RUBOUT 0207
+#define LM_K_OVERSTRIKE 0210
+#define LM_K_TAB 0211
+#define LM_K_LINE 0212
+#define LM_K_DELETE 0213
+#define LM_K_PAGE 0214
+#define LM_K_CLEAR_SCREEN 0214
+#define LM_K_RETURN 0215
+#define LM_K_QUOTE 0216
+#define LM_K_HOLD_OUTPUT 0217
 #define LM_K_STOP_OUTPUT 0220
-#define LM_K_ABORT 0221 
-#define LM_K_RESUME 0222 
-#define LM_K_STATUS 0223 
-#define LM_K_END 0224 
-#define LM_K_ROMAN_I 0225 
-#define LM_K_ROMAN_II 0226 
-#define LM_K_ROMAN_III 0227 
-#define LM_K_ROMAN_IV 0230 
-#define LM_K_HAND_UP 0231 
-#define LM_K_HAND_DOWN 0232 
-#define LM_K_HAND_LEFT 0233 
-#define LM_K_HAND_RIGHT 0234 
-#define LM_K_SYSTEM 0235 
-#define LM_K_NETWORK 0236 
+#define LM_K_ABORT 0221
+#define LM_K_RESUME 0222
+#define LM_K_STATUS 0223
+#define LM_K_END 0224
+#define LM_K_ROMAN_I 0225
+#define LM_K_ROMAN_II 0226
+#define LM_K_ROMAN_III 0227
+#define LM_K_ROMAN_IV 0230
+#define LM_K_HAND_UP 0231
+#define LM_K_HAND_DOWN 0232
+#define LM_K_HAND_LEFT 0233
+#define LM_K_HAND_RIGHT 0234
+#define LM_K_SYSTEM 0235
+#define LM_K_NETWORK 0236
 
 extern unsigned int iob_key_scan;
 extern unsigned int iob_kbd_csr;
 
 
 /* ****
-;KEYBOARD TRANSLATE TABLE IS A 3 X 64 ARRAY.
-;3 ENTRIES FOR EACH OF 100 KEYS.  FIRST IS VANILLA, SECOND SHIFT, THIRD TOP.
-;THE FUNCTION KBD-INITIALIZE IS ONLY CALLED ONCE, IN ORDER TO SET UP THIS ARRAY.
-**** */
+ * KEYBOARD TRANSLATE TABLE IS A 3 X 64 ARRAY.
+ * 3 ENTRIES FOR EACH OF 100 KEYS.  FIRST IS VANILLA, SECOND SHIFT, THIRD TOP.
+ * THE FUNCTION KBD-INITIALIZE IS ONLY CALLED ONCE, IN ORDER TO SET UP THIS ARRAY.
+ **** */
 unsigned char kb_old_table[64][3] = {
 	/* none,shift,top */
 	0201,	0201,	LM_K_NETWORK,	//BREAK,BREAK,NETWORK
@@ -133,18 +133,18 @@ unsigned char kb_old_table[64][3] = {
 unsigned short kb_sdl_to_scancode[256][4];
 
 /****
-;FORMAT OF DATA IN 764100 (IF USING OLD KEYBOARD):
-; 00077   0006	  ;KEY CODE
-; 00300   0602    ;SHIFT LEFT,RIGHT
-; 01400   1002    ;TOP LEFT,RIGHT
-; 06000   1202    ;CONTROL LEFT,RIGHT
-; 30000   1402    ;META LEFT,RIGHT
-; 40000   1601    ;SHIFT LOCK
-****/
+ * FORMAT OF DATA IN 764100 (IF USING OLD KEYBOARD):
+ * 00077   0006	  ;KEY CODE
+ * 00300   0602    ;SHIFT LEFT,RIGHT
+ * 01400   1002    ;TOP LEFT,RIGHT
+ * 06000   1202    ;CONTROL LEFT,RIGHT
+ * 30000   1402    ;META LEFT,RIGHT
+ * 40000   1601    ;SHIFT LOCK
+ ****/
 void
 iob_sdl_key_event(int code, int extra)
 {
-    int newkbd = 0; // keys found on the "new" keyboard
+	int newkbd = 0; // keys found on the "new" keyboard
 
 	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
 
@@ -199,21 +199,21 @@ iob_sdl_key_event(int code, int extra)
 		iob_key_scan = 50; /* CR */
 		break;
 	case XK_Down:
-        iob_key_scan = 0176;
-        newkbd = 1;
+		iob_key_scan = 0176;
+		newkbd = 1;
 		break;
 	case XK_Left:
-        iob_key_scan = 0117;
-        newkbd = 1;
+		iob_key_scan = 0117;
+		newkbd = 1;
 		break;
 	case XK_Right:
-        iob_key_scan = 017;
-        newkbd = 1;
-        break;
+		iob_key_scan = 017;
+		newkbd = 1;
+		break;
 	case XK_Up:
-        iob_key_scan = 0106;
-        newkbd = 1;
-        break;
+		iob_key_scan = 0106;
+		newkbd = 1;
+		break;
 	case XK_Tab:
 		iob_key_scan = 18;
 		break;
@@ -236,17 +236,17 @@ iob_sdl_key_event(int code, int extra)
 	/* but if Control/Meta, add in Shift */
 	if (extra & (17 << 10))
 	{
-	  if (0) printf("extra: %x  17<<10: %x", extra, 17 << 10);
-	  iob_key_scan |= extra;
+		if (0) printf("extra: %x  17<<10: %x", extra, 17 << 10);
+		iob_key_scan |= extra;
 	}
 
 	if (0) printf("code 0%o, extra 0%o, scan 0%o\n",
 		      code, extra, iob_key_scan);
 
-    if (newkbd)
-        iob_key_scan |= 1 << 16;
-    else
-        iob_key_scan |= 0xffff0000;
+	if (newkbd)
+		iob_key_scan |= 1 << 16;
+	else
+		iob_key_scan |= 0xffff0000;
 
 	iob_kbd_csr |= 1 << 5;
 	assert_unibus_interrupt(0260);
@@ -286,7 +286,7 @@ kbd_init(void)
 	/* Modify mapping to match present-day US kbd */
 	kb_sdl_to_scancode['`'][0] = 015 | (3 << 6); /* ` = Shift @ = ` */
 	kb_sdl_to_scancode['`'][1] = 016 | (3 << 6); /* Sh-` = Sh-^ = ~*/
-	
+
 	kb_sdl_to_scancode['\''][0] = 010 | (3<<6);  /* ' = Sh-7 = ' */
 	kb_sdl_to_scancode['\''][1] = 3 | (3<<6);    /* Sh-' = Sh-2 = " */
 	kb_sdl_to_scancode['='][0] = 014 | (3<<6);   /* = = Sh-- = = */
@@ -362,9 +362,9 @@ kbd_init(void)
 
 	/* esc = esc */
 	kb_sdl_to_scancode[0x1b][0] = 0204;	     /* Esc = Esc (Terminal) */
-    
-    /* map arrows */
-//    kb_sdl_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
+
+	/* map arrows */
+	//    kb_sdl_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
 
 	/* Add shifts */
 	for (i = 0; i < 256; i++) {

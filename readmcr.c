@@ -47,7 +47,7 @@ read32(int fd)
 		return (b[1] << 24) | (b[0] << 16) | (b[3] << 8) | b[2];
 
 	return (b[3] << 24) | (b[2] << 16) | (b[1] << 8) | b[0];
-//	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+	//	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
 }
 
 int
@@ -130,7 +130,7 @@ read_main_mem(int fd, int start, int size)
 	printf("start %d, size %d\n", start, size);
 
 	o = lseek(fd, 0, SEEK_CUR);
-//	printf("offset %d\n", o);
+	//	printf("offset %d\n", o);
 
 #if 0
 	o = (o + 256*4-1) & ~01777;
@@ -161,7 +161,7 @@ usage(void)
 	fprintf(stderr, "-b	swap bytes\n");
 	fprintf(stderr, "-d	extra debug info\n");
 	fprintf(stderr, "-s<n>	skip N * 32-bit values\n");
-	
+
 	exit(1);
 }
 
@@ -241,4 +241,3 @@ main(int argc, char *argv[])
 
 	exit(0);
 }
-
