@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <sys/timeb.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <time.h>
 #include <sys/dir.h>
@@ -4857,7 +4858,7 @@ _processmini(void *conn)
 				char buffer[CHMAXDATA];
 
 				length = read(fd, buffer, CHMAXDATA);
-				/*log(LOG_INFO, "MINI: read %d\n", length);*/
+				/*chaosfile_log(LOG_INFO, "MINI: read %d\n", length);*/
 				if (length == 0)
 					break;
 				output = chaos_allocate_packet(conn, (binary) ? DWDOP : DATOP, length);
