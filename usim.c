@@ -124,7 +124,7 @@ usage(void)
 	fprintf(stderr, "-m 		mouse sync\n");
 	fprintf(stderr, "-p <sym-name>	set breakpoint in prom\n");
 	fprintf(stderr, "-q <number>	break after hitting breakpoint n times\n");
-	fprintf(stderr, "-r		map /tree to ../l\n");
+	fprintf(stderr, "-r		map /tree to ../sys\n");
 	fprintf(stderr, "-S 		save state\n");
 	fprintf(stderr, "-t		turn on microcode tracing\n");
 	fprintf(stderr, "-T<flags>	turn on tracing\n");
@@ -198,7 +198,7 @@ main(int argc, char *argv[])
 			break;
 		case 'r':
 		{
-			char *p = "../l";
+			char *p = "../sys";
 			char newpath[PATH_MAX];
 			realpath (p, newpath);
 			dcanon(newpath, 0);

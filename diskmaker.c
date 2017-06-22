@@ -588,7 +588,7 @@ default_template(void)
 	heads = 19;
 	blocks_per_track = 17;
 
-#define DEFAULT_MCR_FILE	"../l/ubin/ucadr.mcr.841"
+#define DEFAULT_MCR_FILE	"../sys/ubin/ucadr.mcr.841"
 #define DEFAULT_LOD_FILE	"../bands/system-78-42.LOD"
 
 	part_count = 0;
