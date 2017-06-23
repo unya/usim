@@ -162,8 +162,7 @@ dumpbuffer(unsigned short *buffer, int size)
 	size = size - (int)(8 * sizeof(short)); // subtract off the size of packet header
 	if (size < cnt)
 		printf("ERROR: packet size mismatch: size %d < cnt %d\n", size, cnt);
-	else if (size > cnt)
-	{
+	else if (size > cnt) {
 		printf("extra data: %d bytes\n", size - cnt);
 		cnt = size;
 	}
@@ -272,8 +271,7 @@ chaos_get_bit_count(void)
 {
 	if (chaos_rcv_buffer_size > 0)
 		return chaos_bit_count;
-	else
-	{
+	else {
 #if CHAOS_DEBUG
 		printf("chaos_get_bit_count: returned empty count\n");
 #endif
@@ -288,8 +286,7 @@ chaos_get_rcv_buffer(void)
 	if (chaos_rcv_buffer_ptr < chaos_rcv_buffer_size) {
 		v = chaos_rcv_buffer[chaos_rcv_buffer_ptr++];
 
-		if (chaos_rcv_buffer_ptr == chaos_rcv_buffer_size)
-		{
+		if (chaos_rcv_buffer_ptr == chaos_rcv_buffer_size) {
 			chaos_rcv_buffer_empty = 1;
 #if CHAOS_DEBUG
 			printf("chaos_get_rcv_buffer: marked buffer as empty\n");
@@ -507,10 +504,8 @@ chaos_make_connection(void)
 {
 	int i;
 
-	for (i = 0; i < 255; i++)
-	{
-		if (connections[i] == 0)
-		{
+	for (i = 0; i < 255; i++) {
+		if (connections[i] == 0) {
 			chaos_connection *conn = (chaos_connection *)malloc(sizeof(chaos_connection));
 			static unsigned short index = 0x0101;
 
@@ -553,10 +548,8 @@ chaos_dump_connection(chaos_connection *conn)
 {
 	int i;
 
-	for (i = 0; i < 255; i++)
-	{
-		if (connections[i] == conn)
-		{
+	for (i = 0; i < 255; i++) {
+		if (connections[i] == conn) {
 			printf("conn: %d\n", i);
 			printf("conn: remote %04x %04x\n", conn->remoteaddr, conn->remoteindex);
 			printf("conn: local  %04x %04x\n", conn->localaddr, conn->localindex);
@@ -573,8 +566,7 @@ chaos_delete_connection(chaos_connection *conn)
 	int i;
 
 	for (i = 0; i < 255; i++)
-		if (connections[i] == conn)
-		{
+		if (connections[i] == conn) {
 			connections[i] = 0;
 			break;
 		}
@@ -601,12 +593,9 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 	unsigned short nextpacket;
 
 	// any packet for remote gets queued
-	if (packet->destaddr == conn->remoteaddr)
-	{
-		for (;;)
-		{
-			if (conn->state == cs_open && (conn->lastsent - conn->remotelastreceived) >= conn->twsize && ((packet->opcode >> 8) != CHAOS_OPCODE_STS))
-			{
+	if (packet->destaddr == conn->remoteaddr) {
+		for (;;) {
+			if (conn->state == cs_open && (conn->lastsent - conn->remotelastreceived) >= conn->twsize && ((packet->opcode >> 8) != CHAOS_OPCODE_STS)) {
 #if 0 && CHAOS_DEBUG
 				printf("waiting for remote ack packet=%d\n", packet->number);
 				printf("lastsent = %d  remotelastreceived = %d  twsize = %d\n", conn->lastsent, conn->remotelastreceived, conn->twsize);
@@ -616,10 +605,8 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 
 				clock_gettime(CLOCK_REALTIME, &ts);
 				ts.tv_sec += 5;
-				if (pthread_cond_timedwait(&conn->twcond, &conn->twsem, &ts))
-				{
-					if (conn->lastpacket)
-					{
+				if (pthread_cond_timedwait(&conn->twcond, &conn->twsem, &ts)) {
+					if (conn->lastpacket) {
 						printf("re-transmit last packet\n");
 						chaos_packet *retransmit = conn->lastpacket;
 						conn->lastpacket = 0;
@@ -627,8 +614,7 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 					}
 				}
 				pthread_mutex_unlock(&conn->twsem);
-			}
-			else
+			} else
 				break;
 		}
 
@@ -643,8 +629,7 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 	node->next = 0;
 	node->packet = packet;
 	nextpacket = conn->lastreceived + 1;
-	if (cmp_gt(packet->number, nextpacket))
-	{
+	if (cmp_gt(packet->number, nextpacket)) {
 #if CHAOS_DEBUG
 		printf("chaos_connection_queue: out-of-order nextpacket=%d packet=%d\n", nextpacket, packet->number);
 #endif
@@ -682,16 +667,13 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 	if (conn->state == cs_closed)
 		return 0;
 
-	for (;;)
-	{
+	for (;;) {
 		pthread_mutex_lock(&conn->queuelock);
-		if (conn->orderhead)
-		{
+		if (conn->orderhead) {
 			packet_queue *prev = 0;
 
 			for (node = conn->orderhead; node; prev = node, node = node->next)
-				if (node->packet->number == nextpacket)
-				{
+				if (node->packet->number == nextpacket) {
 #if CHAOS_DEBUG
 					printf("chaos_connection_deque: grabbed out-of-order packet %d\n", nextpacket);
 #endif
@@ -705,8 +687,7 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 					break;
 				}
 		}
-		if (node == 0 && conn->queuehead)
-		{
+		if (node == 0 && conn->queuehead) {
 			packet = conn->queuehead->packet;
 			node = conn->queuehead;
 			conn->queuehead = node->next;
@@ -715,18 +696,15 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 		}
 		pthread_mutex_unlock(&conn->queuelock);
 
-		if (node)
-		{
+		if (node) {
 			free(node);
 			node = 0;
 		}
-		if (packet)
-		{
+		if (packet) {
 			if (cmp_gt(packet->number, conn->lastreceived))
 				conn->lastreceived = packet->number;
 			conn->remotelastreceived = packet->acknowledgement;
-			if (3 * (short)(conn->lastreceived - conn->lastacked) > conn->rwsize)
-			{
+			if (3 * (short)(conn->lastreceived - conn->lastacked) > conn->rwsize) {
 				chaos_packet *status = chaos_allocate_packet(conn, CHAOS_OPCODE_STS, 2 * sizeof(unsigned short));
 
 				conn->lastacked = conn->lastreceived;
@@ -799,9 +777,7 @@ chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsiz
 
 	conn->rwsize = (unsigned short)(rwsize ? rwsize : 5);
 
-	if (co_host)
-	{
-
+	if (co_host) {
 		pkt = (chaos_packet *)malloc(CHAOS_PACKET_HEADER_SIZE + co_clength);
 
 		pkt->opcode = CHAOS_OPCODE_RFC << 8;
@@ -850,9 +826,8 @@ chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsiz
 
 		free(answer);
 		chaos_connection_queue(conn, sts);
-	}
-	else // listen
-	{
+	} else {
+		// listen
 	}
 
 	return conn;
@@ -862,28 +837,24 @@ int
 chaos_poll(void)
 {
 	/* is rx buffer full? */
-	if (!chaos_rcv_buffer_empty && (chaos_csr & CHAOS_CSR_RECEIVE_DONE))
-	{
+	if (!chaos_rcv_buffer_empty && (chaos_csr & CHAOS_CSR_RECEIVE_DONE)) {
 #if CHAOS_DEBUG
 		printf("chaos: polling, but unread data exists\n");
 #endif
 		return 0;
 	}
 
-	if (!chaos_rcv_buffer_empty)
-	{
+	if (!chaos_rcv_buffer_empty) {
 #if CHAOS_DEBUG
 		printf("chaos: polling, but buffer not empty\n");
 #endif
 		return 0;
 	}
-	if (queuehead == 0)
-	{
+	if (queuehead == 0) {
 		return 0;
 	}
 
-	if (!(chaos_csr & CHAOS_CSR_RECEIVE_ENABLE))
-	{
+	if (!(chaos_csr & CHAOS_CSR_RECEIVE_ENABLE)) {
 #if CHAOS_DEBUG
 		printf("chaos: polling but rx not enabled\n");
 #endif
@@ -941,7 +912,6 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 	/* local loopback */
 	if (chaos_csr & CHAOS_CSR_LOOP_BACK) {
-
 		printf("chaos: loopback %d bytes\n", size);
 		memcpy(chaos_rcv_buffer, buffer, size);
 
@@ -959,22 +929,17 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
 
 	// look for packets addressed to the local server
-	if (packet->destaddr == CHAOS_SERVER_ADDRESS)
-	{
+	if (packet->destaddr == CHAOS_SERVER_ADDRESS) {
 		chaos_connection *conn = chaos_find_connection(packet->destindex);
 
-		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_RFC)
-		{
-
-			if (conn && conn->state == cs_rfc)
-			{
+		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_RFC) {
+			if (conn && conn->state == cs_rfc) {
 #if CHAOS_DEBUG
 				printf("Duplicate RFC\n");
 #endif
 				return 0;
 			}
-			if (conn)
-			{
+			if (conn) {
 				chaos_packet *pkt = malloc((size_t)size);
 
 				memcpy(pkt, packet, size);
@@ -986,13 +951,11 @@ chaos_send_to_chaosd(char *buffer, int size)
 			printf("RFC packet\n");
 #endif
 
-			if (memcmp(&packet->data, "FILE", 4) == 0)
-			{
+			if (memcmp(&packet->data, "FILE", 4) == 0) {
 				void processdata(chaos_connection *conn);
 				chaos_packet *answer;
 
-				if (packet->data[4] == ' ' && packet->data[5] >= '0' && packet->data[5] <= '9')
-				{
+				if (packet->data[4] == ' ' && packet->data[5] >= '0' && packet->data[5] <= '9') {
 					extern int protocol;
 					protocol = packet->data[5] - '0';
 					printf("FILE protocol version=%d\n", protocol);
@@ -1018,8 +981,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 				return 0;
 			}
-			if (memcmp(&packet->data, "MINI", 4) == 0)
-			{
+			if (memcmp(&packet->data, "MINI", 4) == 0) {
 				void processmini(chaos_connection *conn);
 				chaos_packet *answer;
 
@@ -1047,8 +1009,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 				return 0;
 			}
-			if (memcmp(&packet->data, "TIME", 4) == 0)
-			{
+			if (memcmp(&packet->data, "TIME", 4) == 0) {
 				time_t t;
 				struct timeval time;
 				chaos_packet *answer = malloc(CHAOS_PACKET_HEADER_SIZE + sizeof(long));
@@ -1073,8 +1034,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				chaos_queue(answer);
 				return 0;
 			}
-			if (memcmp(&packet->data, "UPTIME", 6) == 0)
-			{
+			if (memcmp(&packet->data, "UPTIME", 6) == 0) {
 				chaos_packet *answer = malloc(CHAOS_PACKET_HEADER_SIZE + sizeof(long));
 
 				printf("uptime: answering\n");
@@ -1092,8 +1052,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				chaos_queue(answer);
 				return 0;
 			}
-			if (memcmp(&packet->data, "STATUS", 6) == 0)
-			{
+			if (memcmp(&packet->data, "STATUS", 6) == 0) {
 				chaos_packet *answer = malloc(CHAOS_PACKET_HEADER_SIZE + sizeof(chaos_status));
 				chaos_status *status = (chaos_status *)&answer->data[0];
 
@@ -1127,8 +1086,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 			return 0;
 		}
-		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_SNS && conn)
-		{
+		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_SNS && conn) {
 			chaos_packet *sts = malloc(CHAOS_PACKET_HEADER_SIZE + 2 * sizeof(unsigned short) + 3 * sizeof(unsigned short));
 
 			sts->opcode = CHAOS_OPCODE_STS << 8;
@@ -1152,15 +1110,12 @@ chaos_send_to_chaosd(char *buffer, int size)
 #endif
 			return 0;
 		}
-		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_STS)
-		{
-			if (conn)
-			{
+		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_STS) {
+			if (conn) {
 				if (cmp_gt(packet->acknowledgement, conn->remotelastreceived))
 					conn->remotelastreceived = packet->acknowledgement;
 
-				if (conn->lastpacket && conn->remotelastreceived == conn->lastpacket->number)
-				{
+				if (conn->lastpacket && conn->remotelastreceived == conn->lastpacket->number) {
 					free(conn->lastpacket);
 					conn->lastpacket = 0;
 				}
@@ -1176,8 +1131,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 			}
 			return 0;
 		}
-		if (conn && (packet->opcode >> 8) == CHAOS_OPCODE_CLS)
-		{
+		if (conn && (packet->opcode >> 8) == CHAOS_OPCODE_CLS) {
 #if CHAOS_DEBUG
 			printf("chaos: got close\n");
 #endif
@@ -1190,8 +1144,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 			chaos_delete_connection(conn);
 			return 0;
 		}
-		if (conn && (cmp_gt(conn->lastreceived, packet->number) || (conn->lastreceived == packet->number)))
-		{
+		if (conn && (cmp_gt(conn->lastreceived, packet->number) || (conn->lastreceived == packet->number))) {
 #if CHAOS_DEBUG
 			printf("chaos: Duplicate data packet\n");
 #endif
@@ -1205,8 +1158,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 			return 0;
 		}
 
-		if (conn)
-		{
+		if (conn) {
 			chaos_packet *pkt = malloc((size_t)size);
 
 			memcpy(pkt, packet, size);
@@ -1443,7 +1395,6 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 	/* local loopback */
 	if (chaos_csr & CHAOS_CSR_LOOP_BACK) {
-
 		printf("chaos: loopback %d bytes\n", size);
 		memcpy(chaos_rcv_buffer, buffer, size);
 
