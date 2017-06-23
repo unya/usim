@@ -5,6 +5,13 @@
 #include <termios.h>
 #include <errno.h>
 
+#include "ucode.h"
+#include "decode.h"
+
+unsigned int a_memory[1024];
+int disk_fd;
+int alt_prom_flag;
+
 typedef unsigned long long u64;
 typedef unsigned int u32;
 typedef unsigned short u16;
@@ -1402,4 +1409,16 @@ verbose = 0;
 	sleep(1);
 	close(fd);
 	exit(0);
+}
+
+char *
+sym_find_by_type_val(int mcr, int t, int v)
+{
+	// Dummy.
+}
+
+int
+read_mem(int vaddr, unsigned int *pv)
+{
+// Dummy.
 }

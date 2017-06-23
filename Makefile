@@ -45,7 +45,7 @@ USIM_HDR += Files.h glob.h
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 
-all: usim readmcr diskmaker lod lmfs disk.img
+all: usim readmcr diskmaker lod lmfs cc disk.img
 
 usim: $(USIM_OBJ)
 	$(CC) $(CFLAGS) -o $@ $(USIM_OBJ) $(LFLAGS) $(DISPLAY_LIBS)
@@ -66,13 +66,13 @@ lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 cc: cc.c decode.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $^
 
 disk.img:
 	./diskmaker -c -f disk.img -t disk.cfg
 
 clean:
-	rm -f *.o usim lod readmcr diskmaker lmfs xx
+	rm -f *.o usim lod readmcr diskmaker lmfs cc xx
 	rm -f *~
 
 x11.c: DEFINES+=$(DISPLAY_DEFINES)
