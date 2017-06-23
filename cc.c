@@ -4,17 +4,11 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <errno.h>
+#include <unistd.h>
+#include <stdint.h>
 
 #include "ucode.h"
 #include "decode.h"
-
-unsigned int a_memory[1024];
-int disk_fd;
-int alt_prom_flag;
-
-typedef unsigned long long u64;
-typedef unsigned int u32;
-typedef unsigned short u16;
 
 int fd;
 int debug;
@@ -77,7 +71,7 @@ int verbose;
 #define	CONS_M_SRC_PDL_BUFFER_POINTER 042
 #define	CONS_M_SRC_PDL_BUFFER_INDEX 043
 #define	CONS_M_SRC_C_PDL_BUFFER_INDEX 045
-#define	CONS_M_SRC_OPC 046 
+#define	CONS_M_SRC_OPC 046
 #define	CONS_M_SRC_Q 047
 #define	CONS_M_SRC_VMA 050
 #define	CONS_M_SRC_MAP 051		//ADDRESSED BY MD, NOT VMA
@@ -86,7 +80,7 @@ int verbose;
 #define	CONS_MAP_PFR_BIT (1 << 30)
 #define	CONS_MAP_PFW_BIT (1 << 31)
 #define	CONS_M_SRC_MD 052
-#define	CONS_M_SRC_LC 053 
+#define	CONS_M_SRC_LC 053
 #define	CONS_M_SRC_MICRO_STACK_POP 054 //SAME AS MICRO_STACK, BUT ALSO POPS USP
 #define	CONS_US_POINTER_BYTE 03005
 #define	CONS_US_DATA_BYTE 0023
@@ -97,8 +91,8 @@ int verbose;
 #define	CONS_A_MEM_DEST_1777 05777
 #define	CONS_IR_M_MEM_DEST 01605
 #define	CONS_IR_FUNC_DEST 02305
-#define	CONS_FUNC_DEST_LC 1 
-#define	CONS_FUNC_DEST_INT_CNTRL 2 
+#define	CONS_FUNC_DEST_LC 1
+#define	CONS_FUNC_DEST_INT_CNTRL 2
 #define	CONS_FUNC_DEST_C_PP 010
 #define	CONS_FUNC_DEST_PDL_BUFFER_PUSH 011
 #define	CONS_FUNC_DEST_C_PI 012
@@ -183,8 +177,12 @@ int verbose;
 #define	CONS_DISP_RPN_BITS 01603
 #define	CONS_DISP_PARITY_BIT 02101
 
-u32 cc_read_md(void);
+uint32_t cc_read_md(void);
 
+int cc_noop_debug_clock(void);
+int cc_debug_clock(void);
+int cc_noop_clock(void);
+int cc_clock(void);
 
 int cc_send(unsigned char *b, int len)
 {
@@ -210,15 +208,15 @@ int cc_send(unsigned char *b, int len)
 }
 
 
-u16
+uint16_t
 reg_get(int base, int reg)
 {
 	unsigned char buffer[64];
 	unsigned char nibs[4];
 	int ret, i, mask, loops, off;
-	u16 v;
+	uint16_t v;
 
-again:
+ again:
 	buffer[0] = base | (reg & 0x1f);
 	if (debug) printf("send %02x\n", buffer[0]);
 	cc_send(buffer, 1);
@@ -328,7 +326,7 @@ reg_set(int base, int reg, int v)
 	return 0;
 }
 
-u16
+uint16_t
 cc_get(int reg)
 {
 	return reg_get(0x80, reg);
@@ -341,7 +339,7 @@ cc_set(int reg, int v)
 }
 
 
-u16
+uint16_t
 mmc_get(int reg)
 {
 	return reg_get(0xc0, reg);
@@ -365,72 +363,72 @@ cc_go(void)
 	return cc_set(wr_spy_clk, 0001);
 }
 
-u32
+uint32_t
 _cc_read_pair(int r1, int r2)
 {
-	u32 v1, v2;
+	uint32_t v1, v2;
 	v1 = cc_get(r1);
 	v2 = cc_get(r2);
 	return (v1 << 16) | v2;
 }
 
-u64
+uint64_t
 _cc_read_triple(int r1, int r2, int r3)
 {
-	u64 v1;
-	u32 v2, v3;
+	uint64_t v1;
+	uint32_t v2, v3;
 	v1 = cc_get(r1);
 	v2 = cc_get(r2);
 	v3 = cc_get(r3);
 	return (v1 << 32) | (v2 << 16) | v3;
 }
 
-u32
+uint32_t
 cc_read_obus(void)
 {
 	return _cc_read_pair(rd_spy_ob_high, rd_spy_ob_low);
 }
 
-u32
+uint32_t
 cc_read_obus_(void)
 {
 	return _cc_read_pair(025, 024);
 }
 
-u32
+uint32_t
 cc_read_a_bus(void)
 {
 	return _cc_read_pair(rd_spy_a_high, rd_spy_a_low);
 }
 
-u32
+uint32_t
 cc_read_m_bus(void)
 {
 	return _cc_read_pair(rd_spy_m_high, rd_spy_m_low);
 }
 
-u64
+uint64_t
 cc_read_ir(void)
 {
 	return _cc_read_triple(rd_spy_ir_high, rd_spy_ir_med, rd_spy_ir_low);
 }
 
-u16
+uint16_t
 cc_read_pc(void)
 {
 	return cc_get(rd_spy_pc);
 }
 
-u16
+uint16_t
 cc_read_scratch(void)
 {
 	return cc_get(rd_spy_scratch);
 }
 
-u32
+uint32_t
 cc_read_status(void)
 {
-	u16 v1, v2, v3;
+	uint16_t v1, v2, v3;
 	v1 = cc_get(rd_spy_flag_1);
 	v2 = cc_get(rd_spy_flag_2);
 	//printf("v1 %04x v2 %04x\n", v1, v2);
@@ -442,24 +440,24 @@ cc_read_status(void)
 }
 
 int
-cc_write_diag_ir(u64 ir)
+cc_write_diag_ir(uint64_t ir)
 {
 	int tries;
 
 	if (debug || verbose) disassemble_ucode_loc(0, ir);
-	cc_set(wr_spy_ir_high, (u16)((ir >> 32) & 0xffff));
-	cc_set(wr_spy_ir_med,  (u16)((ir >> 16) & 0xffff));
-	cc_set(wr_spy_ir_low,  (u16)((ir >>  0) & 0xffff));
+	cc_set(wr_spy_ir_high, (uint16_t)((ir >> 32) & 0xffff));
+	cc_set(wr_spy_ir_med,  (uint16_t)((ir >> 16) & 0xffff));
+	cc_set(wr_spy_ir_low,  (uint16_t)((ir >>  0) & 0xffff));
 
-	cc_set(wr_spy_ir_high, (u16)((ir >> 32) & 0xffff));
-	cc_set(wr_spy_ir_med,  (u16)((ir >> 16) & 0xffff));
-	cc_set(wr_spy_ir_low,  (u16)((ir >>  0) & 0xffff));
+	cc_set(wr_spy_ir_high, (uint16_t)((ir >> 32) & 0xffff));
+	cc_set(wr_spy_ir_med,  (uint16_t)((ir >> 16) & 0xffff));
+	cc_set(wr_spy_ir_low,  (uint16_t)((ir >>  0) & 0xffff));
 
 	return 0;
 }
 
 int
-cc_write_ir(u64 ir)
+cc_write_ir(uint64_t ir)
 {
 	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
 	cc_write_diag_ir(ir);
@@ -467,12 +465,12 @@ cc_write_ir(u64 ir)
 }
 
 int
-cc_execute_r(u64 ir)
+cc_execute_r(uint64_t ir)
 {
 	int ret;
 	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
 
-again:
+ again:
 	cc_write_diag_ir(ir);
 	cc_noop_debug_clock();
 #if 1
@@ -487,12 +485,12 @@ again:
 }
 
 int
-cc_execute_w(u64 ir)
+cc_execute_w(uint64_t ir)
 {
 	int ret;
 	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
 
-again:
+ again:
 	cc_write_diag_ir(ir);
 	cc_noop_debug_clock();	// PUT IT INTO IR, IT WILL START EXECUTING
 	if (cc_read_ir() != ir) {
@@ -501,13 +499,13 @@ again:
 	}
 	cc_clock();		// CLOCK THAT INSTRUCTION, GARBAGE TO IR
 	ret = cc_noop_clock();	// CLOCK MACHINE AGAIN TO CLEAR PASS AROUND PATH, LOAD IR
-				// WITH INSTRUCTION JUMPED TO, ETC.
+	// WITH INSTRUCTION JUMPED TO, ETC.
 	return ret;
 
 }
 
 int
-cc_execute(int op, u64 ir)
+cc_execute(int op, uint64_t ir)
 {
 	if (debug) disassemble_ucode_loc(0, ir);
 	if (op == WRITE) {
@@ -517,11 +515,11 @@ cc_execute(int op, u64 ir)
 	return cc_execute_r(ir);
 }
 
-u32
+uint32_t
 bitmask(int wid)
 {
 	int i;
-	u32 m = 0;
+	uint32_t m = 0;
 	for (i = 0; i < wid; i++) {
 		m <<= 1;
 		m |= 1;
@@ -529,11 +527,11 @@ bitmask(int wid)
 	return m;
 }
 
-u64
-ir_pair(int field, u32 val)
+uint64_t
+ir_pair(int field, uint32_t val)
 {
-	u64 ir = 0;
-	u32 mask;
+	uint64_t ir = 0;
+	uint32_t mask;
 	int shift, width;
 
 	shift = field >> 6;
@@ -541,7 +539,7 @@ ir_pair(int field, u32 val)
 	mask = bitmask(width);
 
 	val &= mask;
-	ir = ((u64)val) << shift;
+	ir = ((uint64_t)val) << shift;
 
 	if (debug)
 		printf("ir_pair field=%o, shift=%d, width=%d, mask=%x, val=%x\n",
@@ -551,6 +549,7 @@ ir_pair(int field, u32 val)
 }
 
 #if 0
+int
 cc_write_md_1s(void)
 {
 	cc_execute(WRITE,
@@ -559,6 +558,7 @@ cc_write_md_1s(void)
 		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
 }
 
+int
 cc_write_md_0s(void)
 {
 	cc_execute(WRITE,
@@ -568,10 +568,10 @@ cc_write_md_0s(void)
 }
 
 int
-cc_write_md_shifting(u32 val)
+cc_write_md_shifting(uint32_t val)
 {
 	int i;
-	u32 n;
+	uint32_t n;
 
 	cc_execute(0/*WRITE*/,
 		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
@@ -579,7 +579,7 @@ cc_write_md_shifting(u32 val)
 		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
 
 	for (i = 31, n = val; i >= 0; i--, n <<= 1) {
-		if (debug) printf("n %08x, bit %d\n", n, (n & 0x80000000) == 0); 
+		if (debug) printf("n %08x, bit %d\n", n, (n & 0x80000000) == 0);
 		else { printf("."); fflush(stdout); }
 		if ((n & 0x80000000) == 0) {
 			cc_execute(0/*WRITE*/,
@@ -600,19 +600,19 @@ cc_write_md_shifting(u32 val)
 }
 
 int
-cc_write_md(u32 md)
+cc_write_md(uint32_t md)
 {
 	return cc_write_md_shifting(md);
 }
 
-u32
+uint32_t
 cc_read_md(void)
 {
 	return cc_read_m_mem(CONS_M_SRC_MD);
 }
 
 int
-cc_write_vma(u32 vma)
+cc_write_vma(uint32_t vma)
 {
 	cc_write_md(vma);
 	cc_execute(WRITE,
@@ -625,65 +625,67 @@ cc_write_vma(u32 vma)
 }
 #endif
 
-u32
+uint32_t
 cc_read_md(void)
 {
 	return _cc_read_pair(rd_spy_md_high, rd_spy_md_low);
 }
 
 int
-cc_write_md(u32 md)
+cc_write_md(uint32_t md)
 {
-	cc_set(wr_spy_md_high, (u16)(md >> 16) & 0xffff);
-	cc_set(wr_spy_md_low,  (u16)(md >>  0) & 0xffff);
+	cc_set(wr_spy_md_high, (uint16_t)(md >> 16) & 0xffff);
+	cc_set(wr_spy_md_low,  (uint16_t)(md >>  0) & 0xffff);
 
 	while (1) {
-		u32 v;
+		uint32_t v;
 		v = cc_read_md();
 		if (v == md)
 			break;
-		
+
 		printf("md readback failed, retry got %x want %x\n", v, md);
-		cc_set(wr_spy_md_high, (u16)(md >> 16) & 0xffff);
-		cc_set(wr_spy_md_low,  (u16)(md >>  0) & 0xffff);
+		cc_set(wr_spy_md_high, (uint16_t)(md >> 16) & 0xffff);
+		cc_set(wr_spy_md_low,  (uint16_t)(md >>  0) & 0xffff);
 	}
-	
+
 }
 
-u32
+uint32_t
 cc_read_vma(void)
 {
-//	return cc_read_m_mem(CONS_M_SRC_VMA);
+	//	return cc_read_m_mem(CONS_M_SRC_VMA);
 	return _cc_read_pair(rd_spy_vma_high, rd_spy_vma_low);
 }
 
 int
-cc_write_vma(u32 vma)
+cc_write_vma(uint32_t vma)
 {
-	cc_set(wr_spy_vma_high, (u16)(vma >> 16) & 0xffff);
-	cc_set(wr_spy_vma_low,  (u16)(vma >>  0) & 0xffff);
+	cc_set(wr_spy_vma_high, (uint16_t)(vma >> 16) & 0xffff);
+	cc_set(wr_spy_vma_low,  (uint16_t)(vma >>  0) & 0xffff);
 
 	while (cc_read_vma() != vma) {
 		printf("vma readback failed, retry\n");
-		cc_set(wr_spy_vma_high, (u16)(vma >> 16) & 0xffff);
-		cc_set(wr_spy_vma_low,  (u16)(vma >>  0) & 0xffff);
+		cc_set(wr_spy_vma_high, (uint16_t)(vma >> 16) & 0xffff);
+		cc_set(wr_spy_vma_low,  (uint16_t)(vma >>  0) & 0xffff);
 	}
-	
+
 }
 
 
+int
 cc_write_md_1s(void)
 {
 	cc_write_md(0xffffffff);
 }
 
+int
 cc_write_md_0s(void)
 {
 	cc_write_md(0x00000000);
 }
 
-u32
-cc_read_a_mem(u32 adr)
+uint32_t
+cc_read_a_mem(uint32_t adr)
 {
 	cc_execute(0,
 		   ir_pair(CONS_IR_A_SRC, adr) | 	//PUT IT ONTO THE OBUS
@@ -692,10 +694,10 @@ cc_read_a_mem(u32 adr)
 	return cc_read_obus();
 }
 
-u32
-cc_write_a_mem(u32 loc, u32 val)
+uint32_t
+cc_write_a_mem(uint32_t loc, uint32_t val)
 {
-	u32 v2;
+	uint32_t v2;
 
 	cc_write_md(val);
 	v2 = cc_read_md();
@@ -709,8 +711,8 @@ cc_write_a_mem(u32 loc, u32 val)
 		   ir_pair(CONS_IR_A_MEM_DEST, CONS_A_MEM_DEST_INDICATOR + loc));
 }
 
-u32
-cc_read_m_mem(u32 adr)
+uint32_t
+cc_read_m_mem(uint32_t adr)
 {
 	cc_execute(0,
 		   ir_pair(CONS_IR_M_SRC, adr) | 	//PUT IT ONTO THE OBUS
@@ -762,7 +764,7 @@ cc_single_step(void)
 int
 cc_report_basic_regs(void)
 {
-	u32 A, M, PC, MD, VMA;
+	uint32_t A, M, PC, MD, VMA;
 	A  = cc_read_a_bus();
 	printf("A  = %011o (%08x)\n", A, A);
 	M  = cc_read_m_bus();
@@ -775,7 +777,7 @@ cc_report_basic_regs(void)
 	printf("VMA= %011o (%08x)\n", VMA, VMA);
 
 	{
-		u32 disk, bd, mmc;
+		uint32_t disk, bd, mmc;
 		disk = cc_get(rd_spy_disk);
 		bd = cc_get(rd_spy_bd);
 		mmc = bd >> 6;
@@ -785,14 +787,14 @@ cc_report_basic_regs(void)
 		printf("bd-state   %d (0x%04x)\n", bd, bd);
 		printf("mmc-state  %d (0x%04x)\n", mmc, mmc);
 	}
-	
+
 	return 0;
 }
 
 int
-cc_report_pc(u32 *ppc)
+cc_report_pc(uint32_t *ppc)
 {
-	u32 PC;
+	uint32_t PC;
 	PC = cc_read_pc();
 	printf("PC = %011o (%08x)\n", PC, PC);
 	*ppc = PC;
@@ -800,9 +802,9 @@ cc_report_pc(u32 *ppc)
 }
 
 int
-cc_report_pc_and_md(u32 *ppc)
+cc_report_pc_and_md(uint32_t *ppc)
 {
-	u32 PC, MD;
+	uint32_t PC, MD;
 	PC = cc_read_pc();
 	MD = cc_read_md();
 	printf("PC=%011o (%08x) MD=%011o (%08x)\n", PC, PC, MD, MD);
@@ -811,10 +813,10 @@ cc_report_pc_and_md(u32 *ppc)
 }
 
 int
-cc_report_pc_and_ir(u32 *ppc)
+cc_report_pc_and_ir(uint32_t *ppc)
 {
-	u32 PC;
-	u64 ir;
+	uint32_t PC;
+	uint64_t ir;
 	PC = cc_read_pc();
 	ir = cc_read_ir();
 	printf("PC=%011o (%08x) ir=%llo ", PC, PC, ir);
@@ -825,10 +827,10 @@ cc_report_pc_and_ir(u32 *ppc)
 }
 
 int
-cc_report_pc_md_ir(u32 *ppc)
+cc_report_pc_md_ir(uint32_t *ppc)
 {
-	u32 PC, MD;
-	u64 ir;
+	uint32_t PC, MD;
+	uint64_t ir;
 	PC = cc_read_pc();
 	MD = cc_read_md();
 	ir = cc_read_ir();
@@ -843,7 +845,7 @@ cc_report_pc_md_ir(u32 *ppc)
 int
 cc_report_status(void)
 {
-	u32 s, f1, f2;
+	uint32_t s, f1, f2;
 	s = cc_read_status();
 	f1 = s >> 16;
 	f2 = s & 0xffff;
@@ -864,40 +866,40 @@ cc_report_status(void)
 	printf(") ");
 }
 
-int 
+int
 cc_pipe(void)
 {
-	u64 isn;
+	uint64_t isn;
 	int adr, ret;
 
 	for (adr = 0; adr < 8; adr++) {
 
-	printf("addr %o:\n", adr);
-	isn = 
-		ir_pair(CONS_IR_M_SRC, adr) | 	//PUT IT ONTO THE OBUS
-		ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
-		ir_pair(CONS_IR_OB, CONS_OB_ALU);
+		printf("addr %o:\n", adr);
+		isn =
+			ir_pair(CONS_IR_M_SRC, adr) | 	//PUT IT ONTO THE OBUS
+			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
+			ir_pair(CONS_IR_OB, CONS_OB_ALU);
 
-	printf("%llo ", isn);
-	disassemble_ucode_loc(0, isn);
+		printf("%llo ", isn);
+		disassemble_ucode_loc(0, isn);
 
-	cc_write_diag_ir(isn);
-	cc_noop_debug_clock();
-	printf(" obus1 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
-	
-	ret = cc_debug_clock();
-	printf(" obus2 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
+		cc_write_diag_ir(isn);
+		cc_noop_debug_clock();
+		printf(" obus1 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-	ret = cc_debug_clock();
-	printf(" obus3 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
+		ret = cc_debug_clock();
+		printf(" obus2 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-//	ret = cc_debug_clock();
-	cc_clock();
-	printf(" obus4 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
+		ret = cc_debug_clock();
+		printf(" obus3 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-//	ret = cc_debug_clock();
-	cc_clock();
-	printf(" obus5 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
+		//	ret = cc_debug_clock();
+		cc_clock();
+		printf(" obus4 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
+
+		//	ret = cc_debug_clock();
+		cc_clock();
+		printf(" obus5 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 	}
 
 	return 0;
@@ -907,8 +909,8 @@ int
 cc_pipe2(void)
 {
 	int r;
-	u64 isn;
-	u32 val, v2;
+	uint64_t isn;
+	uint32_t val, v2;
 	for (r = 0; r < 8; r++) {
 		printf("val %o:\n", r);
 		cc_write_md(r);
@@ -917,7 +919,7 @@ cc_pipe2(void)
 			printf("cc_pipe2; md readback error (got=%o wanted=%o)\n", v2, r);
 		}
 
-		isn = 
+		isn =
 			ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |	//MOVE IT TO DESIRED PLACE
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU) |
@@ -944,20 +946,20 @@ cc_pipe2(void)
 	}
 }
 
-u64 setup_map_inst[] = {
-	04000000000110003, // (alu) SETZ a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[2] 
-	00000000000150173, // (alu) SETO a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[3] 
-	00600101602370010, // (byte) a=2 m=m[3] dpb pos=10, width=1 ->a_mem[47] 
+uint64_t setup_map_inst[] = {
+	04000000000110003, // (alu) SETZ a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[2]
+	00000000000150173, // (alu) SETO a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[3]
+	00600101602370010, // (byte) a=2 m=m[3] dpb pos=10, width=1 ->a_mem[47]
 
-	04600101446230166, // (byte) a=2 m=m[3] dpb pos=26, width=4 ->VMA,write-map ,m[4] 
-	04600201400270400, // (byte) a=4 m=m[3] dpb pos=0, width=11 -><none>,m[5] 
-	00002340060010050, // (alu) SETA a=47 m=0 m[0] C=0 alu-> ->MD ,m[0] 
-	00600241446030152, // (byte) a=5 m=m[3] dpb pos=12, width=4 ->VMA,write-map ,m[0] 
-	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0] 
-	00600201400270041, // (byte) a=4 m=m[3] dpb pos=1, width=2 -><none>,m[5] 
-	04600241446030444, // (byte) a=5 m=m[3] dpb pos=4, width=12 ->VMA,write-map ,m[0] 
-	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0] 
-	04600201446030000, // (byte) a=4 m=m[3] dpb pos=0, width=1 ->VMA,write-map ,m[0] 
+	04600101446230166, // (byte) a=2 m=m[3] dpb pos=26, width=4 ->VMA,write-map ,m[4]
+	04600201400270400, // (byte) a=4 m=m[3] dpb pos=0, width=11 -><none>,m[5]
+	00002340060010050, // (alu) SETA a=47 m=0 m[0] C=0 alu-> ->MD ,m[0]
+	00600241446030152, // (byte) a=5 m=m[3] dpb pos=12, width=4 ->VMA,write-map ,m[0]
+	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
+	00600201400270041, // (byte) a=4 m=m[3] dpb pos=1, width=2 -><none>,m[5]
+	04600241446030444, // (byte) a=5 m=m[3] dpb pos=4, width=12 ->VMA,write-map ,m[0]
+	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
+	04600201446030000, // (byte) a=4 m=m[3] dpb pos=0, width=1 ->VMA,write-map ,m[0]
 	0
 };
 
@@ -979,17 +981,17 @@ int
 cc_report_ide_regs(void)
 {
 	int r;
-	u32 v;
-/*
-	((A-20)   DPB M-ONES (BYTE-FIELD 1 4) A-ZERO)
-	((A-DISK-REGS) DPB M-ONES (BYTE-FIELD 7 2) A-ZERO)	;Virt Addr 774
-	((VMA-START-READ) A-DISK-REGS)
+	uint32_t v;
+	/*
+	  ((A-20)   DPB M-ONES (BYTE-FIELD 1 4) A-ZERO)
+	  ((A-DISK-REGS) DPB M-ONES (BYTE-FIELD 7 2) A-ZERO)	;Virt Addr 774
+	  ((VMA-START-READ) A-DISK-REGS)
 
-	((MD) A-20)
-	((VMA-START-WRITE) ADD VMA A-ONES)
-	((VMA-START-READ) ADD VMA A-ONES)
-	((A-20) ADD A-1)
-*/
+	  ((MD) A-20)
+	  ((VMA-START-WRITE) ADD VMA A-ONES)
+	  ((VMA-START-READ) ADD VMA A-ONES)
+	  ((A-20) ADD A-1)
+	*/
 
 
 	printf("setting up map...\n");
@@ -1024,9 +1026,9 @@ cc_report_ide_regs(void)
 }
 
 int
-_test_scratch(u16 v)
+_test_scratch(uint16_t v)
 {
-	u16 s1, s2;
+	uint16_t s1, s2;
 
 	s1 = cc_read_scratch();
 	cc_set(wr_spy_scratch, v);
@@ -1049,14 +1051,14 @@ _test_scratch(u16 v)
 			s2 = cc_read_scratch();
 			printf("  rewrite 0%o; scratch %o -> %o (0x%x) ", v, s1, s2, s2);
 			if (s2 == v) {
-				printf("ok\n");				
+				printf("ok\n");
 			} else {
 				printf("BAD\n");
 				return -1;
 			}
-			
+
 		}
-		
+
 	}
 
 	return 0;
@@ -1076,12 +1078,13 @@ cc_test_scratch(void)
 	_test_scratch(++vv);
 }
 
-_test_ir(u64 isn)
+int
+_test_ir(uint64_t isn)
 {
-	u64 iv;
-	
+	uint64_t iv;
+
 	printf("test ir %llo ", isn);
-	
+
 	cc_write_ir(isn);
 	iv = cc_read_ir();
 	if (iv == isn) {
@@ -1104,7 +1107,7 @@ _test_ir(u64 isn)
 				return -1;
 			}
 		}
-		
+
 	}
 
 	return 0;
@@ -1174,7 +1177,7 @@ main(int argc, char *argv[])
 	done = 0;
 	while (!done) {
 		int c, i, arg;
-		u32 A, M, PC, MD, VMA, v;
+		uint32_t A, M, PC, MD, VMA, v;
 		char line[256];
 
 		printf("> "); fflush(stdout);
@@ -1195,7 +1198,7 @@ main(int argc, char *argv[])
 
 		case 'q':
 			cc_pipe2();
-		break;
+			break;
 
 		case 'g':
 			cc_go();
@@ -1209,7 +1212,7 @@ main(int argc, char *argv[])
 
 		case 's': /* step */
 			for (i = 0; i < arg; i++) {
-//			cc_single_step();
+				//			cc_single_step();
 				cc_clock();
 				cc_report_status();
 				cc_report_pc(&PC);
@@ -1250,7 +1253,7 @@ main(int argc, char *argv[])
 
 		case 'R':
 			for (r = 0; r < 027; r++) {
-				u16 v;
+				uint16_t v;
 				v = cc_get(r);
 				printf("spy reg %o = %06o (0x%x)\n", r, v, v);
 			}
@@ -1300,7 +1303,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm':
-			//  (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6] 
+			//  (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 			cc_write_a_mem(2, 0);
 			cc_execute_r(04000100042310050ULL);
 			v = cc_read_md();
@@ -1310,19 +1313,19 @@ main(int argc, char *argv[])
 		case 'G':
 			for (i = 0; i < 4; i++) {
 				cc_write_a_mem(2, i);
-verbose = 1;
+				verbose = 1;
 				cc_execute_r(04000100042310050ULL);
-verbose = 0;
+				verbose = 0;
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
 			if (0)
-			for (i = 0200; i < 0220; i++) {
-				cc_write_a_mem(2, i);
-				cc_execute_r(04000100042310050ULL);
-				v = cc_read_md();
-				printf("@%o MD=%011o (0x%x)\n", i, v, v);
-			}
+				for (i = 0200; i < 0220; i++) {
+					cc_write_a_mem(2, i);
+					cc_execute_r(04000100042310050ULL);
+					v = cc_read_md();
+					printf("@%o MD=%011o (0x%x)\n", i, v, v);
+				}
 
 			for (i = 0776; i < 01000; i++) {
 				cc_write_a_mem(2, i);
@@ -1333,18 +1336,18 @@ verbose = 0;
 			break;
 
 		case 'a':
-			// (byte) a=2 m=m[3] dpb pos=7, width=1 ->VMA,start-read ,m[6] 
+			// (byte) a=2 m=m[3] dpb pos=7, width=1 ->VMA,start-read ,m[6]
 			cc_execute_w(04600101442330007ULL);
 			printf("@200 MD=%011o\n", cc_read_md());
 
-			//  (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6] 
+			//  (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6]
 			cc_execute_w(00002003042310310ULL);
 			printf("@201 MD=%011o\n", cc_read_md());
 
-			// (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6] 
+			// (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6]
 			cc_execute_r(00002003000310310ULL);
 
-			// (alu) SETM a=0 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[0] 
+			// (alu) SETM a=0 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[0]
 			cc_execute_w(00000003042010030ULL);
 			printf("@202 MD=%011o\n", cc_read_md());
 
@@ -1374,9 +1377,9 @@ verbose = 0;
 			printf("A[3] = %011o\n", cc_read_a_mem(3));
 			break;
 
-//		case 'q':
-//			done = 1;
-//			break;
+			//		case 'q':
+			//			done = 1;
+			//			break;
 
 		case '/':
 			switch (line[1]) {
@@ -1411,6 +1414,12 @@ verbose = 0;
 	exit(0);
 }
 
+/* Dummy stuff; not used */
+
+unsigned int a_memory[1024];
+int disk_fd;
+int alt_prom_flag;
+
 char *
 sym_find_by_type_val(int mcr, int t, int v)
 {
@@ -1420,5 +1429,5 @@ sym_find_by_type_val(int mcr, int t, int v)
 int
 read_mem(int vaddr, unsigned int *pv)
 {
-// Dummy.
+	// Dummy.
 }
