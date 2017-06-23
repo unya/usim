@@ -177,128 +177,117 @@ char *alu_arith_op[] = {
 	"M+M"
 };
 
-char *
+void
 disassemble_m_src(ucw_t u, int m_src)
 {
-	static char buffer[128];
-
-	buffer[0] = '\0';
 	if (m_src & 040) {
 		switch (m_src & 037) {
 		case 0:
-			strcpy(buffer, "dispatch-constant ");
-			break;
+			printf("dispatch-constant "); break;
 		case 1:
-			strcpy(buffer, "SPC-ptr, spc-data ");
+			printf("SPC-ptr, spc-data ");
 			break;
 		case 2:
-			sprintf(buffer, "PDL-ptr %o ", (int)u & 01777);
+			printf("PDL-ptr %o ", (int)u & 01777);
 			break;
 		case 3:
-			sprintf(buffer, "PDL-index %o ", (int)u & 01777);
+			printf("PDL-index %o ", (int)u & 01777);
 			break;
 		case 5:
-			strcpy(buffer, "PDL-buffer ");
+			printf("PDL-buffer ");
 			break;
 		case 6:
-			sprintf(buffer, "OPC register %o ",
-				(int)u & 017777);
+			printf("OPC register %o ",
+			       (int)u & 017777);
 			break;
 		case 7:
-			strcpy(buffer, "Q ");
+			printf("Q ");
 			break;
 		case 010:
-			strcpy(buffer, "VMA ");
+			printf("VMA ");
 			break;
 		case 011:
-			strcpy(buffer, "MAP[MD] ");
+			printf("MAP[MD] ");
 			break;
 		case 012:
-			strcpy(buffer, "MD ");
-			break;
+			printf("MD ");
+			break; 
 		case 013:
-			strcpy(buffer, "LC ");
-			break;
+			printf("LC ");
+			break; 
 		case 014:
-			strcpy(buffer, "SPC pointer and data, pop ");
-			break;
+			printf("SPC pointer and data, pop ");
+			break; 
 		case 024:
-			strcpy(buffer, "PDL[Pointer], pop ");
+			printf("PDL[Pointer], pop ");
 			break;
 		case 025:
-			strcpy(buffer, "PDL[Pointer] ");
-			break;
+			printf("PDL[Pointer] ");
+			break; 
 		}
 	} else {
-		sprintf(buffer, "m[%o] ", m_src);
+		printf("m[%o] ", m_src);
 	}
-	return buffer;
 }
 
-char *
+void
 disassemble_dest(int dest)
 {
-	static char buffer[128];
-
 	if (dest & 04000) {
-		sprintf(buffer, "->a_mem[%o] ", dest & 01777);
+		printf("->a_mem[%o] ", dest & 01777);
 	} else {
 		switch (dest >> 5) {
-		case 0: strcpy(buffer, "-><none>"); break;
-		case 1: strcpy(buffer, "->LC "); break;
-		case 2: strcpy(buffer, "->IC "); break;
-		case 010: strcpy(buffer, "->PDL[ptr] "); break;
-		case 011: strcpy(buffer, "->PDL[ptr],push "); break;
-		case 012: strcpy(buffer, "->PDL[index] "); break;
-		case 013: strcpy(buffer, "->PDL index "); break;
-		case 014: strcpy(buffer, "->PDL ptr "); break;
+		case 0: printf("-><none>"); break;
+		case 1: printf("->LC "); break;
+		case 2: printf("->IC "); break;
+		case 010: printf("->PDL[ptr] "); break;
+		case 011: printf("->PDL[ptr],push "); break;
+		case 012: printf("->PDL[index] "); break;
+		case 013: printf("->PDL index "); break;
+		case 014: printf("->PDL ptr "); break;
 
-		case 015: strcpy(buffer, "->SPC data,push "); break;
+		case 015: printf("->SPC data,push "); break;
 
-		case 016: strcpy(buffer, "->OA-reg-lo "); break;
-		case 017: strcpy(buffer, "->OA-reg-hi "); break;
+		case 016: printf("->OA-reg-lo "); break;
+		case 017: printf("->OA-reg-hi "); break;
 
-		case 020: strcpy(buffer, "->VMA "); break;
-		case 021: strcpy(buffer, "->VMA,start-read "); break;
-		case 022: strcpy(buffer, "->VMA,start-write "); break;
-		case 023: strcpy(buffer, "->VMA,write-map "); break;
+		case 020: printf("->VMA "); break;
+		case 021: printf("->VMA,start-read "); break;
+		case 022: printf("->VMA,start-write "); break;
+		case 023: printf("->VMA,write-map "); break;
 
-		case 030: strcpy(buffer, "->MD "); break;
-		case 031: strcpy(buffer, "->MD,start-read "); break;
-		case 032: strcpy(buffer, "->MD,start-write "); break;
-		case 033: strcpy(buffer, "->MD,write-map "); break;
+		case 030: printf("->MD "); break;
+		case 031: printf("->MD,start-read "); break;
+		case 032: printf("->MD,start-write "); break;
+		case 033: printf("->MD,write-map "); break;
 		}
 
-		sprintf(&buffer[strlen(buffer)], ",m[%o] ", dest & 037);
+		printf(",m[%o] ", dest & 037);
 	}
-	return buffer;
 }
 
-char *
-disassemble_ucode_loc(unsigned int loc, ucw_t u)
+void
+disassemble_ucode_loc(int loc, ucw_t u)
 {
-	static char buffer[256];
-
 	int a_src, m_src, new_pc, dest, alu_op;
 	int r_bit, p_bit, n_bit, ir8, ir7;
 	int widthm1, pos;
 	int mr_sr_bits;
+	int jump_op;
 
 	int disp_cont, disp_addr;
 	int map, len, rot;
 	int out_bus;
 
-	buffer[0] = '\0';
-
 	if ((u >> 42) & 1)
-		strcpy(buffer, "popj; ");
+		printf("popj; ");
 
 	switch ((u >> 43) & 03) {
 	case 0: /* alu */
-		strcat(buffer, "(alu) ");
+		printf("(alu) ");
 
 		if ((u & NOP_MASK) == 0) {
-			strcat(buffer, "no-op");
+			printf("no-op");
 			goto done;
 		}
 
@@ -312,118 +301,115 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 		alu_op = (u >> 3) & 017;
 		if (ir8 == 0) {
 			if (ir7 == 0) {
-				sprintf(&buffer[strlen(buffer)], "%s ", alu_bool_op[alu_op]);
+				printf("%s ", alu_bool_op[alu_op]);
 			} else {
-				sprintf(&buffer[strlen(buffer)], "%s ", alu_arith_op[alu_op]);
+				printf("%s ", alu_arith_op[alu_op]);
 			}
 		} else {
 			switch (alu_op) {
-			case 0: strcat(buffer, "mult-step "); break;
-			case 1: strcat(buffer, "div-step "); break;
-			case 5: strcat(buffer, "rem-corr "); break;
-			case 011: strcat(buffer, "init-div-step "); break;
+			case 0: printf("mult-step "); break;
+			case 1: printf("div-step "); break;
+			case 5: printf("rem-corr "); break;
+			case 011: printf("init-div-step "); break;
 			}
 		}
 
-		sprintf(&buffer[strlen(buffer)], "a=%o m=%o ", a_src, m_src);
-		strcat(buffer, disassemble_m_src(u, m_src));
+		printf("a=%o m=%o ", a_src, m_src);
+		disassemble_m_src(u, m_src);
 
 		if ((u >> 2) & 1)
-			strcat(buffer, "C=1 ");
+			printf("C=1 ");
 		else
-			strcat(buffer, "C=0 ");
+			printf("C=0 ");
 
 		switch (out_bus) {
-		case 1: strcat(buffer, "alu-> "); break;
-		case 2: strcat(buffer, "alu>>+s "); break;
-		case 3: strcat(buffer, "alu<<+q31 "); break;
+		case 1: printf("alu-> "); break;
+		case 2: printf("alu>>+s "); break;
+		case 3: printf("alu<<+q31 "); break;
 		}
 
 		switch (u & 3) {
-		case 1: strcat(buffer, "<<Q "); break;
-		case 2: strcat(buffer, ">>Q "); break;
-		case 3: strcat(buffer, "Q-R "); break;
+		case 1: printf("<<Q "); break;
+		case 2: printf(">>Q "); break;
+		case 3: printf("Q-R "); break;
 		}
 
-		strcat(buffer, disassemble_dest(dest));
+		disassemble_dest(dest);
 		break;
 	case 1: /* jump */
-		strcat(buffer, "(jump) ");
+		printf("(jump) ");
 
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 		new_pc = (u >> 12) & 037777;
 
+		jump_op = (u >> 14) & 3;
 
-		sprintf(&buffer[strlen(buffer)], "a=%o m=", a_src);
+		printf("a=%o m=", a_src);
 		disassemble_m_src(u, m_src);
 
 		r_bit = (u >> 9) & 1;
 		p_bit = (u >> 8) & 1;
 		n_bit = (u >> 7) & 1;
 
-		sprintf(&buffer[strlen(buffer)], "pc %o, %s%s",
-			new_pc,
-			r_bit ? "R " : "",
-			p_bit ? "P " : "");
+		printf("pc %o, %s%s",
+		       new_pc,
+		       r_bit ? "R " : "",
+		       p_bit ? "P " : "");
 
 		if (n_bit)
 			/* INHIBIT-XCT-NEXT */
-			strcat(buffer, "!next ");
+			printf("!next ");
 		if (u & (1<<6))
 			/* INVERT-JUMP-SENSE */
-			strcat(buffer, "!jump ");
+			printf("!jump ");
 
 		if (u & (1<<5)) {
 			switch (u & 017) {
 			case 0:
-			case 1: strcat(buffer, "M-src < A-src "); break;
-			case 2: strcat(buffer, "M-src <= A-src "); break;
-			case 3: strcat(buffer, "M-src = A-src "); break;
-			case 4: strcat(buffer, "pf "); break;
-			case 5: strcat(buffer, "pf/int "); break;
-			case 6: strcat(buffer, "pf/int/seq "); break;
+			case 1: printf("M-src < A-src "); break;
+			case 2: printf("M-src <= A-src "); break;
+			case 3: printf("M-src = A-src "); break;
+			case 4: printf("pf "); break;
+			case 5: printf("pf/int "); break;
+			case 6: printf("pf/int/seq "); break;
 			case 7:
-				strcat(buffer, "jump-always "); break;
+				printf("jump-always "); break;
 			}
 		} else {
-			sprintf(&buffer[strlen(buffer)], "m-rot<< %o", (int)u & 037);
+			printf("m-rot<< %o", (int)u & 037);
 		}
 
-		/*
-		  int jump_op;
-
-		  jump_op = (u >> 14) & 3;
-
-		  switch (jump_op) {
-		  case 0: printf("jump-xct-next "); break;
-		  case 1: printf("jump "); break;
-		  case 2: printf("call-xct-next "); break;
-		  case 3: printf("call "); break;
-		  }
-		*/
+/*
+  switch (jump_op) {
+  case 0: printf("jump-xct-next "); break;
+  case 1: printf("jump "); break;
+  case 2: printf("call-xct-next "); break;
+  case 3: printf("call "); break;
+  }
+*/
 		break;
 	case 2: /* dispatch */
-		strcat(buffer, "(dispatch) ");
+		printf("(dispatch) ");
 
 		disp_cont = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 
-		if ((u >> 25) & 1) strcat(buffer, "!N+1 ");
-		if ((u >> 24) & 1) strcat(buffer, "ISH ");
+		if ((u >> 25) & 1) printf("!N+1 ");
+		if ((u >> 24) & 1) printf("ISH ");
 		disp_addr = (u >> 12) & 03777;
 		map = (u >> 8) & 3;
 		len = (u >> 5) & 07;
 		rot = u & 037;
 
-		sprintf(&buffer[strlen(buffer)], "m=%o ", m_src);
-		strcat(buffer, disassemble_m_src(u, m_src));
+		printf("m=%o ", m_src);
+		disassemble_m_src(u, m_src);
 
-		sprintf(&buffer[strlen(buffer)], "disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
-			disp_cont, disp_addr, map, len, rot);
+		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ",
+		       disp_cont, disp_addr, map, len, rot);
 		break;
 	case 3: /* byte */
-		strcat(buffer, "(byte) ");
+		printf("(byte) ");
 
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -433,32 +419,32 @@ disassemble_ucode_loc(unsigned int loc, ucw_t u)
 		widthm1 = (u >> 5) & 037;
 		pos = u & 037;
 
-		sprintf(&buffer[strlen(buffer)], "a=%o m=", a_src);
+		printf("a=%o m=", a_src);
 		disassemble_m_src(u, m_src);
 
 		switch (mr_sr_bits) {
 		case 0:
 			break;
 		case 1: /* ldb */
-			sprintf(&buffer[strlen(buffer)], "ldb pos=%o, width=%o ",
-				pos, widthm1+1);
+			printf("ldb pos=%o, width=%o ",
+			       pos, widthm1+1);
 			break;
 		case 2:
-			sprintf(&buffer[strlen(buffer)], "sel dep (a<-m&mask) pos=%o, width=%o ",
-				pos, widthm1+1);
+			printf("sel dep (a<-m&mask) pos=%o, width=%o ",
+			       pos, widthm1+1);
 			break;
 		case 3: /* dpb */
-			sprintf(&buffer[strlen(buffer)], "dpb pos=%o, width=%o ",
-				pos, widthm1+1);
+			printf("dpb pos=%o, width=%o ",
+			       pos, widthm1+1);
 			break;
 		}
 
-		strcat(buffer, disassemble_dest(dest));
+		disassemble_dest(dest);
 		break;
 	}
 
-done:
-	return buffer;
+ done:
+	printf("\n");
 }
 
 void
@@ -480,7 +466,7 @@ disassemble_prom(void)
 
 		printf("%03o %016llo ", i, prom_ucode[i]);
 
-		printf("%s\n", disassemble_ucode_loc(i, u));
+		disassemble_ucode_loc(i, u);
 	}
 }
 

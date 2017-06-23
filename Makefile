@@ -65,6 +65,9 @@ lmfs: lmfs.c
 lod: lod.c macro.c
 	$(CC) $(CFLAGS) -o $@ $<
 
+cc: cc.c decode.c
+	$(CC) $(CFLAGS) -o $@ $<
+
 disk.img:
 	./diskmaker -c -f disk.img -t disk.cfg
 
