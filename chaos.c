@@ -20,18 +20,11 @@
 #include "endian.h"
 #include "chaos.h"
 
-#define USE_LOCAL_CHAOS     1
-
 #ifndef CHAOS_MY_ADDRESS
 # define CHAOS_MY_ADDRESS 0401
 #endif
 
-#ifndef CHAOS_DEBUG
-# define CHAOS_DEBUG 0
-#endif
-
 #define CHAOS_DEBUG_PKT 0
-//#define CHAOS_TOSS_IF_RXBUFF_FULL
 
 #define CHAOS_BUF_SIZE_BYTES 8192
 
@@ -52,9 +45,7 @@ int chaos_rcv_buffer_empty;
 int chaos_fd;
 int chaos_need_reconnect;
 static int reconnect_delay;
-#if !USE_LOCAL_CHAOS
 static int reconnect_time;
-#endif
 void chaos_force_reconect(void);
 int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_reconnect(void);
@@ -108,17 +99,12 @@ chaos_rx_pkt(void)
 	chaos_rcv_buffer_ptr = 0;
 	chaos_bit_count = (chaos_rcv_buffer_size * 2 * 8) - 1;
 	if (chaos_rcv_buffer_size > 0) {
-#if CHAOS_DEBUG
-		printf("chaos: set RDN, generate interrupt\n");
-#endif
+		tracenet("chaos: set RDN, generate interrupt\n");
 		chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
 		if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE)
 			assert_unibus_interrupt(0270);
-	}
-#if CHAOS_DEBUG
-	else
-		printf("chaos_rx_pkt: called, but no data in buffer\n");
-#endif
+	} else
+		tracenet("chaos_rx_pkt: called, but no data in buffer\n");
 }
 
 void
@@ -224,12 +210,9 @@ dumpbuffer(unsigned short *buffer, int size)
 void
 chaos_xmit_pkt(void)
 {
-#if CHAOS_DEBUG
-	printf("chaos_xmit_pkt() %d bytes, data len %d\n",
-	       chaos_xmit_buffer_ptr * 2,
-	       (chaos_xmit_buffer_ptr > 0 ? chaos_xmit_buffer[1]&0x3f : -1));
-#endif
-
+	tracenet("chaos_xmit_pkt() %d bytes, data len %d\n",
+		 chaos_xmit_buffer_ptr * 2,
+		 (chaos_xmit_buffer_ptr > 0 ? chaos_xmit_buffer[1]&0x3f : -1));
 
 	chaos_xmit_buffer_size = chaos_xmit_buffer_ptr;
 
@@ -272,9 +255,7 @@ chaos_get_bit_count(void)
 	if (chaos_rcv_buffer_size > 0)
 		return chaos_bit_count;
 	else {
-#if CHAOS_DEBUG
-		printf("chaos_get_bit_count: returned empty count\n");
-#endif
+		tracenet("chaos_get_bit_count: returned empty count\n");
 		return 07777;
 	}
 }
@@ -288,17 +269,13 @@ chaos_get_rcv_buffer(void)
 
 		if (chaos_rcv_buffer_ptr == chaos_rcv_buffer_size) {
 			chaos_rcv_buffer_empty = 1;
-#if CHAOS_DEBUG
-			printf("chaos_get_rcv_buffer: marked buffer as empty\n");
-#endif
+			tracenet("chaos_get_rcv_buffer: marked buffer as empty\n");
 		}
 	} else {
 		/* read last word, clear receive done */
 		chaos_csr &= ~CHAOS_CSR_RECEIVE_DONE;
 		chaos_rcv_buffer_size = 0;
-#if CHAOS_DEBUG
-		printf("chaos_get_rcv_buffer: cleared CHAOS_CSR_RECEIVE_DONE\n");
-#endif
+		tracenet("chaos_get_rcv_buffer: cleared CHAOS_CSR_RECEIVE_DONE\n");
 	}
 	return v;
 }
@@ -318,9 +295,7 @@ chaos_get_csr(void)
 		static int old_chaos_csr = 0;
 		if (chaos_csr != old_chaos_csr) {
 			old_chaos_csr = chaos_csr;
-#if CHAOS_DEBUG
-			printf("unibus: chaos read csr %o\n", chaos_csr);
-#endif
+			tracenet("unibus: chaos read csr %o\n", chaos_csr);
 		}
 	}
 
@@ -386,19 +361,17 @@ chaos_set_csr(int v)
 		CHAOS_CSR_RECEIVE_DONE |
 		CHAOS_CSR_RECEIVER_CLEAR;
 
-#if CHAOS_DEBUG
-	printf("chaos: set csr bits 0%o (",v);
-	print_csr_bits(v);
-	printf ("), old 0%o ", chaos_csr);
-#endif
 
+	if (trace_net_flag) {
+		tracenet("chaos: set csr bits 0%o (",v);
+		print_csr_bits(v);
+		tracenet ("), old 0%o ", chaos_csr);
+	}
 
 	chaos_csr = (chaos_csr & mask) | (v & ~mask);
 
 	if (chaos_csr & CHAOS_CSR_RESET) {
-#if CHAOS_DEBUG
-		printf("reset ");
-#endif
+		tracenet("reset ");
 		chaos_rcv_buffer_size = 0;
 		chaos_xmit_buffer_ptr = 0;
 		chaos_lost_count = 0;
@@ -426,9 +399,7 @@ chaos_set_csr(int v)
 	}
 
 	if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE) {
-#if CHAOS_DEBUG
-		printf("rx-enable ");
-#endif
+		tracenet("rx-enable ");
 		if (chaos_rcv_buffer_empty) {
 			chaos_rcv_buffer_ptr = 0;
 			chaos_rcv_buffer_size = 0;
@@ -437,17 +408,13 @@ chaos_set_csr(int v)
 		/* if buffer is full, generate status & interrupt again */
 		if (chaos_rcv_buffer_size > 0)
 		{
-#if CHAOS_DEBUG
-			printf("\n rx-enabled and buffer is full\n");
-#endif
+			tracenet("\n rx-enabled and buffer is full\n");
 			chaos_rx_pkt();
 		}
 	}
 
 	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
-#if CHAOS_DEBUG
-		printf("tx-enable ");
-#endif
+		tracenet("tx-enable ");
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
 #if 0
 		char_xmit_done_intr();
@@ -456,15 +423,14 @@ chaos_set_csr(int v)
 #endif
 	}
 
-#if CHAOS_DEBUG
-	printf(" New csr 0%o", chaos_csr);
-	print_csr_bits(chaos_csr);
-	printf("\n");
-#endif
+	if (trace_net_flag) {
+		tracenet(" New csr 0%o", chaos_csr);
+		print_csr_bits(chaos_csr);
+		tracenet("\n");
+	}
+
 	return 0;
 }
-
-#if USE_LOCAL_CHAOS
 
 void
 chaos_force_reconect(void)
@@ -596,10 +562,8 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 	if (packet->destaddr == conn->remoteaddr) {
 		for (;;) {
 			if (conn->state == cs_open && (conn->lastsent - conn->remotelastreceived) >= conn->twsize && ((packet->opcode >> 8) != CHAOS_OPCODE_STS)) {
-#if 0 && CHAOS_DEBUG
-				printf("waiting for remote ack packet=%d\n", packet->number);
-				printf("lastsent = %d  remotelastreceived = %d  twsize = %d\n", conn->lastsent, conn->remotelastreceived, conn->twsize);
-#endif
+				tracenet("waiting for remote ack packet=%d\n", packet->number);
+				tracenet("lastsent = %d  remotelastreceived = %d  twsize = %d\n", conn->lastsent, conn->remotelastreceived, conn->twsize);
 				pthread_mutex_lock(&conn->twsem);
 				struct timespec ts;
 
@@ -630,9 +594,7 @@ int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
 	node->packet = packet;
 	nextpacket = conn->lastreceived + 1;
 	if (cmp_gt(packet->number, nextpacket)) {
-#if CHAOS_DEBUG
-		printf("chaos_connection_queue: out-of-order nextpacket=%d packet=%d\n", nextpacket, packet->number);
-#endif
+		tracenet("chaos_connection_queue: out-of-order nextpacket=%d packet=%d\n", nextpacket, packet->number);
 		pthread_mutex_lock(&conn->queuelock);
 		if (conn->ordertail)
 			conn->ordertail->next = node;
@@ -674,9 +636,7 @@ chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
 
 			for (node = conn->orderhead; node; prev = node, node = node->next)
 				if (node->packet->number == nextpacket) {
-#if CHAOS_DEBUG
-					printf("chaos_connection_deque: grabbed out-of-order packet %d\n", nextpacket);
-#endif
+					tracenet("chaos_connection_deque: grabbed out-of-order packet %d\n", nextpacket);
 					if (prev == 0)
 						conn->orderhead = node->next;
 					else
@@ -744,10 +704,7 @@ chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len)
 		packet->number = conn->packetnumber = 1;
 	packet->acknowledgement = conn->lastreceived;
 	conn->lastacked = conn->lastreceived;
-
-#if CHAOS_DEBUG
-	printf("chaos_allocate_packet: %04x number: %d\n", conn->localindex, packet->number);
-#endif
+	tracenet("chaos_allocate_packet: %04x number: %d\n", conn->localindex, packet->number);
 	return packet;
 }
 
@@ -769,9 +726,7 @@ chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsiz
 	chaos_connection *conn = chaos_make_connection();
 	chaos_packet *pkt;
 
-#if CHAOS_DEBUG
-	printf("chaos_open_connection(address=%o,contact=%s)\n", co_host, contact);
-#endif
+	tracenet("chaos_open_connection(address=%o,contact=%s)\n", co_host, contact);
 
 	co_clength = strlen(contact);
 
@@ -838,16 +793,12 @@ chaos_poll(void)
 {
 	/* is rx buffer full? */
 	if (!chaos_rcv_buffer_empty && (chaos_csr & CHAOS_CSR_RECEIVE_DONE)) {
-#if CHAOS_DEBUG
-		printf("chaos: polling, but unread data exists\n");
-#endif
+		tracenet("chaos: polling, but unread data exists\n");
 		return 0;
 	}
 
 	if (!chaos_rcv_buffer_empty) {
-#if CHAOS_DEBUG
-		printf("chaos: polling, but buffer not empty\n");
-#endif
+		tracenet("chaos: polling, but buffer not empty\n");
 		return 0;
 	}
 	if (queuehead == 0) {
@@ -855,9 +806,7 @@ chaos_poll(void)
 	}
 
 	if (!(chaos_csr & CHAOS_CSR_RECEIVE_ENABLE)) {
-#if CHAOS_DEBUG
-		printf("chaos: polling but rx not enabled\n");
-#endif
+		tracenet("chaos: polling but rx not enabled\n");
 		return 0;
 	}
 
@@ -893,9 +842,7 @@ chaos_poll(void)
 	chaos_rcv_buffer_size = size;
 	chaos_rcv_buffer_empty = 0;
 
-#if CHAOS_DEBUG
-	printf("chaos polling: got chaosd packet of %d bytes\n", chaos_rcv_buffer_size * 2);
-#endif
+	tracenet("chaos polling: got chaosd packet of %d bytes\n", chaos_rcv_buffer_size * 2);
 
 #if CHAOS_DEBUG_PKT
 	dumpbuffer(chaos_rcv_buffer, size * 2);
@@ -923,10 +870,8 @@ chaos_send_to_chaosd(char *buffer, int size)
 		return 0;
 	}
 
-#if CHAOS_DEBUG
-	printf("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n",
-	       packet->destaddr, chaos_addr, size, (size + 1) / 2);
-#endif
+	tracenet("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n",
+		 packet->destaddr, chaos_addr, size, (size + 1) / 2);
 
 	// look for packets addressed to the local server
 	if (packet->destaddr == CHAOS_SERVER_ADDRESS) {
@@ -934,9 +879,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 		if (((packet->opcode & 0xff00) >> 8) == CHAOS_OPCODE_RFC) {
 			if (conn && conn->state == cs_rfc) {
-#if CHAOS_DEBUG
-				printf("Duplicate RFC\n");
-#endif
+				tracenet("Duplicate RFC\n");
 				return 0;
 			}
 			if (conn) {
@@ -947,9 +890,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				return 0;
 			}
 
-#if CHAOS_DEBUG
-			printf("RFC packet\n");
-#endif
+			tracenet("RFC packet\n");
 
 			if (memcmp(&packet->data, "FILE", 4) == 0) {
 				void processdata(chaos_connection *conn);
@@ -962,9 +903,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				}
 
 				conn = chaos_make_connection();
-#if CHAOS_DEBUG
-				printf("RFC FILE\n");
-#endif
+				tracenet("RFC FILE\n");
 				conn->remoteaddr = packet->sourceaddr;
 				conn->remoteindex = packet->sourceindex;
 				answer = chaos_allocate_packet(conn, CHAOS_OPCODE_OPN, 2 * sizeof(unsigned short));
@@ -989,9 +928,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				printf("MINI: '%s'\n", &packet->data[4]);
 
 				conn = chaos_make_connection();
-#if CHAOS_DEBUG
-				printf("RFC MINI\n");
-#endif
+				tracenet("RFC MINI\n");
 				conn->remoteaddr = packet->sourceaddr;
 				conn->remoteindex = packet->sourceindex;
 				answer = chaos_allocate_packet(conn, CHAOS_OPCODE_OPN, 2 * sizeof(unsigned short));
@@ -1072,9 +1009,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				status->subnetident = CHAOS_SERVER_ADDRESS;
 				status->subnetnumshorts = 8 * sizeof(int) / sizeof(short);
 				chaos_queue(answer);
-#if CHAOS_DEBUG
-				printf("statusrfc: answering\n");
-#endif
+				tracenet("statusrfc: answering\n");
 				return 0;
 			}
 
@@ -1122,9 +1057,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 
 				conn->state = cs_open;
 				conn->twsize = *(unsigned short *)&packet->data[2];
-#if CHAOS_DEBUG
-				printf("STS: twsize = %d\n", conn->twsize);
-#endif
+				tracenet("STS: twsize = %d\n", conn->twsize);
 				pthread_mutex_lock(&conn->twsem);
 				pthread_cond_signal(&conn->twcond);
 				pthread_mutex_unlock(&conn->twsem);
@@ -1132,9 +1065,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 			return 0;
 		}
 		if (conn && (packet->opcode >> 8) == CHAOS_OPCODE_CLS) {
-#if CHAOS_DEBUG
-			printf("chaos: got close\n");
-#endif
+			tracenet("chaos: got close\n");
 			conn->state = cs_closed;
 
 			pthread_mutex_lock(&conn->queuesem);
@@ -1145,9 +1076,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 			return 0;
 		}
 		if (conn && (cmp_gt(conn->lastreceived, packet->number) || (conn->lastreceived == packet->number))) {
-#if CHAOS_DEBUG
-			printf("chaos: Duplicate data packet\n");
-#endif
+			tracenet("chaos: Duplicate data packet\n");
 			chaos_packet *status = chaos_allocate_packet(conn, CHAOS_OPCODE_STS, 2 * sizeof(unsigned short));
 
 			status->number = packet->number;
@@ -1191,380 +1120,3 @@ chaos_init(void)
 
 	return 0;
 }
-
-#else // !USE_LOCAL_CHAOS
-
-#define UNIX_SOCKET_PATH	"/var/tmp/"
-#define UNIX_SOCKET_CLIENT_NAME	"chaosd_"
-#define UNIX_SOCKET_SERVER_NAME	"chaosd_server"
-#define UNIX_SOCKET_PERM	S_IRWXU
-
-static struct sockaddr_un unix_addr;
-
-chaos_packet *
-chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len)
-{
-	return 0;
-}
-
-void
-chaos_queue(chaos_packet *packet)
-{
-}
-
-chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
-{
-	return 0;
-}
-
-chaos_connection *
-chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize)
-{
-	return 0;
-}
-
-int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
-{
-	return 0;
-}
-
-void
-chaos_delete_connection(chaos_connection *conn)
-{
-}
-
-void chaos_interrupt_connection(chaos_connection *conn)
-{
-}
-
-void
-chaos_force_reconect(void)
-{
-#if CHAOS_DEBUG || 1
-	printf("chaos: forcing reconnect to chaosd\n");
-#endif
-	close(chaos_fd);
-	chaos_fd = 0;
-	chaos_need_reconnect = 1;
-}
-
-int
-chaos_poll(void)
-{
-	int ret;
-	struct pollfd pfd[1];
-	int nfds, timeout;
-
-	if (chaos_need_reconnect) {
-		chaos_reconnect();
-	}
-
-	if (chaos_fd == 0) {
-		return 0;
-	}
-
-	timeout = 0;
-	nfds = 1;
-	pfd[0].fd = chaos_fd;
-	pfd[0].events = POLLIN;
-	pfd[0].revents = 0;
-
-	ret = poll(pfd, nfds, timeout);
-	if (ret < 0) {
-#if CHAOS_DEBUG
-		printf("chaos: Polling, nothing there (RDN=%o)\n",
-		       chaos_csr & CHAOS_CSR_RECEIVE_DONE);
-#endif
-		chaos_need_reconnect = 1;
-		return -1;
-	}
-
-	if (ret > 0) {
-		u_char lenbytes[4];
-		int len;
-
-		/* is rx buffer full? */
-		if (!chaos_rcv_buffer_empty &&
-		    (chaos_csr & CHAOS_CSR_RECEIVE_DONE))
-		{
-#ifndef CHAOS_TOSS_IF_RXBUFF_FULL
-			printf("chaos: polling, but unread data exists\n");
-			return 0;
-#else
-			/*
-			 * Toss packets arriving when buffer is already in use
-			 * they will be resent
-			 */
-#if CHAOS_DEBUG
-			printf("chaos: polling, unread data, drop "
-			       "(RDN=%o, lost %d)\n",
-			       chaos_csr & CHAOS_CSR_RECEIVE_DONE,
-			       chaos_lost_count);
-#endif
-			chaos_lost_count++;
-			read(chaos_fd, lenbytes, 4);
-			len = (lenbytes[0] << 8) | lenbytes[1];
-#if CHAOS_DEBUG
-			printf("chaos: tossing packet of %d bytes\n", len);
-#endif
-			if (len > sizeof(chaos_rcv_buffer_toss)) {
-				printf("chaos packet won't fit");
-				chaos_force_reconect();
-				return -1;
-			}
-
-			/* toss it */
-			read(chaos_fd, (char *)chaos_rcv_buffer_toss, len);
-			return -1;
-#endif
-		}
-
-		/* read header from chaosd */
-		ret = read(chaos_fd, lenbytes, 4);
-		if (ret <= 0) {
-			perror("chaos: header read error");
-			chaos_force_reconect();
-			return -1;
-		}
-
-		len = (lenbytes[0] << 8) | lenbytes[1];
-
-		if (len > sizeof(chaos_rcv_buffer)) {
-			printf("chaos: packet too big: "
-			       "pkt size %d, buffer size %lu\n",
-			       len, sizeof(chaos_rcv_buffer));
-
-			/* When we get out of synch break socket conn */
-			chaos_force_reconect();
-			return -1;
-		}
-
-		ret = read(chaos_fd, (char *)chaos_rcv_buffer, len);
-		if (ret < 0) {
-			perror("chaos: read");
-			chaos_force_reconect();
-			return -1;
-		}
-
-#if CHAOS_DEBUG
-		printf("chaos: polling; got chaosd packet %d\n", ret);
-#endif
-
-		if (ret > 0) {
-			int dest_addr;
-
-			chaos_rcv_buffer_size = (ret+1)/2;
-			chaos_rcv_buffer_empty = 0;
-
-#if __BIG_ENDIAN__
-			/* flip shorts to host order */
-			int w;
-			for (w = 0; w < chaos_rcv_buffer_size; w++) {
-				chaos_rcv_buffer[w] = SWAP_SHORT(chaos_rcv_buffer[w]);
-			}
-#endif
-
-			dest_addr = chaos_rcv_buffer[chaos_rcv_buffer_size-3];
-
-			/* if not to us, ignore */
-			if (dest_addr != chaos_addr) {
-				chaos_rcv_buffer_size = 0;
-				chaos_rcv_buffer_empty = 1;
-				return 0;
-			}
-
-#if CHAOS_DEBUG
-			printf("chaos rx: to %o, my %o\n", dest_addr, chaos_addr);
-#endif
-
-#if CHAOS_DEBUG_PKT
-			dumpbuffer(chaos_rcv_buffer, chaos_rcv_buffer_size * 2);
-#endif
-
-			chaos_rx_pkt();
-		}
-	}
-
-	return 0;
-}
-
-int
-chaos_send_to_chaosd(char *buffer, int size)
-{
-	int ret, wcount, dest_addr;
-
-	/* local loopback */
-	if (chaos_csr & CHAOS_CSR_LOOP_BACK) {
-		printf("chaos: loopback %d bytes\n", size);
-		memcpy(chaos_rcv_buffer, buffer, size);
-
-		chaos_rcv_buffer_size = (size+1)/2;
-		chaos_rcv_buffer_empty = 0;
-
-		chaos_rx_pkt();
-
-		return 0;
-	}
-
-	wcount = (size+1)/2;
-	dest_addr = ((u_short *)buffer)[wcount-3];
-
-	//printf("chaos_send_to_chaosd() dest_addr %o\n", dest_addr);
-
-#if __BIG_ENDIAN__
-	/* flip host order to network order */
-	int w;
-	for (w = 0; w < wcount; w++) {
-		u_short *ps = &((u_short *)buffer)[w];
-		*ps = SWAP_SHORT(*ps);
-	}
-#endif
-
-#if CHAOS_DEBUG
-	printf("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n",
-	       dest_addr, chaos_addr, size, wcount);
-#endif
-
-	/* recieve packets address to ourselves */
-	if (dest_addr == chaos_addr) {
-		memcpy(chaos_rcv_buffer, buffer, size);
-
-		chaos_rcv_buffer_size = (size+1)/2;
-		chaos_rcv_buffer_empty = 0;
-
-		chaos_rx_pkt();
-	}
-
-	/* chaosd server */
-	if (chaos_fd) {
-		struct iovec iov[2];
-		unsigned char lenbytes[4];
-		int ret;
-
-		lenbytes[0] = size >> 8;
-		lenbytes[1] = size;
-		lenbytes[2] = 1;
-		lenbytes[3] = 0;
-
-		iov[0].iov_base = lenbytes;
-		iov[0].iov_len = 4;
-
-		iov[1].iov_base = buffer;
-		iov[1].iov_len = size;
-
-		ret = writev(chaos_fd, iov, 2);
-		if (ret < 0) {
-			perror("chaos write");
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-
-/*
- * connect to server using specificed socket type
- */
-static int
-chaos_connect_to_server(void)
-{
-	int len;
-
-	if (0) printf("connect_to_server()\n");
-
-	if ((chaos_fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
-		perror("socket(AF_UNIX)");
-		chaos_fd = 0;
-		return -1;
-	}
-
-	memset(&unix_addr, 0, sizeof(unix_addr));
-
-	sprintf(unix_addr.sun_path, "%s%s%05u",
-		UNIX_SOCKET_PATH, UNIX_SOCKET_CLIENT_NAME, getpid());
-
-	unix_addr.sun_family = AF_UNIX;
-	len = SUN_LEN(&unix_addr);
-
-	unlink(unix_addr.sun_path);
-
-	if ((bind(chaos_fd, (struct sockaddr *)&unix_addr, len) < 0)) {
-		perror("bind(AF_UNIX)");
-		return -1;
-	}
-
-	if (chmod(unix_addr.sun_path, UNIX_SOCKET_PERM) < 0) {
-		perror("chmod(AF_UNIX)");
-		return -1;
-	}
-
-	memset(&unix_addr, 0, sizeof(unix_addr));
-	sprintf(unix_addr.sun_path, "%s%s",
-		UNIX_SOCKET_PATH, UNIX_SOCKET_SERVER_NAME);
-	unix_addr.sun_family = AF_UNIX;
-	len = SUN_LEN(&unix_addr);
-
-	if (connect(chaos_fd, (struct sockaddr *)&unix_addr, len) < 0) {
-		printf("chaos: no chaosd server\n");
-		return -1;
-	}
-
-	socklen_t value = 0;
-	socklen_t length = sizeof(value);
-
-	if (getsockopt(chaos_fd, SOL_SOCKET, SO_RCVBUF, &value, &length) == 0)
-	{
-		value = value * 4;
-		if (setsockopt(chaos_fd, SOL_SOCKET, SO_RCVBUF, &value, sizeof(value)) != 0)
-			printf("setsockopt(SO_RCVBUF) failed\n");
-	}
-
-	if (0) printf("chaos_fd %d\n", chaos_fd);
-
-	return 0;
-}
-
-int
-chaos_init(void)
-{
-	if (chaos_connect_to_server()) {
-		close(chaos_fd);
-		chaos_fd = 0;
-		return -1;
-	}
-
-	chaos_rcv_buffer_empty = 1;
-
-	return 0;
-}
-
-int
-chaos_reconnect(void)
-{
-	/* */
-	if (++reconnect_delay < 200) {
-		return 0;
-	}
-	reconnect_delay = 0;
-
-	/* try every 5 seconds */
-	if (reconnect_time &&
-	    time(NULL) < (reconnect_time + 5))
-	{
-		return 0;
-	}
-	reconnect_time = time(NULL);
-
-# if CHAOS_DEBUG || 1
-	printf("chaos: reconnecting to chaosd\n");
-#endif
-	if (chaos_init() == 0) {
-		printf("chaos: reconnected\n");
-		chaos_need_reconnect = 0;
-		reconnect_delay = 0;
-	}
-
-	return 0;
-}
-#endif
