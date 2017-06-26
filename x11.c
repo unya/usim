@@ -134,84 +134,6 @@ display_poll(void)
 	}
 }
 
-#if 0
-static void sdl_resize(DisplayState *ds, int w, int h)
-{
-	int flags;
-
-	flags = SDL_HWSURFACE|SDL_ASYNCBLIT|SDL_HWACCEL;
-	//    flags |= SDL_RESIZABLE;
-	//    flags |= SDL_FULLSCREEN;
-	//    screen = SDL_SetVideoMode(w, h, 0, flags);
-	//    screen = SDL_SetVideoMode(w, h, 8, flags);
-	screen = SDL_SetVideoMode(w, h, 8, flags);
-
-	if (!screen) {
-		fprintf(stderr, "Could not open SDL display\n");
-		exit(1);
-	}
-
-	ds->data = screen->pixels;
-	ds->linesize = screen->pitch;
-	ds->depth = screen->format->BitsPerPixel;
-	ds->width = w;
-	ds->height = h;
-}
-
-static void update_caption(void)
-{
-	char buf[1024];
-
-	strcpy(buf, "CADR");
-	if (run_ucode_flag) {
-		strcat(buf, " [Running]");
-	} else {
-		strcat(buf, " [Stopped]");
-	}
-
-	SDL_WM_SetCaption(buf, "CADR");
-}
-
-static void sdl_cleanup(void)
-{
-	SDL_Quit();
-}
-
-
-void
-sdl_setup_display(void)
-{
-	SDL_Surface *logo;
-	unsigned char *p = screen->pixels;
-	int i, j;
-
-	for (i = 0; i < video_width; i++) {
-		for (j = 0; j < video_height; j++)
-			*p++ = COLOR_WHITE;
-	}
-
-#if 0
-	logo = IMG_ReadXPMFromArray(logo_xpm);
-	SDL_BlitSurface(logo, NULL, screen, NULL);
-#else
-	{
-		char *p;
-		unsigned char *ps = screen->pixels;
-		for (j = 0; j < 116; j++) {
-			p = logo_xpm[3+j];
-			for (i = 0; i < 432; i++) {
-				if (p[i] != '.')
-					ps[i] = COLOR_BLACK;
-			}
-			ps += video_width;
-		}
-	}
-#endif
-
-	SDL_UpdateRect(screen, 0, 0, video_width, video_height);
-}
-#endif
-
 void
 video_read(int offset, unsigned int *pv)
 {
@@ -247,14 +169,10 @@ int u_minh = 0x7fffffff, u_maxh, u_minv = 0x7fffffff, u_maxv;
 void
 accumulate_update(int h, int v, int hs, int vs)
 {
-#if 0
-	SDL_UpdateRect(screen, h, v, 32, 1);
-#else
 	if (h < u_minh) u_minh = h;
 	if (h+hs > u_maxh) u_maxh = h+hs;
 	if (v < u_minv) u_minv = v;
 	if (v+vs > u_maxv) u_maxv = v+vs;
-#endif
 }
 
 void
