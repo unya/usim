@@ -1678,42 +1678,6 @@ save_state(void)
 	return 0;
 }
 
-void
-patch_prom_code(void)
-{
-	//#define PATCH_PROM_LOOPS_1
-	//#define PATCH_PROM_LOOPS_2
-
-#ifdef PATCH_PROM_LOOPS_1
-	/* short out some really long loops */
-	prom_ucode[0244] = 0;
-	prom_ucode[0251] = 0;
-	prom_ucode[0256] = 0;
-#endif
-
-#if 0
-	/* test unibus prom enable flag */
-	prom_ucode[0504] = 0;
-	prom_ucode[0510] = 0;
-#endif
-
-#ifdef PATCH_PROM_LOOPS_2
-	prom_ucode[0452] = 04000001000310030; /* m-c <- m-zero */
-#endif
-
-#if 0
-	/* quick hack while debugging verilog */
-	prom_ucode[0175] = 0;
-	prom_ucode[0202] = 0;
-	prom_ucode[0226] = 0;
-	prom_ucode[0232] = 0;
-	prom_ucode[0236] = 0;
-	prom_ucode[0244] = 0;
-	prom_ucode[0251] = 0;
-	prom_ucode[0256] = 0;
-#endif
-}
-
 char *breakpoint_name_prom;
 char *breakpoint_name_mcr;
 int breakpoint_count;
@@ -1940,8 +1904,6 @@ run(void)
 	set_breakpoints(&trace_pt_prom, &trace_pt, &trace_pt_count, &trace_label_pt);
 
 	printf("run:\n");
-
-	patch_prom_code();
 
 	write_phy_mem(0, 0);
 
