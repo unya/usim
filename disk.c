@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 #include "ucode.h"
 #include "config.h"
 #include "endian.h"
@@ -146,6 +149,7 @@ extern void assert_xbus_interrupt(void);
  */
 
 int disk_fd;
+uint8_t *disk_mm;
 
 int disk_status = 1;
 int disk_cmd;
@@ -226,24 +230,8 @@ _disk_read(int block_no, unsigned int *buffer)
 	tracedio("disk: file image block %d(10), offset %ld(10)\n",
 		 block_no, (long)offset);
 
-	ret = lseek(disk_fd, offset, SEEK_SET);
-	if (ret != offset) {
-		printf("disk: image file seek error\n");
-		perror("lseek");
-		return -1;
-	}
-
 	size = 256*4;
-
-	ret = read(disk_fd, buffer, size);
-	if (ret != size) {
-		printf("disk read error; ret %d, offset %lu, size %d\n",
-		       (int)ret, (long)offset, size);
-		perror("read");
-
-		memset((char *)buffer, 0, size);
-		return -1;
-	}
+	memcpy(buffer, disk_mm+offset, size);
 
 	/* byte order fixups? */
 	if (disk_byteswap) {
@@ -264,26 +252,12 @@ _disk_write(int block_no, unsigned int *buffer)
 	tracedio("disk: file image block %d, offset %ld\n",
 		 block_no, (long)offset);
 
-	ret = lseek(disk_fd, offset, SEEK_SET);
-	if (ret != offset) {
-		printf("disk: image file seek error\n");
-		perror("lseek");
-		return -1;
-	}
-
 	size = 256*4;
+	memcpy(disk_mm+offset, buffer, size);
 
 	/* byte order fixups? */
 	if (disk_byteswap) {
 		_swaplongbytes((unsigned int *)buffer, 256);
-	}
-
-	ret = write(disk_fd, buffer, size);
-	if (ret != size) {
-		printf("disk write error; ret %d, offset %lu, size %d\n",
-		       (int)ret, (long)offset, size);
-		perror("write");
-		return -1;
 	}
 
 	return 0;
@@ -696,6 +670,11 @@ disk_init(char *filename)
 		perror(filename);
 		exit(1);
 	}
+
+	struct stat s;
+	fstat(disk_fd, &s);
+	printf("disk: size: %d bytes\n", s.st_size);
+	disk_mm = mmap(NULL, s.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, disk_fd, 0);
 
 	ret = _disk_read(0, label);
 
