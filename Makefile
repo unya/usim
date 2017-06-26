@@ -45,7 +45,7 @@ USIM_HDR += Files.h glob.h
 
 USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
 
-all: usim readmcr diskmaker lod lmfs cc disk.img
+all: TAGS usim readmcr diskmaker lod lmfs cc disk.img
 
 usim: $(USIM_OBJ)
 	$(CC) $(CFLAGS) -o $@ $(USIM_OBJ) $(LFLAGS) $(DISPLAY_LIBS)
@@ -82,5 +82,5 @@ kbd_new.o: DEFINES+=$(DISPLAY_DEFINES)
 kbd_old.o: DEFINES+=$(DISPLAY_DEFINES)
 main.o: DEFINES+=$(DISPLAY_DEFINES)
 
-TAGS:
+TAGS: $(USIM_SRC) $(USIM_HDR) readmcr.c diskmaker.c lmfs.c lod.c macro.c cc.c 
 	find . -type f -iname "*.[ch]" | etags -
