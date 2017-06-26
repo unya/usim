@@ -71,10 +71,8 @@ read_i_mem(int fd, int start, int size)
 			((unsigned long long)w3 << 16) |
 			((unsigned long long)w4 << 0);
 
-		if (showmcr) {
-			printf("%03o %016Lo\n",
-			       loc, ll);
-		}
+		if (showmcr)
+			printf("%03o %016Lo\n", loc, ll);
 
 		ucode[loc] = ll;
 		loc++;
@@ -172,7 +170,7 @@ main(int argc, char *argv[])
 {
 	int c, fd, done, skip;
 
-	showmcr = 1;
+	showmcr = 0;
 	needswap = 1;
 	skip = 0;
 
@@ -189,7 +187,7 @@ main(int argc, char *argv[])
 			break;
 		case 'm':
 			showmcr = 1;
-			break;			
+			break;
 		}
 	}
 
