@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include <signal.h>
 
-#include "logo.h"
-
 extern int run_ucode_flag;
 extern void iob_sdl_key_event(int code, int extra);
 extern void iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons);
