@@ -10,13 +10,11 @@
 #include <sys/types.h>
 
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "ucode.h"
 #include "decode.h"
 #include "syms.h"
-
-/*---!!! Should be detected, or supplied via command line. */
-int needswap = 1;
 
 ucw_t prom_ucode[512];
 
@@ -24,8 +22,8 @@ ucw_t prom_ucode[512];
 unsigned int
 read16(int fd)
 {
-	int fd, i;
-	ssize_t ret;
+	unsigned char b[2];
+	int ret;
 
 	ret = read(fd, b, 2);
 	if (ret < 2) {
@@ -33,10 +31,7 @@ read16(int fd)
 		exit(1);
 	}
 
-	if (needswap)
-		return (b[1] << 8) | b[0];
-
-	return (b[0] << 8) | b[1];
+	return (b[1] << 8) | b[0];
 }
 
 unsigned int
@@ -45,38 +40,52 @@ read32(int fd)
 	unsigned char b[4];
 	int ret;
 
-		ret = read(fd, prom[i], 512);
-		close(fd);
-
-		if (ret != 512) {
-			fprintf(stderr, "read_prom_files: short read\n");
-			exit(1);
-		}
+	ret = read(fd, b, 4);
+	if (ret < 4) {
+		printf("eof!\n");
+		exit(1);
 	}
 
-	if (needswap)
-		return (b[1] << 24) | (b[0] << 16) | (b[3] << 8) | b[2];
-
-	return (b[3] << 24) | (b[2] << 16) | (b[1] << 8) | b[0];
-//	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+	return (b[1] << 24) | (b[0] << 16) | (b[3] << 8) | b[2];
 }
+
 
 int
 read_prom_files(void)
 {
 
-	char *name = "../../lisp/ubin/promh.mcr";
+	char *name = "../sys/ubin/promh.mcr";
 	int fd;
 	unsigned int code, start, size;
 
 	if (alt_prom_flag) {
 		sprintf(name, "./promh.mcr");
- 	}
+	}
 
 	fd = open(name, O_RDONLY | O_BINARY);
 	if (fd < 0) {
 		perror(name);
 		exit(1);
+	}
+
+	code = read32(fd);
+	start = read32(fd);
+	size = read32(fd);
+
+	printf ("prom (%s): code: %d, start: %d, size: %d\n", name, code, start, size);
+
+	int loc = start;
+	for (int i = 0; i < size; i++) {
+		unsigned int w1, w2, w3, w4;
+		w1 = read16(fd);
+		w2 = read16(fd);
+		w3 = read16(fd);
+		w4 = read16(fd);
+		prom_ucode[loc] = ((unsigned long long) w1 << 48) |
+			((unsigned long long) w2 << 32) |
+			((unsigned long long) w3 << 16) |
+			((unsigned long long) w4 << 0);
+		loc++;
 	}
 
 	code = read32(fd);
@@ -107,27 +116,8 @@ show_prom(void)
 {
 	int i;
 
-	for (i = 0; i < 16; i++) {
-		printf("%03o %016llo", i, prom_ucode[i]);
-		printf(" %02x %02x %02x %02x %02x %02x",
-		       prom[0][i],
-		       prom[1][i],
-		       prom[2][i],
-		       prom[3][i],
-		       prom[4][i],
-		       prom[5][i]);
-		printf("\n");
-	}
-
 	for (i = 0; i < 512; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
-		printf(" %02x %02x %02x %02x %02x %02x",
-		       prom[0][i],
-		       prom[1][i],
-		       prom[2][i],
-		       prom[3][i],
-		       prom[4][i],
-		       prom[5][i]);
 		printf("\n");
 	}
 
