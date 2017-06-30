@@ -1912,8 +1912,8 @@ run(void)
 	while (run_ucode_flag) {
 		char op_code;
 		char invert_sense, take_jump;
-		int a_src, m_src, new_pc, dest, alu_op;
-		int r_bit, p_bit, n_bit, ir8, ir7;
+		int a_src, m_src, new_pc, dest, aluop;
+		int r_bit, p_bit, n_bit;
 		int m_src_value, a_src_value;
 
 		int widthm1, pos;
@@ -2262,311 +2262,390 @@ run(void)
 
 			dest = (u >> 14) & 07777;
 			out_bus = (u >> 12) & 3;
-			ir8 = (u >> 8) & 1;
-			ir7 = (u >> 7) & 1;
 			carry_in = (u >> 2) & 1;
 
-			alu_op = (u >> 3) & 017;
-
+			aluop = (u >> 3) & 077;
+			
 			if (trace) {
 				printf("a=%o (%o), m=%o (%o)\n",
 				       a_src, a_src_value,
 				       m_src, m_src_value);
 
-				printf("alu_op %o, ir8 %o, ir7 %o, c %o, "
+				printf("aluop %o, c %o, "
 				       "dest %o, out_bus %d\n",
-				       alu_op, ir8, ir7, carry_in,
+				       aluop, carry_in,
 				       dest, out_bus);
 			}
 
 			/* (spec) ir7 is backward in memo? */
-			if (ir8 == 0 && ir7 == 0) {
+			alu_carry = 0;
+			
+			switch (aluop) {
+				// Arithmetic
+			case 020:
 #ifdef STAT_ALU_USE
-				alu_stat0[alu_op]++;
+				alu_stat0[aluop]++;
 #endif
-				/* logic */
+				alu_out = carry_in ? 0 : -1;
 				alu_carry = 0;
-				switch (alu_op) {
-				case 0: /* [SETZ] */
-					alu_out = 0;
-					break;
-				case 1: /* [AND] */
-					alu_out = m_src_value & a_src_value;
-					break;
-				case 2: /* [ANDCA] */
-					alu_out = m_src_value & ~a_src_value;
-					break;
-				case 3: /* [SETM] */
-					alu_out = m_src_value;
-					break;
-				case 4: /* [ANDCM] */
-					alu_out = ~m_src_value & a_src_value;
-					break;
-				case 5: /* [SETA] */
-					alu_out = a_src_value;
-					break;
-				case 6: /* [XOR] */
-					alu_out = m_src_value ^ a_src_value;
-					break;
-				case 7: /* [IOR] */
-					alu_out = m_src_value | a_src_value;
-					break;
-				case 010: /* [ANDCB] */
-					alu_out = ~a_src_value & ~m_src_value;
-					//new - better?
-					//					alu_out = ~(a_src_value | m_src_value);
-					break;
-				case 011: /* [EQV] */
-					alu_out = a_src_value == m_src_value;
-					break;
-				case 012: /* [SETCA] */
-					alu_out = ~a_src_value;
-					break;
-				case 013: /* [ORCA] */
-					alu_out = m_src_value | ~a_src_value;
-					break;
-				case 014: /* [SETCM] */
-					alu_out = ~m_src_value;
-					break;
-				case 015: /* [ORCM] */
-					alu_out = ~m_src_value | a_src_value;
-					break;
-				case 016: /* [ORCB] */
-					alu_out = ~m_src_value | ~a_src_value;
-					break;
-				case 017: /* [ONES] */
-					alu_out = ~0;
-					break;
-				}
-			}
-
-			if (ir8 == 0 && ir7 == 1) {
+				break;
+			case 021:
 #ifdef STAT_ALU_USE
-				alu_stat1[alu_op]++;
+				alu_stat0[aluop]++;
 #endif
-				/* arithmetic */
-				switch (alu_op) {
-				case 0: /* -1 */
-					alu_out = carry_in ? 0 : -1;
-					alu_carry = 0;
-					break;
-				case 1: /* (M&A)-1 */
-					lv = (long long)(m_src_value & a_src_value) -
-						(carry_in ? 0 : 1);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 2: /* (M&~A)-1 */
-					lv = (long long)(m_src_value & ~a_src_value) -
-						(carry_in ? 0 : 1);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 3: /* M-1 */
-					lv = (long long)m_src_value - (carry_in ? 0 : 1);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 4: /* M|~A */
-					lv = (long long)(m_src_value | ~a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 5: /* (M|~A)+(M&A) */
-					lv = (long long)(m_src_value | ~a_src_value) +
-						(m_src_value & a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 6: /* M-A-1 [SUB] */
-					sub32(m_src_value,
-					      a_src_value,
+				lv = (long long)(m_src_value & a_src_value) -
+					(carry_in ? 0 : 1);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 022:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value & ~a_src_value) -
+					(carry_in ? 0 : 1);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 023:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)m_src_value - (carry_in ? 0 : 1);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 024:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value | ~a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 025:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value | ~a_src_value) +
+					(m_src_value & a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 026:			// [M-A-1] [SUB]
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				sub32(m_src_value,
+				      a_src_value,
+				      carry_in,
+				      alu_out, alu_carry);
+				break;
+			case 027:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value | ~a_src_value) +
+					m_src_value +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 030:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				//?? is this right? check 74181
+				lv = (long long)(m_src_value |
+						 a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 031:			// [ADD]	[M+A+1]
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				add32(m_src_value, a_src_value,
+				      carry_in, alu_out, alu_carry);
+				break;
+			case 032:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value | a_src_value) +
+					(m_src_value & ~a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 033:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)(m_src_value | a_src_value) +
+					m_src_value +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 034:			// [M+1]
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+#if 1
+				/* faster */
+				alu_out = m_src_value +
+					(carry_in ? 1 : 0);
+				alu_carry = 0;
+				if (m_src_value == 0xffffffff &&
+				    carry_in)
+					alu_carry = 1;
+#else
+				lv = (long long)
+					m_src_value +
+					(carry_in ? 1 : 0);
+				alu_out = lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+#endif
+				break;
+			case 035:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)m_src_value +
+					(m_src_value & a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 036:
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				lv = (long long)m_src_value +
+					(m_src_value | ~a_src_value) +
+					(carry_in ? 1 : 0);
+				alu_out = (unsigned int)lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+				break;
+			case 037:			// [M+M]	[M+M+1]
+#ifdef STAT_ALU_USE
+				alu_stat0[aluop]++;
+#endif
+				add32(m_src_value, m_src_value,
+				      carry_in, alu_out, alu_carry);
+				//new - better?
+				//					alu_out = (m_src_value << 1) |
+				//						(carry_in ? 1 : 0);
+				//					alu_carry = (m_src_value & 0x80000000)
+				//						? 1 : 0;
+				break;
+				
+				// Boolean
+			case 000:			// [SETZ]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = 0;
+				break;
+			case 001:			// [AND]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value & a_src_value;
+				break;
+			case 002:			// [ANDCA]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value & ~a_src_value;
+				break;
+			case 003:			// [SETM]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value;
+				break;
+			case 004:			// [ANDCM]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~m_src_value & a_src_value;
+				break;
+			case 005:			// [SETA]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = a_src_value;
+				break;
+			case 006:			// [XOR]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value ^ a_src_value;
+				break;
+			case 007:			// [IOR]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value | a_src_value;
+				break;
+			case 010:			// [ANDCB]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~a_src_value & ~m_src_value;
+				//new - better?
+				//					alu_out = ~(a_src_value | m_src_value);
+				break;
+			case 011:			// [EQV]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = a_src_value == m_src_value;
+				break;
+			case 012:			// [SETCA]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~a_src_value;
+				break;
+			case 013:			// [ORCA]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = m_src_value | ~a_src_value;
+				break;
+			case 014:			// [SETCM]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~m_src_value;
+				break;
+			case 015:			// [ORCM]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~m_src_value | a_src_value;
+				break;
+			case 016:			// [ORCB]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~m_src_value | ~a_src_value;
+				break;
+			case 017:			// [SETO]
+#ifdef STAT_ALU_USE
+				alu_stat1[aluop]++;
+#endif
+				alu_out = ~0;
+				break;
+				
+				// Conditioanl ALU operation
+			case 040:			// Multiply step
+#ifdef STAT_ALU_USE
+				alu_stat2[aluop]++;
+#endif
+				/* ADD if Q<0>=1, else SETM */
+				do_add = q & 1;
+				if (do_add) {
+					add32(a_src_value,
+					      m_src_value,
 					      carry_in,
 					      alu_out, alu_carry);
-					break;
-				case 7: /* (M|~A)+M */
-					lv = (long long)(m_src_value | ~a_src_value) +
-						m_src_value +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 010: /* M|A */
-					//?? is this right? check 74181
-					lv = (long long)(m_src_value |
-							 a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 011: /* M+A [ADD] */
-					add32(m_src_value, a_src_value,
-					      carry_in, alu_out, alu_carry);
-					break;
-				case 012: /* (M|A)+(M&~A) */
-					lv = (long long)(m_src_value | a_src_value) +
-						(m_src_value & ~a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 013: /* (M|A)+M */
-					lv = (long long)(m_src_value | a_src_value) +
-						m_src_value +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 014: /* M */
-#if 1
-					/* faster */
-					alu_out = m_src_value +
-						(carry_in ? 1 : 0);
-					alu_carry = 0;
-					if (m_src_value == 0xffffffff &&
-					    carry_in)
-						alu_carry = 1;
-#else
-					lv = (long long)
-						m_src_value +
-						(carry_in ? 1 : 0);
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-#endif
-					break;
-				case 015: /* M+(M&A) */
-					lv = (long long)m_src_value +
-						(m_src_value & a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 016: /* M+(M|~A) */
-					lv = (long long)m_src_value +
-						(m_src_value | ~a_src_value) +
-						(carry_in ? 1 : 0);
-					alu_out = (unsigned int)lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-					break;
-				case 017: /* M+M */
-					add32(m_src_value, m_src_value,
-					      carry_in, alu_out, alu_carry);
-					//new - better?
-					//					alu_out = (m_src_value << 1) |
-					//						(carry_in ? 1 : 0);
-					//					alu_carry = (m_src_value & 0x80000000)
-					//						? 1 : 0;
-					break;
-				}
-			}
-
-			if (ir8 == 1) {
+				} else {
+					alu_out = m_src_value;
+					alu_carry =
+						alu_out & 0x80000000 ?
+						1 : 0;
+				}	
+				break;
+			case 041:			// Divide step
 #ifdef STAT_ALU_USE
-				alu_stat2[alu_op]++;
+				alu_stat2[aluop]++;
 #endif
-
-				/* conditional alu op code */
-				switch (alu_op) {
-				case 0: /* multiply step */
-					/* ADD if Q<0>=1, else SETM */
-					do_add = q & 1;
-					if (do_add) {
-						add32(a_src_value,
-						      m_src_value,
-						      carry_in,
-						      alu_out, alu_carry);
-					} else {
-						alu_out = m_src_value;
-						alu_carry =
-							alu_out & 0x80000000 ?
-							1 : 0;
-					}
-					break;
-				case 1: /* divide step */
-					tracef("divide step\n");
-					do_sub = q & 1;
-					tracef("do_sub %d\n", do_sub);
-
+				do_sub = q & 1;
+				tracef("do_sub %d\n", do_sub);
+				
 #if 1
-					if (do_sub) {
-						sub32(m_src_value, a_src_value,
-						      !carry_in,
-						      alu_out, alu_carry);
-					} else {
-						add32(m_src_value, a_src_value,
-						      carry_in,
-						      alu_out, alu_carry);
-					}
-#else
-					if (do_sub) {
-						lv = (long long)
-							m_src_value -
-							a_src_value -
-							(carry_in ? 1 : 0);
-					} else {
-						lv = (long long)
-							m_src_value +
-							a_src_value +
-							(carry_in ? 1 : 0);
-					}
-					alu_out = lv;
-					alu_carry = (lv >> 32) ? 1 : 0;
-#endif
-					break;
-				case 5: /* remainder correction */
-					tracef("remainder correction\n");
-					do_sub = q & 1;
-
-					tracef("do_sub %d\n", do_sub);
-					if (do_sub) {
-						/* setm */
-						alu_carry = 0;
-					} else {
-#if 1
-						add32(alu_out, a_src_value,
-						      carry_in,
-						      alu_out, alu_carry);
-#else
-						lv =
-							(long long)alu_out +
-							a_src_value +
-							(carry_in ? 1 : 0);
-						alu_out = lv;
-						alu_carry = (lv >> 32) ? 1 : 0;
-#endif
-					}
-
-					break;
-				case 011:
-					/* initial divide step */
-					tracef("divide-first-step\n");
-					tracef("divide: %o / %o \n",
-					       q, a_src_value);
-
-#if 1
+				if (do_sub) {
 					sub32(m_src_value, a_src_value,
-					      !carry_in, alu_out, alu_carry);
+					      !carry_in,
+					      alu_out, alu_carry);
+				} else {
+					add32(m_src_value, a_src_value,
+					      carry_in,
+					      alu_out, alu_carry);
+				}
 #else
-					lv = (long long)m_src_value -
+				if (do_sub) {
+					lv = (long long)
+						m_src_value -
 						a_src_value -
 						(carry_in ? 1 : 0);
+				} else {
+					lv = (long long)
+						m_src_value +
+						a_src_value +
+						(carry_in ? 1 : 0);
+				}
+				alu_out = lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+#endif	
+				break;
+			case 045:			// Remainder correction
+#ifdef STAT_ALU_USE
+				alu_stat2[aluop]++;
+#endif
+				do_sub = q & 1;
+				
+				tracef("do_sub %d\n", do_sub);
+				if (do_sub) {
+					/* setm */
+					alu_carry = 0;
+				} else {
+#if 1
+					add32(alu_out, a_src_value,
+					      carry_in,
+					      alu_out, alu_carry);
+#else
+					lv =
+						(long long)alu_out +
+						a_src_value +
+						(carry_in ? 1 : 0);
 					alu_out = lv;
 					alu_carry = (lv >> 32) ? 1 : 0;
 #endif
-					tracef("alu_out %08x %o %d\n",
-					       alu_out, alu_out, alu_out);
-					break;
-
-				default:
-					printf("UNKNOWN cond alu op code %o\n",
-					       alu_op);
-				}
+				}	
+				break;
+			case 051:			// Initial divide step
+#ifdef STAT_ALU_USE
+				alu_stat2[aluop]++;
+#endif
+				tracef("divide-first-step\n");
+				tracef("divide: %o / %o \n",
+				       q, a_src_value);
+				
+#if 1
+				sub32(m_src_value, a_src_value,
+				      !carry_in, alu_out, alu_carry);
+#else
+				lv = (long long)m_src_value -
+					a_src_value -
+					(carry_in ? 1 : 0);
+				alu_out = lv;
+				alu_carry = (lv >> 32) ? 1 : 0;
+#endif
+				tracef("alu_out %08x %o %d\n",
+				       alu_out, alu_out, alu_out);
+				break;
 			}
-
+			
 			take_jump = 0;
-
+			
 			/* Q control */
 			old_q = q;
 			switch (u & 3) {
@@ -2588,7 +2667,7 @@ run(void)
 				q = alu_out;
 				break;
 			}
-
+			
 			/* output bus control */
 			switch (out_bus) {
 			case 0:
