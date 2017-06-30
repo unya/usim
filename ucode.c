@@ -10,11 +10,6 @@
 
 #include "ucode.h"
 
-//#define STAT_PC_HISTORY
-//#define STAT_ALU_USE
-//#define STAT_PC_HISTOGRAM
-//#define TRACE
-
 extern ucw_t prom_ucode[512];
 ucw_t ucode[16*1024];
 
@@ -102,10 +97,6 @@ int trace_after_flag;
 static int macro_pc_incrs;
 
 static int phys_ram_pages;
-
-#ifdef STAT_ALU_USE
-static unsigned int alu_stat0[16], alu_stat1[16], alu_stat2[16];
-#endif
 
 void show_label_closest(unsigned int upc);
 void show_label_closest_padded(unsigned int upc);
@@ -657,9 +648,6 @@ write_mem(int vaddr, unsigned int v)
 					}
 
 
-#ifdef STAT_PC_HISTOGRAM
-					reset_pc_histogram();
-#endif
 				}
 				if (v & 2) {
 					traceio("unibus: normal speed\n");
@@ -1496,12 +1484,6 @@ dump_state(void)
 	       macro_pc_incrs);
 	printf("\n");
 
-#ifdef STAT_PC_HISTORY
-	show_pc_history();
-#endif
-#ifdef STAT_PC_HISTOGRAM
-	show_pc_histogram();
-#endif
 
 	for (i = 0; i < 32; i += 4) {
 		printf(" spc[%02o] %c%011o %c%011o %c%011o %c%011o\n",
@@ -1999,89 +1981,6 @@ run(void)
 		lashup_start(&p0_pc, &p0, &p1_pc, &p1, &u_pc, &trace);
 #endif
 
-		/* ----------- trace ------------- */
-
-#ifdef STAT_PC_HISTORY
-		record_pc_history(p0_pc, vma, md);
-#endif
-#ifdef STAT_PC_HISTOGRAM
-		record_pc_histogram(p0_pc);
-#endif
-
-#ifdef TRACE
-		if (trace_late_set) {
-			set_late_breakpoint(&trace_pt, &trace_pt_count);
-			trace_late_set = 0;
-		}
-
-		/* see if we hit a label trace point */
-		if (trace_label_pt &&
-		    p0_pc == trace_label_pt)
-		{
-			//			show_pc_history();
-			//			trace = 1;
-			trace_mcr_labels_flag = 1;
-		}
-
-		/* see if we hit a trace point */
-		if (trace_pt_prom &&
-		    p0_pc == trace_pt_prom &&
-		    trace == 0 &&
-		    prom_enabled_flag == 1)
-		{
-			if (trace_pt_count) {
-				if (--trace_pt_count == 0)
-					trace = 1;
-			} else {
-				trace = 1;
-			}
-
-			if (trace)
-				printf("trace on\n");
-		}
-
-		if (trace_pt &&
-		    p0_pc == trace_pt &&
-		    trace == 0 &&
-		    prom_enabled_flag == 0)
-		{
-			if (trace_pt_count) {
-				if (--trace_pt_count == 0)
-					trace = 1;
-			} else {
-				trace = 1;
-			}
-
-			if (trace)
-				printf("trace on\n");
-		}
-
-		if (stop_after_prom_flag) {
-			if (prom_enabled_flag == 0) run_ucode_flag = 0;
-		}
-
-		if (trace_prom_flag) {
-			if (prom_enabled_flag == 1) trace = 1;
-		}
-
-		if (trace_mcr_flag) {
-			if (prom_enabled_flag == 0) trace = 1;
-		}
-
-		/* enforce max trace count */
-		if (trace) {
-			if (max_trace_cycles &&
-			    trace_cycles++ > max_trace_cycles)
-			{
-				printf("trace cycle count exceeded, pc %o\n",
-				       u_pc);
-				break;
-			}
-		}
-#endif
-
-		/* ----------- end trace ------------- */
-
 		/* enforce max cycles */
 		cycles++;
 		/* glug. overflow */
@@ -2283,51 +2182,33 @@ run(void)
 			switch (aluop) {
 				// Arithmetic
 			case 020:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				alu_out = carry_in ? 0 : -1;
 				alu_carry = 0;
 				break;
 			case 021:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value & a_src_value) -
 					(carry_in ? 0 : 1);
 				alu_out = (unsigned int)lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 022:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value & ~a_src_value) -
 					(carry_in ? 0 : 1);
 				alu_out = (unsigned int)lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 023:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)m_src_value - (carry_in ? 0 : 1);
 				alu_out = (unsigned int)lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 024:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value | ~a_src_value) +
 					(carry_in ? 1 : 0);
 				alu_out = (unsigned int)lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 025:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value | ~a_src_value) +
 					(m_src_value & a_src_value) +
 					(carry_in ? 1 : 0);
@@ -2335,18 +2216,12 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 026:			// [M-A-1] [SUB]
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				sub32(m_src_value,
 				      a_src_value,
 				      carry_in,
 				      alu_out, alu_carry);
 				break;
 			case 027:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value | ~a_src_value) +
 					m_src_value +
 					(carry_in ? 1 : 0);
@@ -2354,9 +2229,6 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 030:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				//?? is this right? check 74181
 				lv = (long long)(m_src_value |
 						 a_src_value) +
@@ -2365,16 +2237,10 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 031:			// [ADD]	[M+A+1]
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				add32(m_src_value, a_src_value,
 				      carry_in, alu_out, alu_carry);
 				break;
 			case 032:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value | a_src_value) +
 					(m_src_value & ~a_src_value) +
 					(carry_in ? 1 : 0);
@@ -2382,9 +2248,6 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 033:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)(m_src_value | a_src_value) +
 					m_src_value +
 					(carry_in ? 1 : 0);
@@ -2392,9 +2255,6 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 034:			// [M+1]
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 #if 1
 				/* faster */
 				alu_out = m_src_value +
@@ -2412,9 +2272,6 @@ run(void)
 #endif
 				break;
 			case 035:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)m_src_value +
 					(m_src_value & a_src_value) +
 					(carry_in ? 1 : 0);
@@ -2422,9 +2279,6 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 036:
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				lv = (long long)m_src_value +
 					(m_src_value | ~a_src_value) +
 					(carry_in ? 1 : 0);
@@ -2432,9 +2286,6 @@ run(void)
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
 			case 037:			// [M+M]	[M+M+1]
-#ifdef STAT_ALU_USE
-				alu_stat0[aluop]++;
-#endif
 				add32(m_src_value, m_src_value,
 				      carry_in, alu_out, alu_carry);
 				//new - better?
@@ -2446,109 +2297,58 @@ run(void)
 				
 				// Boolean
 			case 000:			// [SETZ]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = 0;
 				break;
 			case 001:			// [AND]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value & a_src_value;
 				break;
 			case 002:			// [ANDCA]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value & ~a_src_value;
 				break;
 			case 003:			// [SETM]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value;
 				break;
 			case 004:			// [ANDCM]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~m_src_value & a_src_value;
 				break;
 			case 005:			// [SETA]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = a_src_value;
 				break;
 			case 006:			// [XOR]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value ^ a_src_value;
 				break;
 			case 007:			// [IOR]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value | a_src_value;
 				break;
 			case 010:			// [ANDCB]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~a_src_value & ~m_src_value;
 				//new - better?
 				//					alu_out = ~(a_src_value | m_src_value);
 				break;
 			case 011:			// [EQV]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = a_src_value == m_src_value;
 				break;
 			case 012:			// [SETCA]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~a_src_value;
 				break;
 			case 013:			// [ORCA]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = m_src_value | ~a_src_value;
 				break;
 			case 014:			// [SETCM]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~m_src_value;
 				break;
 			case 015:			// [ORCM]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~m_src_value | a_src_value;
 				break;
 			case 016:			// [ORCB]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~m_src_value | ~a_src_value;
 				break;
 			case 017:			// [SETO]
-#ifdef STAT_ALU_USE
-				alu_stat1[aluop]++;
-#endif
 				alu_out = ~0;
 				break;
 				
 				// Conditioanl ALU operation
 			case 040:			// Multiply step
-#ifdef STAT_ALU_USE
-				alu_stat2[aluop]++;
-#endif
 				/* ADD if Q<0>=1, else SETM */
 				do_add = q & 1;
 				if (do_add) {
@@ -2564,9 +2364,6 @@ run(void)
 				}	
 				break;
 			case 041:			// Divide step
-#ifdef STAT_ALU_USE
-				alu_stat2[aluop]++;
-#endif
 				do_sub = q & 1;
 				tracef("do_sub %d\n", do_sub);
 				
@@ -2597,9 +2394,6 @@ run(void)
 #endif	
 				break;
 			case 045:			// Remainder correction
-#ifdef STAT_ALU_USE
-				alu_stat2[aluop]++;
-#endif
 				do_sub = q & 1;
 				
 				tracef("do_sub %d\n", do_sub);
@@ -2622,9 +2416,6 @@ run(void)
 				}	
 				break;
 			case 051:			// Initial divide step
-#ifdef STAT_ALU_USE
-				alu_stat2[aluop]++;
-#endif
 				tracef("divide-first-step\n");
 				tracef("divide: %o / %o \n",
 				       q, a_src_value);
@@ -3108,21 +2899,6 @@ run(void)
 	if (dump_state_flag) {
 		dump_state();
 	}
-
-#ifdef STAT_PC_HISTOGRAM
-	show_pc_histogram();
-#endif
-
-#ifdef STAT_ALU_USE
-	{
-		int i;
-		printf("ALU op-code usage:\n");
-		for (i = 0; i < 16; i++) {
-			printf("%2i %2o %08u %08u %08u\n",
-			       i, i, alu_stat0[i], alu_stat1[i], alu_stat2[i]);
-		}
-	}
-#endif
 
 	return 0;
 }
