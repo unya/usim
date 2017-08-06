@@ -604,10 +604,50 @@ write_mem(int vaddr, unsigned int v)
 		case 044:
 			traceio("unibus: clear bus error %o\n", v);
 			return 0;
-
-		case 0100: case 0104:
-		case 0110: case 0114:
-			traceio("unibus: cadr debugee (%o) v %o\n", offset, v);
+			
+		case 0100:
+			// 766100
+			//
+			// Reads or writes the debuggee-Unibus
+			// location addressed by the registers below.
+		case 0104:
+			// 766104 (Read only)
+			//
+			// These contain the status for bus cycles
+			// executed on the debuggee's busses.  These
+			// bits are cleared by writing into location
+			// 766044 (Error Status) on the debuggee's
+			// Unibus.  They are not cleared by power up.
+			// The bits are documented below under "Error
+			// Status".
+		case 0110:
+			// 766110
+			//
+			// (Write only) Contains additional modifier
+			// bits, as follows.  These bits are reset to
+			// zero when the debuggee's Unibus is reset.
+			//
+			// 1
+			//      Bit 17 of the debuggee-Unibus address.
+			//
+			// 2
+			//      Resets the debuggee's Unibus and bus
+			//      interface.  Write a 1 here then write
+			//      a 0.
+			//
+			// 4
+			//      Timeout inhibit.  This turns off the
+			//      NXM timeout for all Xbus and Unibus
+			//      cycles done by the debuggee's bus
+			//      interface (not just those commanded by
+			//      the debugger).
+		case 0114:
+			// 766114 (Write only)
+			//
+			// Contains bits 1-16 of the debuggee-Unibus
+			// address to be accessed.  Bit 0 of the
+			// address is always zero.
+			printf("unibus: cadr debugee (%o) v %o\n", offset, v);
 			return 0;
 
 		default:
