@@ -406,7 +406,7 @@ void
 disk_start_read(void)
 {
 	unsigned int ccw;
-	unsigned int vma = 0;
+	unsigned int vma;
 	int i;
 
 	disk_decode_addr();
@@ -426,6 +426,7 @@ disk_start_read(void)
 
 		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
+		vma = ccw & ~0377;
 		disk_ma = vma;
 
 		disk_show_cur_addr();
@@ -465,7 +466,7 @@ disk_start_write(void)
 	disk_show_cur_addr();
 #else
 	unsigned int ccw;
-	unsigned int vma = 0;
+	unsigned int vma;
 	int i;
 
 	disk_decode_addr();
@@ -485,6 +486,7 @@ disk_start_write(void)
 
 		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
+		vma = ccw & ~0377;
 		disk_ma = vma;
 
 		disk_show_cur_addr();
