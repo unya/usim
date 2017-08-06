@@ -68,9 +68,6 @@ timing_stop()
 
 	printf("\ncycle timing:\n");
 
-	//	printf("%lu %lu ; %lu %lu \n",
-	//	       tv2.tv_sec, tv1.tv_sec, tv2.tv_usec, tv1.tv_usec);
-
 	printf("%lu cycles in %g seconds, %10.8g cycles/second\n",
 	       cycles, t, cps);
 	printf("%.0f ns/cycle\n", (t / cycles) * 1000.0 * 1000.0 * 1000.0);
@@ -85,8 +82,6 @@ sigint_handler(int arg)
 void
 sighup_handler(int arg)
 {
-	//	char *b = "XMMUL";
-	//	char *b = "FMPY";
 	char *b = "MPY";
 	extern int trace_late_set;
 	breakpoint_set_mcr(b);
@@ -249,11 +244,6 @@ main(int argc, char *argv[])
 
 	iob_init();
 	chaos_init();
-
-#if 0
-	show_prom();
-	disassemble_prom();
-#endif
 
 	signal_init();
 

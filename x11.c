@@ -79,10 +79,6 @@ static void x11_process_key(XEvent *e, int updown)
 	if (updown) {
 		ret = XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
 				    &status);
-#if 0
-		printf("keysym %d, scancode %x, sym %s, state %x\n",
-		       keysym, e->xkey.keycode, buffer, e->xkey.state);
-#endif
 		iob_key_event(keysym, extra);
 	}
 }
@@ -203,8 +199,6 @@ video_write(int offset, unsigned int bits)
 		v = offset / video_width;
 		h = offset % video_width;
 
-		if (0) printf("v,h %d,%d <- %o (offset %d)\n", v, h, bits, offset);
-
 		for (i = 0; i < 32; i++)
 		{
 			tv_bitmap[offset + i] =
@@ -212,8 +206,6 @@ video_write(int offset, unsigned int bits)
 			bits >>= 1;
 		}
 
-		//	XPutImage(display, window, gc, ximage, h, v, h, v, 32, 1);
-		//	XFlush(display);
 		accumulate_update(h, v, 32, 1);
 	}
 }

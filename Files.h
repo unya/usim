@@ -154,6 +154,5 @@ extern char *errstring;			/* Error message if non-standard */
 #define ERRSIZE 100
 extern char errbuf[ERRSIZE + 1];	/* Buffer for building error messages */
 extern int globerr;			/* Error return from glob() */
-//  extern char *sys_errlist[];		/* System error messages */
 
 void settreeroot(const char *root);

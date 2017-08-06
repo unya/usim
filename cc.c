@@ -189,10 +189,6 @@ int cc_send(unsigned char *b, int len)
 	int i, ret;
 	char bb[5];
 
-#if 0
-	ret = write(fd, b, len);
-	return len;
-#else
 	/* send slowly so as not to confuse hardware */
 	for (i = 0; i < len; i++) {
 		ret = write(fd, b+i, 1);
@@ -204,7 +200,6 @@ int cc_send(unsigned char *b, int len)
 
 	usleep(10000);
 	return len;
-#endif
 }
 
 
@@ -227,21 +222,9 @@ reg_get(int base, int reg)
 	off = 0;
 	while (1) {
 		ret = read(fd, buffer+off, 64-off);
-		if (0) {
-			printf("ret %d, errno %d\n", ret, errno);
-			if (ret > 0) {
-				int i;
-				for (i = 0; i < ret; i++)
-					printf("%02x ", buffer[i]);
-				printf("\n");
-			}
-		}
-
 		if (ret > 0) off += ret;
 		if (off == 4) break;
 		if (ret < 0 && errno == 11) {
-			//sleep(1);
-			//usleep(1000*100);
 			usleep(100);
 
 			loops++;
@@ -431,7 +414,6 @@ cc_read_status(void)
 	uint16_t v1, v2, v3;
 	v1 = cc_get(rd_spy_flag_1);
 	v2 = cc_get(rd_spy_flag_2);
-	//printf("v1 %04x v2 %04x\n", v1, v2);
 	v3 = cc_get(rd_spy_ir_low);
 	/* Hardware reads JC-TRUE incorrectly */
 	if (v3 & 0100)
@@ -473,12 +455,10 @@ cc_execute_r(uint64_t ir)
  again:
 	cc_write_diag_ir(ir);
 	cc_noop_debug_clock();
-#if 1
 	if (cc_read_ir() != ir) {
 		printf("ir reread failed; retry\n");
 		goto again;
 	}
-#endif
 
 	ret = cc_debug_clock();
 	return ret;
@@ -548,83 +528,6 @@ ir_pair(int field, uint32_t val)
 	return ir;
 }
 
-#if 0
-int
-cc_write_md_1s(void)
-{
-	cc_execute(WRITE,
-		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-		   ir_pair(CONS_IR_ALUF, CONS_ALU_SETO) |
-		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
-}
-
-int
-cc_write_md_0s(void)
-{
-	cc_execute(WRITE,
-		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-		   ir_pair(CONS_IR_ALUF, CONS_ALU_SETZ) |
-		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
-}
-
-int
-cc_write_md_shifting(uint32_t val)
-{
-	int i;
-	uint32_t n;
-
-	cc_execute(0/*WRITE*/,
-		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-		   ir_pair(CONS_IR_ALUF, CONS_ALU_SETO) |
-		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
-
-	for (i = 31, n = val; i >= 0; i--, n <<= 1) {
-		if (debug) printf("n %08x, bit %d\n", n, (n & 0x80000000) == 0);
-		else { printf("."); fflush(stdout); }
-		if ((n & 0x80000000) == 0) {
-			cc_execute(0/*WRITE*/,
-				   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-				   ir_pair(CONS_IR_ALUF, CONS_ALU_MPM) |
-				   ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
-				   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
-		} else {
-			cc_execute(0/*WRITE*/,
-				   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-				   ir_pair(CONS_IR_ALUF, CONS_ALU_MPMP1) |
-				   ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
-				   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_MD));
-		}
-	}
-
-	return 0;
-}
-
-int
-cc_write_md(uint32_t md)
-{
-	return cc_write_md_shifting(md);
-}
-
-uint32_t
-cc_read_md(void)
-{
-	return cc_read_m_mem(CONS_M_SRC_MD);
-}
-
-int
-cc_write_vma(uint32_t vma)
-{
-	cc_write_md(vma);
-	cc_execute(WRITE,
-		   ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
-		   ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
-		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-		   ir_pair(CONS_IR_FUNC_DEST, CONS_FUNC_DEST_VMA));
-
-	return 0;
-}
-#endif
-
 uint32_t
 cc_read_md(void)
 {
@@ -653,7 +556,6 @@ cc_write_md(uint32_t md)
 uint32_t
 cc_read_vma(void)
 {
-	//	return cc_read_m_mem(CONS_M_SRC_VMA);
 	return _cc_read_pair(rd_spy_vma_high, rd_spy_vma_low);
 }
 
@@ -893,11 +795,9 @@ cc_pipe(void)
 		ret = cc_debug_clock();
 		printf(" obus3 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-		//	ret = cc_debug_clock();
 		cc_clock();
 		printf(" obus4 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-		//	ret = cc_debug_clock();
 		cc_clock();
 		printf(" obus5 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 	}
@@ -1129,7 +1029,6 @@ cc_test_ir(void)
 
 char *serial_devicename1 = "/dev/ttyUSB1";
 char *serial_devicename2 = "/dev/ttyUSB2";
-//char *serial_devicename = "/dev/ttyS5";
 
 
 int
@@ -1212,7 +1111,6 @@ main(int argc, char *argv[])
 
 		case 's': /* step */
 			for (i = 0; i < arg; i++) {
-				//			cc_single_step();
 				cc_clock();
 				cc_report_status();
 				cc_report_pc(&PC);
@@ -1223,9 +1121,6 @@ main(int argc, char *argv[])
 			printf("run until PC=%o\n", arg);
 			while (1) {
 				cc_clock();
-				//cc_report_pc(&PC);
-				//cc_report_pc_and_md(&PC);
-				//cc_report_pc_and_ir(&PC);
 				cc_report_pc_md_ir(&PC);
 				if (PC == arg)
 					break;
@@ -1319,14 +1214,6 @@ main(int argc, char *argv[])
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
-			if (0)
-				for (i = 0200; i < 0220; i++) {
-					cc_write_a_mem(2, i);
-					cc_execute_r(04000100042310050ULL);
-					v = cc_read_md();
-					printf("@%o MD=%011o (0x%x)\n", i, v, v);
-				}
-
 			for (i = 0776; i < 01000; i++) {
 				cc_write_a_mem(2, i);
 				cc_execute_r(04000100042310050ULL);
@@ -1376,10 +1263,6 @@ main(int argc, char *argv[])
 			printf("A[2] = %011o\n", cc_read_a_mem(2));
 			printf("A[3] = %011o\n", cc_read_a_mem(3));
 			break;
-
-			//		case 'q':
-			//			done = 1;
-			//			break;
 
 		case '/':
 			switch (line[1]) {

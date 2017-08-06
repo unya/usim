@@ -81,35 +81,6 @@ glob(register char *v)
 	rscan(vv, tglob);
 	if (gflag == 0)
 	{
-#if 0   // if you do a change properties on a directory, it wants the directory
-		struct stat sbuf;
-
-		// if it's a directory, we're probably looking for the list of contents
-		if (stat(v, &sbuf) == 0) {
-			if ((sbuf.st_mode & S_IFMT) == S_IFDIR)
-			{
-				ssize_t len = strlen(v);
-
-				wild = malloc(len + 3);
-				strcpy(wild, v);
-				if (wild[len] != '/')
-					wild[len++] = '/';
-				wild[len++] = '*';
-				wild[len] = '\0';
-
-				vv[0] = wild;
-				vv[1] = 0;
-				rscan(vv, tglob);
-				if (gflag == 0)
-				{
-					free(wild);
-					vv[0] = v;
-					return copyblk(vv);
-				}
-			}
-		}
-		else
-#endif
 			return copyblk(vv);
 	}
 

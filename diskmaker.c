@@ -168,7 +168,6 @@ make_labl(int fd)
 		}
 	}
 
-	//#define LABEL_PAD_CHAR '\200'
 #define LABEL_PAD_CHAR '\0'
 	/* pack brand text - offset 010, 32 bytes */
 	memset((char *)&buffer[010], LABEL_PAD_CHAR, 32);
@@ -232,11 +231,7 @@ write_block(int fd, int block_no, unsigned char *buf)
 	int size;
 
 	offset = block_no * (256*4);
-	//printf("block_no %d (%x), offset %lld\n", block_no, block_no, offset);
-
 	ret = lseek(fd, offset, SEEK_SET);
-	//printf("lseek ret %lld\n", ret);
-
 	if (ret != offset) {
 		perror("lseek");
 		return -1;
@@ -367,15 +362,12 @@ parse_template(char *template)
 			continue;
 		}
 
-		if (0) printf("%d: %s\n", mode, line);
-
 		switch(mode) {
 		case 1:
 			img_filename = strdup(line);
 			break;
 		case 2:
 			sscanf(line, "%s\t%s", what, str);
-			if (0) printf("what '%s', str '%s'\n", what, str);
 
 			if (strcmp(what, "cyls") == 0)
 				cyls = atoi(str);
@@ -426,29 +418,12 @@ fillout_image_file(int fd)
 	}
 
 	offset = (last_block_no + 1) * (256*4);
-	//if (0) printf("last block %d (0%o), expanding file to %lld\n",
-	//	      last_block_no, last_block_no, offset-1);
 
 	ret = ftruncate(fd, offset-1);
-	if (0) printf("ret %d\n", ret);
-
 	if (ret) {
 		perror("ftruncate");
 		return -1;
 	}
-
-#if 0
-	{
-		unsigned char b[256*4];
-
-		/* zero blocks */
-		memset(b, 0, sizeof(b));
-		for (i = 0; i < 1000; i++) {
-			if (write(fd, b, 1024))
-				break;
-		}
-	}
-#endif
 
 	lseek(fd, (off_t)0, SEEK_SET);
 
@@ -470,10 +445,6 @@ create_disk(char *template)
 		perror(img_filename);
 		return -1;
 	}
-
-	//#ifdef __APPLE__
-	//	fillout_image_file(fd);
-	//#endif
 
 	make_labl(fd);
 	make_partitions(fd);

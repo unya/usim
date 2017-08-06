@@ -431,7 +431,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 			unsigned int v, tag;
 			v = get(fefptr + delta);
 			tag = (v >> width) & 037;
-			if (0) printf("(tag%o %o) ", tag, v);
 			switch (tag) {
 			case 3:
 				v = get(v);
@@ -447,10 +446,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 				show_fef_func_name( v , width);
 			}
 		}
-		//		nlc = (loc*2 + (even?0:1)) + delta;
-		//		printf("+%o; %o%c ",
-		//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
-
 		break;
 	case 2: /* move */
 	case 3: /* car */

@@ -553,7 +553,6 @@ struct property {
 /*
  * Globals
  */
-//struct chstatus chst;		/* Status buffer for connections */
 char errtype;			/* Error type if not E_COMMAND */
 char *errstring;		/* Error message if non-standard */
 char errbuf[ERRSIZE + 1];	/* Buffer for building error messages */
@@ -562,7 +561,6 @@ char *cwd;			/* Current working directory, if one */
 int protocol = 1;			/* Which number argument after FILE in RFC */
 int mypid;			/* Pid of controlling process */
 struct timeb timeinfo;
-//struct chlogin mylogin;		/* Record for login */
 extern int errno;		/* System call error code */
 
 /*
@@ -704,8 +702,6 @@ void processdata(chaos_connection *conn)
   00000020 50 4d 20 62 72 61 64 20 xx xx xx xx xx xx xx xx  PM brad xxxxxxxx
 */
 unsigned char pkt[] = {
-	//	0x00, 0x80, 0x18, 0x00, 0x04, 0x01, 0x00, 0x01,
-	//	0x01, 0x01, 0x45, 0x37, 0x01, 0x00, 0x01, 0x00,
 	0x80,
 	0x54, 0x31, 0x34, 0x33, 0x34, 0x20, 0x20, 0x4c,
 	0x4f, 0x47, 0x49, 0x4e, 0x20, 0x4c, 0x49, 0x53,
@@ -754,10 +750,8 @@ getwork(chaos_connection *conn)
 		length = packet->length & 0x3ff;
 
 		packet->data[length] = '\0';
-#if 1
 		chaosfile_log(LOG_INFO, "FILE: pkt(%d):%.*s\n", ((packet->opcode & 0xff00) >> 8), length-1,
 		    packet->data);
-#endif
 		switch (((packet->opcode & 0xff00) >> 8)) {
 		case EOFOP:
 			tfree(t);
@@ -1286,9 +1280,7 @@ error(struct transaction *t, char *fh, int code)
 
 	error = chaos_allocate_packet(t->t_connection, CHAOS_OPCODE_DATA, (int)strlen(data));
 
-#if 1
 	chaosfile_log(LOG_INFO, "FILE: error; %s\n", data);
-#endif
 	errstring = NOSTR;
 	errtype = 0;
 
@@ -1482,11 +1474,6 @@ login(register struct transaction *t)
 	if ((name = a->a_strings[0]) == NOSTR) {
 		chaosfile_log(LOG_INFO, "FILE exiting due to logout\n");
 		finish(0);
-#if 0
-	} else if (home != NOSTR) {
-		//		errstring = "You are already logged in.";
-		//		error(t, "", BUG);
-#endif
 	} else if (*name == '\0' || (p = getpwnam(downcase(name))) == (struct passwd *)0) {
 		chaosfile_log(LOG_INFO, "FILE: login() no user '%s'\n", name);
 		errstring = "Login incorrect.";
@@ -1512,44 +1499,12 @@ login(register struct transaction *t)
 		chaosfile_log(LOG_INFO, "FILE: login() pw ok\n");
 		home = savestr(p->pw_dir);
 		cwd = savestr(home);
-#if 0
-		umask(0);
-		(void)initgroups(p->pw_name, (int)p->pw_gid);
-		(void)setuid(p->pw_uid);
-#endif
 
 		(void)sprintf(response, "%s %s/%c%s%c", p->pw_name, p->pw_dir,
 			      CHNL, fullname(p), CHNL);
 
-#if 0
-		register int ufd;
-
-		strncpy(mylogin.cl_user, p->pw_name, sizeof(mylogin.cl_user));
-		if ((ufd = open(FILEUTMP, 1)) >= 0) {
-			(void)lseek(ufd,
-				    (off_t)(mylogin.cl_cnum * sizeof(struct chlogin)),
-				    0);
-			(void)write(ufd, (char *)&mylogin, sizeof(mylogin));
-			(void)close(ufd);
-		}
-#endif
 		chaosfile_log(LOG_INFO, "FILE: login() responding\n");
 		respond(t, response);
-#if 0
-		chaosfile_log(LOG_NOTICE, "FILE: logged in as %s from host %s\n",
-		    p->pw_name, chaos_name(mylogin.cl_haddr));
-#endif
-#if 0
-		{
-			char str[50];
-
-			sprintf(str, "/usr/local/f @%s",
-				chaos_name(mylogin.cl_haddr));
-			strcat(str, " |/usr/local/logger -t FILE -p %d",
-			       LOG_NOTICE);
-			system(str);
-		}
-#endif
 	}
 	chaosfile_log(LOG_INFO, "FILE: login() done\n");
 }
@@ -2068,7 +2023,6 @@ getprops(register struct transaction *t)
 					afree(a);
 					t->t_args = ANULL;
 					xcommand(t);
-					//                    propopen(x, t);
 					return;
 				}
 				xflush(x);
@@ -2168,7 +2122,6 @@ directory(register struct transaction *t)
 				afree(t->t_args);
 				t->t_args = ANULL;
 				xcommand(t);
-				//              diropen(x, t);
 				return;
 			}
 			xflush(x);
@@ -2188,8 +2141,6 @@ diropen(struct xfer *ax, register struct transaction *t)
 	struct stat *s = (struct stat *)0;
 	struct stat sbuf;
 	int errcode;
-
-	//	printf("diropen: %s\n", x->x_realname);
 
 	x->x_glob = glob(x->x_realname);
 	if ((errcode = globerr) != 0)
@@ -2396,8 +2347,6 @@ xcommand(register struct transaction *t)
 		error(t, f ? f->f_name : "", BUG);
 	} else {
 		xqueue(t, x);
-		//	    (*t->t_command->c_func)(x, t);
-
 		// we may have a packet stuck waiting to transmit
 		// force the transmit window to close and tickle the connection
 		if ((t->t_command->c_func == fileclose || t->t_command->c_func == filepos) && x->x_options & O_READ)
@@ -2502,9 +2451,6 @@ fileclose(register struct xfer *x, register struct transaction *t)
 		}
 	}
 	x->x_close = t;
-#if 0
-	(void)signal(SIGHUP, SIG_IGN);
-#endif
 
 	pthread_mutex_lock(&x->x_hangsem);
 	pthread_cond_signal(&x->x_hangcond);
@@ -2595,7 +2541,7 @@ xclose(struct xfer *ax)
 			chaosfile_log(LOG_INFO, "xclose (3c)\n");
 
 			if (utime(x->x_realname, timep)) {
-				logx(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
+				chaosfile_log(LOG_INFO, "error from utimes: errno = %d %s\n", errno, strerror(errno));
 			}
 
 			chaosfile_log(LOG_INFO, "xclose (3d)\n");
@@ -3853,7 +3799,7 @@ parsetime(register char *cp, register time_t *t)
 	    !(cp = tnum(cp, '\0', &second)) ||
 	    month < 1 || month > 12 ||
 	    day < 1 || day > 31 ||
-	    year < 70 || // year > 99 ||
+	    year < 70 || 
 	    hour < 0 || hour > 23 ||
 	    minute < 0 || minute > 59 ||
 	    second < 0 || second > 59)
@@ -4058,14 +4004,6 @@ dcanon(char *cp, int blankok)
 					break;
 				}
 		/* Can't do this now since we also parse {foo,abc,xyz} */
-#if 0
-		if (p - sp > DIRSIZ) {
-			(void)sprintf(errstring = errbuf,
-				      "Pathname component: '%s', longer than %d characters",
-				      sp, DIRSIZ);
-			return IPS;
-		}
-#endif
 		if (sp[0] == '.' && sp[1] == '\0') {
 			if (slash) {
 				strcpy(sp, ++p);
@@ -4595,7 +4533,6 @@ xpwrite(register struct xfer *x)
 	if (log_verbose) {
 		chaosfile_log(LOG_INFO, "FILE: writing (%d) %d bytes to net\n",
 		    x->x_op & 0377, len);
-		if (0) dumpbuffer((u_char *)x->x_pkt.cp_data, len);
 	}
 
 	chaos_packet *packet = chaos_allocate_packet(conn, x->x_op, len);
@@ -4677,18 +4614,6 @@ loop:
  */
 void finish(int arg)
 {
-#if 0
-	register int ufd;
-
-	if (getpid() == mypid && (ufd = open(FILEUTMP, 1)) >= 0) {
-		mylogin.cl_user[0] = '\0';
-		(void)lseek(ufd, (long)(mylogin.cl_cnum * sizeof(mylogin)), 0);
-		(void)write(ufd, (char *)&mylogin, sizeof(mylogin));
-		(void)close(ufd);
-	}
-	/* Should send close packet here */
-	exit(0);
-#endif // 0
 }
 /*
  * Start the transfer task running.

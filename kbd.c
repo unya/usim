@@ -146,8 +146,6 @@ iob_key_event(int code, int extra)
 {
 	int newkbd = 0; // keys found on the "new" keyboard
 
-	if (0) printf("iob_key_event(code=%x,extra=%x)\n", code, extra);
-
 	if (code == XK_Shift_L ||
 	    code == XK_Shift_R ||
 	    code == XK_Control_L ||
@@ -236,12 +234,8 @@ iob_key_event(int code, int extra)
 	/* but if Control/Meta, add in Shift */
 	if (extra & (17 << 10))
 	{
-		if (0) printf("extra: %x  17<<10: %x", extra, 17 << 10);
 		iob_key_scan |= extra;
 	}
-
-	if (0) printf("code 0%o, extra 0%o, scan 0%o\n",
-		      code, extra, iob_key_scan);
 
 	if (newkbd)
 		iob_key_scan |= 1 << 16;
@@ -364,7 +358,6 @@ kbd_init(void)
 	kb_to_scancode[0x1b][0] = 0204;	     /* Esc = Esc (Terminal) */
 
 	/* map arrows */
-	//    kb_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
 
 	/* Add shifts */
 	for (i = 0; i < 256; i++) {
@@ -372,22 +365,4 @@ kbd_init(void)
 			kb_to_scancode[i][1] = kb_to_scancode[i][0] |
 				(3 << 6);
 	}
-
-	if (0) printf("kb_to_scancode[';'][1] = %x\n", kb_to_scancode[';'][1]);
-
-#if 0   /* Don't do this */
-	/* control keys */
-	for (i = 0; i < 64; i++) {
-		char k;
-		k = kb_old_table[i][0];
-		kb_to_scancode[k][2] = i | (3 << 10);
-	}
-
-	/* meta keys */
-	for (i = 0; i < 64; i++) {
-		char k;
-		k = kb_old_table[i][0];
-		kb_to_scancode[k][3] = i | (3 << 12);
-	}
-#endif
 }

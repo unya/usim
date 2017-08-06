@@ -236,30 +236,6 @@ struct directory_entry_s {
         tapeinfo archive_a;
         tapeinfo archive_b;
         short ignore_mode_word;
-
-#if 0
-        struct {
-                flag safety_switch;
-                flag deleted;
-                flag directory;
-                flag link;
-                flag migrated;
-                flag read_only;
-                flag incrementally_backed_up;
-                flag completely_backed_up;
-                flag properties_were_put;
-                flag successfully_backed_up;
-                flag binary_p;
-                flag user_damaged;
-                flag damaged_header_missing;
-                flag damaged_header_malformed;
-                flag damaged_records_missing;
-                flag damaged_records_incongruous;
-                flag damaged_records;
-                flag dont_reap;
-                flag create_open;
-        } switches;
-#endif
 };
 
 struct file_header_s {
@@ -292,7 +268,6 @@ dumpmem(/*int dbg_level, */char *ptr, int len)
 
                 p = line;
                 c = chars;
-                //debugf(dbg_level, "%x ", ptr);
                 printf("%04x ", offset);
 
                 *p++ = ' ';
@@ -312,7 +287,6 @@ dumpmem(/*int dbg_level, */char *ptr, int len)
                 }
                 *p = 0;
                 *c = 0;
-                //debugf(dbg_level, "%s %s\n", line, chars);
                 printf("%s %s\n", line, chars);
                 offset += 16;
         }
@@ -351,11 +325,7 @@ write_block(int fd, int block_no, unsigned char *buf)
         int size;
 
         offset = block_no * (256*4);
-        //printf("block_no %d (%x), offset %lld\n", block_no, block_no, offset);
-
         ret = lseek(fd, offset, SEEK_SET);
-        //printf("lseek ret %lld\n", ret);
-
         if (ret != offset) {
                 perror("lseek");
                 return -1;
@@ -407,7 +377,6 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
 
         init_access(&b, fd);
         read_record(&b, record_no);
-        //dumpmem(b.buffer, 4096);
 
         fh = (struct file_header_s *)ensure_access(&b, 0, sizeof(struct file_header_s));
 
@@ -467,13 +436,10 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
                 int left, use;
 
                 left = remaining_access(&b);
-                //printf("bl %d, remaining_access %d, remaining_buffer %d\n",
-                //bl, left, remaining_buffer(&b));
 
                 use = bl < left ? bl : left;
 
                 tot += use;
-                //printf("write %d, total %d\n", use, tot);
                 if (fdd > 0) write(fdd, p, use);
 
                 bl -= use;
@@ -485,7 +451,6 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
                         printf("read record %d\n", blocks[n]);
                         read_record(&b, blocks[n++]);
                         p = (char *)ensure_access(&b, 0, 0);
-                        //dumpmem(b.buffer, 4096);
                 }
 
                 if (bl <= 0)
@@ -494,8 +459,6 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
 
         printf("done\n");
         if (fdd > 0) close(fdd);
-
-        // exit(2);
 
         return 0;
 }
@@ -599,7 +562,6 @@ show_de(int fd, int record_no)
                 printf("size %ld\n", sizeof(struct directory_entry_s));
 
                 show_file(fd, de, de->record_0_address);
-                //    show_de(fd, de->record_0_address);
         }
         return 0;
 }
@@ -632,9 +594,6 @@ lmfs_open(char *img_filename, int offset)
         printf("free_store_info %d\n", pl->disk_address.free_store_info);
         printf("bad_track_info %d\n", pl->disk_address.bad_track_info);
         printf("volume_table %d\n", pl->disk_address.volume_table);
-
-        //  dumpmem(&pl->root_list, 8);
-        //  dumpmem((char *)&pl->uid_generator, 64);
         printf("\n");
 
         init_access(&b, fd);
@@ -689,7 +648,6 @@ lmfs_open(char *img_filename, int offset)
                                 printf("record_0_address %d\n", de->record_0_address);
 
                                 struct dir_header_s *dh;
-                                //woffset = 252;
                                 woffset = wlast;
 
                                 dh = (struct dir_header_s *)ensure_access(&b, woffset*4, sizeof(struct dir_header_s));
@@ -718,9 +676,6 @@ lmfs_open(char *img_filename, int offset)
                         }
                 }
         }
-
-        //  read_record(fd, pl->disk_address.free_store_info, rbuffer);
-        //  dumpmem(rbuffer, 256);
 
         close(fd);
 
@@ -791,7 +746,6 @@ main(int argc, char *argv[])
         }
 
         if (img_filename == 0) {
-                //	  img_filename = strdup("disk.img");
                 img_filename = strdup("FILE");
         }
 

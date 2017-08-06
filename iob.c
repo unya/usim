@@ -130,9 +130,7 @@ get_us_clock()
 		ds = tv2.tv_sec - tv.tv_sec;
 		du = tv2.tv_usec - tv.tv_usec;
 
-		//		v = (ds * 100) + (du / 10000);
 		v = (ds * 1000*1000) + du;
-		if (0) printf("delta %lu\n", v);
 
 #ifdef USE_US_CLOCK_FOR_60HZ
 		hz60 = v / 16000;
@@ -228,7 +226,6 @@ iob_unibus_read(int offset, int *pv)
 		*pv = get_60hz_clock();
 		break;
 	case 0140:
-		//tracenet("unibus: chaos read\n");
 		*pv = chaos_get_csr();
 		break;
 	case 0142:
@@ -317,17 +314,6 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0264);
 
-#if 0
-	printf("iob_mouse_event(dx=%x,dy=%x,buttons=%x) x %o, y %o\n",
-	       dx, dy, buttons, mouse_x, mouse_y);
-	mouse_x += dx;
-	mouse_y += dy;
-#endif
-
-	if (0)
-		printf("iob_mouse_event(x=%x,y=%x,buttons=%x)\n",
-		       x, y, buttons);
-
 	if (mouse_sync_flag) {
 		int mcx, mcy, dx, dy;
 
@@ -337,9 +323,6 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 
 		dx = x - mcx;
 		dy = y - mcy;
-
-		//printf("m %d,%d mc %d,%d  c %d,%d  d %d,%d\n",
-		//mouse_x, mouse_y, mcx, mcy, x, y, dx, dy);
 
 		mouse_x += dx;
 		mouse_y += dy;
@@ -397,9 +380,6 @@ iob_mouse_poll(int x, int y)
 		mouse_x += dx;
 		mouse_y += dy;
 
-		//printf("P: m %d,%d mc %d,%d  c %d,%d  d %d,%d\n",
-		//mouse_x, mouse_y, mcx, mcy, x, y, dx, dy);
-
 		iob_kbd_csr |= 1 << 4;
 		assert_unibus_interrupt(0264);
 
@@ -413,7 +393,6 @@ int tv_csr;
 int
 tv_xbus_read(int offset, unsigned int *pv)
 {
-	if (0) printf("tv register read, offset %o -> %o\n", offset, tv_csr);
 	*pv = tv_csr;
 	return 0;
 }
@@ -421,7 +400,6 @@ tv_xbus_read(int offset, unsigned int *pv)
 int
 tv_xbus_write(int offset, unsigned int v)
 {
-	if (0) printf("tv register write, offset %o, v %o\n", offset, v);
 	if ((tv_csr & 4) != (v & 4)) {
 	}
 	tv_csr = v;
@@ -452,7 +430,6 @@ iob_clock_event()
 void
 sigalrm_handler(int arg)
 {
-	if (0) printf("sigalrm_handler()\n");
 	tv_post_60hz_interrupt();
 }
 
@@ -487,10 +464,6 @@ mouse_sync_init(void)
 		printf("can't find A-MOUSE-CURSOR-Y in microcode symbols\n");
 	} else
 		mouse_sync_amem_y = val;
-
-	if (0)
-		printf("mouse_sync_amem_x %o, mouse_sync_amem_y %o\n",
-		       mouse_sync_amem_x, mouse_sync_amem_y);
 }
 
 int

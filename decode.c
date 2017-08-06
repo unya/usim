@@ -442,13 +442,8 @@ disassemble_prom(void)
 {
 	unsigned int i, start, finish;
 
-#if 0
-	start = 0100;
-	finish = 0110;
-#else
 	start = 0;
 	finish = 512;
-#endif
 
 	for (i = start; i < finish; i++) {
 
@@ -463,8 +458,6 @@ disassemble_prom(void)
 /* ----------------------------------------------------------------- */
 
 /* see diskmaker.c */
-//static int partoff = 046324;
-//static int partoff = 0114124;
 static int partoff;
 static int bnum = -1;
 static unsigned int buf[256];
@@ -502,13 +495,10 @@ find_disk_partition_table(int fd)
 	p = 0200;
 	count = buf[p++];
 	nw = buf[p++];
-	if (0) printf("count %d, nw %d\n", count, nw);
 
 	for (i = 0; i < count; i++) {
-		if (0) printf("%d %08x %08x\n", i, buf[p], (int)str4("LOD1"));
 		if (buf[p] == str4("LOD1")) {
 			partoff = (int)buf[p+1];
-			if (0) printf("found lod1 %o\n", partoff);
 			break;
 		}
 		p += nw;
@@ -534,8 +524,6 @@ read_virt(int fd, unsigned int addr, unsigned int *pv)
 	if (b != bnum) {
 		bnum = b;
 
-		if (0) printf("block %d(10)\n", b);
-
 		ret = lseek(fd, offset, SEEK_SET);
 		if (ret != offset) {
 			perror("seek");
@@ -560,9 +548,6 @@ read_string(unsigned int loc)
 	static char s[256];
 
 	if (read_virt(disk_fd, loc, &v) == 0) {
-
-		if (0) printf("%o len %o\n", loc, v);
-
 		t = v & 0xff;
 		j = 0;
 		for (i = 0; i < t; i += 4) {
@@ -571,8 +556,6 @@ read_string(unsigned int loc)
 			l = loc+1+(i/4);
 			if (read_virt(disk_fd, l, &v))
 				return "<read-failed>";
-
-			if (0) printf("%o %o %08x\n", l, v, v);
 
 			s[j++] = (char)(v >> 0);
 			s[j++] = (char)(v >> 8);
@@ -608,8 +591,6 @@ find_function_name(unsigned int the_lc)
 	unsigned int loc = (unsigned int)(the_lc >> 2);
 	unsigned int v;
 
-	if (0) printf("find %o\n", loc);
-
 	if (partoff == 0) {
 		find_disk_partition_table(disk_fd);
 	}
@@ -625,14 +606,9 @@ find_function_name(unsigned int the_lc)
 		loc--;
 	}
 
-	if (0) printf("%o found header, back %d\n", loc, i);
-
 	if (tag == 7) {
 		/* find function symbol ptr */
 		if (read_virt(disk_fd, loc+2, &v) == 0) {
-
-			if (0) printf("%o ptr %o\n", loc, v);
-
 			loc = v;
 			tag = (v >> 24) & 077;
 
@@ -658,12 +634,8 @@ show_list(unsigned int lp)
 	unsigned int loc, l1, v;
 	int i;
 
-	//	loc = 031602653046;
-	//	loc = 001614546634;
 	loc = 030301442405;
 	read_virt(disk_fd, loc, &v);
-	//	printf("%011o %011o\n", loc, v);
-	//	loc = v;
 
 	for (i = 0; i < 10; i++) {
 		int tag, cdr, addr;
@@ -709,7 +681,6 @@ show_list(unsigned int lp)
 				break;
 
 			case 016:
-				//			loc = v;
 				break;
 			case 021:
 				l1 = v;
@@ -720,28 +691,8 @@ show_list(unsigned int lp)
 
 				show_string(l1);
 				printf("\n");
-#if 0
-				l1 = v;
-				read_virt(disk_fd, l1, &v);
-				tag = (v >> 24) & 077;
-				cdr = (v >> 30) & 3;
-				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
-
-				l1++;
-				read_virt(disk_fd, l1, &v);
-				tag = (v >> 24) & 077;
-				cdr = (v >> 30) & 3;
-				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
-
-				l1++;
-				read_virt(disk_fd, l1, &v);
-				tag = (v >> 24) & 077;
-				cdr = (v >> 30) & 3;
-				printf("   %011o %011o %03o %1o\n", l1, v, tag, cdr);
-#endif
 				break;
 			default:
-				//			i = 100;
 				break;
 			}
 
@@ -1228,8 +1179,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 		unsigned int addr = (unsigned int)(loc >> 2);
 		unsigned int v;
 
-		if (0) printf("find %o\n", addr);
-
 		if (partoff == 0) {
 			find_disk_partition_table(disk_fd);
 		}
@@ -1263,7 +1212,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	dest = (inst >> 015) & 07;
 	reg = (inst >> 6) & 07;
 	delta = (inst >> 0) & 0777;
-	//	sprintf(buffer, "%011o%c %06o %s ", loc, even ? 'e':'o', inst, op_names[op]);
 	sprintf(buffer, "%011o%c %06o ", loc, even ? 'e':'o', inst);
 
 	switch (op) {
@@ -1278,7 +1226,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 
 			v = get(fefptr + (delta & 077));
 			tag = (v >> width) & 037;
-			if (0) printf("(tag%o %o) ", tag, v);
 			switch (tag) {
 			case 3:
 				v = get(v);
@@ -1294,10 +1241,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 				show_fef_func_name(buffer, v, width);
 			}
 		}
-		//		nlc = (loc*2 + (even?0:1)) + delta;
-		//		printf("+%o; %o%c ",
-		//		       delta, nlc/2, (nlc & 1) ? 'o' : 'e');
-
 		break;
 	case 2: /* move */
 	case 3: /* car */
@@ -1390,7 +1333,6 @@ show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 	sprintf(&buffer[strlen(buffer)], " "); v = get(n);
 
 	tag = (v >> width) & 037;
-	if (0) printf("tag %o\n", tag);
 
 	if (tag == 3) {
 		v = get(v);

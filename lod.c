@@ -142,9 +142,6 @@ read_virt(int fd, int addr)
 	if (b != bnum) {
 		bnum = b;
 
-		if (0) printf("fd %d, block %d(10) offset %ld\n",
-			      fd, b, offset);
-
 		ret = lseek(fd, offset, SEEK_SET);
 		if (ret != offset) {
 			perror("seek");
@@ -354,7 +351,6 @@ show_fef_func_name(unsigned int fefptr, unsigned int width)
 	printf(" "); v = get(n);
 
 	tag = (v >> width) & 037;
-	if (0) printf("tag %o\n", tag);
 
 	if (tag == 3) {
 		v = get(v);
@@ -424,7 +420,6 @@ find_and_dump_fef(unsigned int pc)
 			printf(" "); v = show(inst, 0);
 
 			tag = (v >> width) & 037;
-			if (0) printf("tag %o\n", tag);
 
 			if (tag == 3) {
 				printf("\n");
@@ -515,7 +510,6 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (0) printf("optind %d, argc %d\n", optind, argc);
 	if (optind < argc || argc == 1) {
 		usage();
 	}
@@ -621,36 +615,6 @@ main(int argc, char *argv[])
 							sys_com[i].a, 1);
 			}
 		}
-
-
-#if 0
-		if (swapfd)
-		{
-			int i;
-			unsigned int a;
-
-			a = sv[3].v & 0x00ffffff;
-			printf("a %o\n", a);
-
-			set_swap();
-			printf("sg - swap\n");
-
-			for (i = 10; i >= 0; i--) {
-				char b[16];
-				sprintf(b, "%d", -i);
-				swap_show(a-i, 1);
-			}
-
-			set_lod1();
-			printf("sg - lod1\n");
-
-			for (i = 10; i >= 0; i--) {
-				char b[16];
-				sprintf(b, "%d", -i);
-				swap_show(a-i, 1);
-			}
-		}
-#endif
 	}
 
 	exit(0);

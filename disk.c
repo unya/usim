@@ -279,13 +279,6 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 			printf("disk_read_block: error reading block_no %d\n", block_no);
 			return -1;
 		}
-#if 0
-		if (block_no == 10312)
-			for (i = 0; i < 32; i++) {
-				tracedio("read; vma %011o <- %011o\n",
-					 vma + i, buffer[i]);
-			}
-#endif
 		for (i = 0; i < 256; i++) {
 			write_phy_mem(vma + i, buffer[i]);
 		}
@@ -331,13 +324,6 @@ disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 		for (i = 0; i < 256; i++) {
 			read_phy_mem(vma + i, &buffer[i]);
 		}
-#if 0
-		if (block_no == 1812)
-			for (i = 0; i < 32; i++) {
-				tracedio("write; vma %011o <- %011o\n",
-					 vma + i, buffer[i]);
-			}
-#endif
 		_disk_write(block_no, buffer);
 		return 0;
 	}
@@ -440,7 +426,6 @@ disk_start_read(void)
 
 		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
-		vma = ccw & ~0377;
 		disk_ma = vma;
 
 		disk_show_cur_addr();
@@ -460,11 +445,7 @@ disk_start_read(void)
 	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
-#if 0
-		disk_throw_interrupt();
-#else
 		disk_future_interrupt();
-#endif
 	}
 }
 
@@ -504,14 +485,11 @@ disk_start_write(void)
 
 		tracedio("disk: mem[clp=%o] -> ccw %08o\n", disk_clp, ccw);
 
-		vma = ccw & ~0377;
 		disk_ma = vma;
 
 		disk_show_cur_addr();
 
 		disk_write_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
-
-		//		disk_incr_block();
 
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");

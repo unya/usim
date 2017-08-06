@@ -47,7 +47,6 @@ read32(int fd)
 		return (b[1] << 24) | (b[0] << 16) | (b[3] << 8) | b[2];
 
 	return (b[3] << 24) | (b[2] << 16) | (b[1] << 8) | b[0];
-	//	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
 }
 
 int
@@ -128,24 +127,6 @@ read_main_mem(int fd, int start, int size)
 	printf("start %d, size %d\n", start, size);
 
 	o = lseek(fd, 0, SEEK_CUR);
-	//	printf("offset %d\n", o);
-
-#if 0
-	o = (o + 256*4-1) & ~01777;
-	lseek(fd, o, SEEK_SET);
-
-	for (i = 0; i < size; i++) {
-		read(fd, b, 256*4);
-	}
-#endif
-
-#if 0
-	for (i = 0; i < start; i++) {
-		for (j = 0; j < 256; j++) {
-			read32(fd);
-		}
-	}
-#endif
 
 	return 0;
 }
@@ -193,8 +174,6 @@ main(int argc, char *argv[])
 
 	if (optind >= argc)
 		usage();
-
-	//"ucadr.mcr.979"
 
 	fd = open(argv[optind], O_RDONLY);
 	if (fd) {

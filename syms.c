@@ -33,8 +33,6 @@ _sym_add(struct symtab_s *tab, int memory, char *name, int v)
 {
 	struct sym_s *s;
 
-	if (0) printf("%d %s %o\n", memory, name, v);
-
 	s = (struct sym_s *)malloc(sizeof(struct sym_s));
 	if (s) {
 		tab->sym_count++;
@@ -104,7 +102,6 @@ _sym_find(struct symtab_s *tab, char *name, int *pval)
 	struct sym_s *s;
 
 	for (s = tab->syms; s; s = s->next) {
-		if (0) printf("%s %s\n", name, s->name);
 		if (strcasecmp(name, s->name) == 0) {
 			*pval = s->v;
 			return 0;
@@ -124,8 +121,6 @@ _sym_read_file(struct symtab_s *tab, const char *filename)
 	FILE *f;
 	char line[8*1024];
 
-	if (0) printf("tab %p, filename %s\n", tab, filename);
-
 	f = fopen(filename, "r");
 	if (f == NULL)
 		return -1;
@@ -144,8 +139,6 @@ _sym_read_file(struct symtab_s *tab, const char *filename)
 			strcpy(line, line+3);
 			first = 0;
 		}
-
-		if (0) printf("'%s'\n", line);
 
 		n = sscanf(line, "%s %s %o", sym, symtype, &loc);
 		if (n == 3) {
@@ -202,12 +195,6 @@ _sym_sort(struct symtab_s *tab)
 
 	/* sort the vector */
 	qsort((void *)tab->sorted_syms, tab->sym_count, sizeof(void *), _sym_loc_compare);
-
-#if 0
-	for (i = 0; i < tab->sym_count; i++) {
-		printf("%s %o\n", tab->sorted_syms[i]->name, tab->sorted_syms[i]->v);
-	}
-#endif
 
 	return 0;
 }

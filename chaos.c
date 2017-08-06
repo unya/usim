@@ -221,7 +221,6 @@ chaos_xmit_pkt(void)
 #endif
 
 	/* Dest is already in the buffer */
-	//	chaos_xmit_buffer[chaos_xmit_buffer_size++] = 0;/* dest */
 
 	chaos_xmit_buffer[chaos_xmit_buffer_size++] =	/* source */
 		(unsigned short)chaos_addr;
@@ -236,17 +235,6 @@ chaos_xmit_pkt(void)
 
 	chaos_xmit_buffer_ptr = 0;
 	char_xmit_done_intr();
-
-#if 0
-	/* set back to ourselves - only for testing */
-	chaos_rcv_buffer_size = chaos_xmit_buffer_size + 2;
-	memcpy(chaos_rcv_buffer, chaos_xmit_buffer, chaos_xmit_buffer_size*2);
-
-	chaos_rcv_buffer[chaos_xmit_buffer_size+0] = 0; /* source */
-	chaos_rcv_buffer[chaos_xmit_buffer_size+1] = 0; /* checksum */
-
-	chaos_rx_pkt();
-#endif
 }
 
 int
@@ -416,11 +404,6 @@ chaos_set_csr(int v)
 	if (chaos_csr & CHAOS_CSR_TRANSMIT_ENABLE) {
 		tracenet("tx-enable ");
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-#if 0
-		char_xmit_done_intr();
-	} else {
-		chaos_csr &= ~CHAOS_CSR_TRANSMIT_DONE;
-#endif
 	}
 
 	if (trace_net_flag) {

@@ -204,7 +204,6 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 		if (virt >= 077051757 && virt <= 077051763) {
 			traceio("disk run light\n");
 		} else {
-			if (0) traceio("tv: frame buffer %o\n", virt);
 		}
 
 		if (poffset)
@@ -222,7 +221,6 @@ map_vtop(unsigned int virt, int *pl1_map, int *poffset)
 
 	/* this should be move below - I'm not sure it has to happen anymore */
 	if ((virt & 077777400) == 077377400) {
-		if (0) traceio("forcing xbus mapping for disk\n");
 		if (poffset)
 			*poffset = virt & 0377;
 		return (1 << 22) | (1 << 23) | 036777;
@@ -403,7 +401,6 @@ read_mem(int vaddr, unsigned int *pv)
 	if (pn == 036000) {
 		/* thwart the color probe */
 		if ((vaddr & 077700000) == 077200000) {
-			if (0) printf("read from %o\n", vaddr);
 			*pv = 0x0;
 			return 0;
 		}
@@ -530,11 +527,9 @@ write_mem(int vaddr, unsigned int v)
 	if (pn == 036000) {
 		/* thwart the color probe */
 		if ((vaddr & 077700000) == 077200000) {
-			if (0) printf("write to %o\n", vaddr);
 			return 0;
 		}
 		offset = vaddr & 077777;
-		if (0) traceio("video_write %o %o (%011o)\n", offset, v, vaddr);
 		video_write(offset, v);
 		return 0;
 	}
@@ -906,20 +901,17 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
-		if (0) show_pdl_local();
 		break;
 	case 011: /* PDL (addressed by pointer, push */
 		pdl_ptr = (pdl_ptr + 1) & 01777;
 		tracef("writing pdl[%o] <- %o, push\n",
 		       pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
-		if (0) show_pdl_local();
 		break;
 	case 012: /* PDL (addressed by index) */
 		tracef("writing pdl[%o] <- %o\n",
 		       pdl_index, out_bus);
 		write_pdl_mem(USE_PDL_INDEX, out_bus);
-		if (0) show_pdl_local();
 		break;
 	case 013: /* PDL index */
 		tracef("pdl-index <- %o\n", out_bus);
@@ -1078,8 +1070,6 @@ show_pc_history(void)
 	unsigned int pc;
 
 	printf("pc history:\n");
-	if (0) printf("pc_history_ptr %d, pc_history_max %d, pc_history_stores %d\n",
-		      pc_history_ptr, pc_history_max, pc_history_stores);
 
 	for (i = 0; i < MAX_PC_HISTORY; i++) {
 		pc = pc_history[pc_history_ptr].rpc;
@@ -1316,11 +1306,6 @@ dump_state(void)
 		       i, m_memory[i], m_memory[i+1], m_memory[i+2], m_memory[i+3]);
 	}
 	printf("\n");
-
-	if (0) {
-		dump_l1_map();
-		dump_l2_map();
-	}
 
 	dump_pdl_memory();
 
@@ -1828,8 +1813,6 @@ run(void)
 			case 5: /* PDL buffer (addressed by index) */
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_index, pdl_memory[pdl_index]);
-				if (0) show_pdl_local();
-
 				m_src_value = pdl_memory[pdl_index];
 				break;
 			case 6: /* OPC registers <13-0> */
@@ -1881,16 +1864,12 @@ run(void)
 			case 024:
 				tracef("reading pdl[%o] -> %o, pop\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
-				if (0) show_pdl_local();
-
 				m_src_value = pdl_memory[pdl_ptr];
 				pdl_ptr = (pdl_ptr - 1) & 01777;
 				break;
 			case 025:
 				tracef("reading pdl[%o] -> %o\n",
 				       pdl_ptr, pdl_memory[pdl_ptr]);
-				if (0) show_pdl_local();
-
 				m_src_value = pdl_memory[pdl_ptr];
 				break;
 			}
