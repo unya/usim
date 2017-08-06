@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "ucode.h"
 
 static char *mcrsym_filename;
 static char *disk_filename;
@@ -10,7 +11,9 @@ static char *disk_filename;
 const char *
 config_get_promsym_filename(void)
 {
-	return "../sys/ubin/promh.sym";
+	if (alt_prom_flag)
+		return "../sys/ubin/promh.sym";
+	return "../bands/promh.sym.9";
 }
 
 const char *

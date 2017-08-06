@@ -54,12 +54,12 @@ int
 read_prom_files(void)
 {
 
-	char *name = "../sys/ubin/promh.mcr";
+	char *name = "../bands/promh.mcr.9";
 	int fd;
 	unsigned int code, start, size;
 
 	if (alt_prom_flag) {
-		sprintf(name, "./promh.mcr");
+		sprintf(name, "../sys/ubin/promh.mcr");
 	}
 
 	fd = open(name, O_RDONLY | O_BINARY);
