@@ -110,6 +110,8 @@ extern int disk_xbus_read(int offset, unsigned int *pv);
 extern int disk_xbus_write(int offset, unsigned int v);
 extern int tv_xbus_read(int offset, unsigned int *pv);
 extern int tv_xbus_write(int offset, unsigned int v);
+extern int uart_xbus_read(int, unsigned int *);
+extern int uart_xbus_write(int, unsigned int);
 
 extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
@@ -452,6 +454,10 @@ read_mem(int vaddr, unsigned int *pv)
 		return 0;
 	}
 
+	if (pn == 036776) {
+		return uart_xbus_read(offset, pv);
+	}
+
 	if ((page = phy_pages[pn]) == 0) {
 		/* page fault */
 		page_fault_flag = 1;
@@ -624,6 +630,10 @@ write_mem(int vaddr, unsigned int v)
 		if (offset == 0360)
 			return tv_xbus_write(offset, v);
 
+	}
+
+	if (pn == 036776) {
+		return uart_xbus_write(offset, v);
 	}
 
 	/* catch questionable accesses */
