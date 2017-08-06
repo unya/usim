@@ -312,20 +312,20 @@ iob_unibus_write(int offset, int v)
 }
 
 void
-iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
+iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 {
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0264);
 
 #if 0
-	printf("iob_sdl_mouse_event(dx=%x,dy=%x,buttons=%x) x %o, y %o\n",
+	printf("iob_mouse_event(dx=%x,dy=%x,buttons=%x) x %o, y %o\n",
 	       dx, dy, buttons, mouse_x, mouse_y);
 	mouse_x += dx;
 	mouse_y += dy;
 #endif
 
 	if (0)
-		printf("iob_sdl_mouse_event(x=%x,y=%x,buttons=%x)\n",
+		printf("iob_mouse_event(x=%x,y=%x,buttons=%x)\n",
 		       x, y, buttons);
 
 	if (mouse_sync_flag) {
@@ -362,7 +362,7 @@ iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons)
  * and microcode cursor in sync
  */
 void
-iob_sdl_mouse_poll(int x, int y)
+iob_mouse_poll(int x, int y)
 {
 	int mcx, mcy, dx, dy;
 
@@ -443,7 +443,7 @@ tv_post_60hz_interrupt(void)
 }
 
 void
-iob_sdl_clock_event()
+iob_clock_event()
 {
 	iob_kbd_csr |= 1 << 6;
 	assert_unibus_interrupt(0274);

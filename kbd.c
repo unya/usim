@@ -130,7 +130,7 @@ unsigned char kb_old_table[64][3] = {
 	' ',	' ',	' '
 };
 
-unsigned short kb_sdl_to_scancode[256][4];
+unsigned short kb_to_scancode[256][4];
 
 /****
  * FORMAT OF DATA IN 764100 (IF USING OLD KEYBOARD):
@@ -142,11 +142,11 @@ unsigned short kb_sdl_to_scancode[256][4];
  * 40000   1601    ;SHIFT LOCK
  ****/
 void
-iob_sdl_key_event(int code, int extra)
+iob_key_event(int code, int extra)
 {
 	int newkbd = 0; // keys found on the "new" keyboard
 
-	if (0) printf("iob_sdl_key_event(code=%x,extra=%x)\n", code, extra);
+	if (0) printf("iob_key_event(code=%x,extra=%x)\n", code, extra);
 
 	if (code == XK_Shift_L ||
 	    code == XK_Shift_R ||
@@ -227,7 +227,7 @@ iob_sdl_key_event(int code, int extra)
 			return;
 		}
 		iob_key_scan =
-			kb_sdl_to_scancode[code][(extra & (3 << 6)) ? 1 : 0];
+			kb_to_scancode[code][(extra & (3 << 6)) ? 1 : 0];
 		break;
 	}
 
@@ -255,7 +255,7 @@ iob_sdl_key_event(int code, int extra)
 void
 iob_warm_boot_key(void)
 {
-	iob_sdl_key_event(XK_Return, 0);
+	iob_key_event(XK_Return, 0);
 }
 
 
@@ -264,7 +264,7 @@ void iob_dequeue_key_event(void)
 }
 
 
-void sdl_queue_all_keys_up(void)
+void queue_all_keys_up(void)
 {
 }
 
@@ -274,120 +274,120 @@ kbd_init(void)
 	int i;
 
 	/* #### bzzt! handle multiple modifiers!! */
-	memset((char *)kb_sdl_to_scancode, 0, sizeof(kb_sdl_to_scancode));
+	memset((char *)kb_to_scancode, 0, sizeof(kb_to_scancode));
 
 	/* Walk unshifted old kbd table */
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
-		kb_sdl_to_scancode[k][0] = i;
+		kb_to_scancode[k][0] = i;
 	}
 
 	/* Modify mapping to match present-day US kbd */
-	kb_sdl_to_scancode['`'][0] = 015 | (3 << 6); /* ` = Shift @ = ` */
-	kb_sdl_to_scancode['`'][1] = 016 | (3 << 6); /* Sh-` = Sh-^ = ~*/
+	kb_to_scancode['`'][0] = 015 | (3 << 6); /* ` = Shift @ = ` */
+	kb_to_scancode['`'][1] = 016 | (3 << 6); /* Sh-` = Sh-^ = ~*/
 
-	kb_sdl_to_scancode['\''][0] = 010 | (3<<6);  /* ' = Sh-7 = ' */
-	kb_sdl_to_scancode['\''][1] = 3 | (3<<6);    /* Sh-' = Sh-2 = " */
-	kb_sdl_to_scancode['='][0] = 014 | (3<<6);   /* = = Sh-- = = */
-	kb_sdl_to_scancode['2'][1] = 015;	     /* Sh-2 = @ (unshifted) */
+	kb_to_scancode['\''][0] = 010 | (3<<6);  /* ' = Sh-7 = ' */
+	kb_to_scancode['\''][1] = 3 | (3<<6);    /* Sh-' = Sh-2 = " */
+	kb_to_scancode['='][0] = 014 | (3<<6);   /* = = Sh-- = = */
+	kb_to_scancode['2'][1] = 015;	     /* Sh-2 = @ (unshifted) */
 
-	kb_sdl_to_scancode['6'][1] = 016;	     /* Sh-6 = ^ (unshifted) */
-	kb_sdl_to_scancode['7'][1] = 7 | (3<<6);     /* Sh-7 = Sh-6 = & */
-	kb_sdl_to_scancode['8'][1] = 061 | (3<<6);   /* Sh-8 = Sh-: = * */
-	kb_sdl_to_scancode['9'][1] = 011 | (3<<6);   /* Sh-9 = Sh-8 = ( */
-	kb_sdl_to_scancode['0'][1] = 012 | (3<<6);   /* Sh-0 = Sh-9 = ) */
-	kb_sdl_to_scancode['-'][1] = 013 | (3<<6);   /* Sh-- = Sh-0 = _ */
-	kb_sdl_to_scancode['='][1] = 060 | (3<<6);   /* Sh-= = Sh-; = + */
+	kb_to_scancode['6'][1] = 016;	     /* Sh-6 = ^ (unshifted) */
+	kb_to_scancode['7'][1] = 7 | (3<<6);     /* Sh-7 = Sh-6 = & */
+	kb_to_scancode['8'][1] = 061 | (3<<6);   /* Sh-8 = Sh-: = * */
+	kb_to_scancode['9'][1] = 011 | (3<<6);   /* Sh-9 = Sh-8 = ( */
+	kb_to_scancode['0'][1] = 012 | (3<<6);   /* Sh-0 = Sh-9 = ) */
+	kb_to_scancode['-'][1] = 013 | (3<<6);   /* Sh-- = Sh-0 = _ */
+	kb_to_scancode['='][1] = 060 | (3<<6);   /* Sh-= = Sh-; = + */
 
-	kb_sdl_to_scancode[';'][1] = 061;	     /* Sh-; = : (unshifted) */
-	kb_sdl_to_scancode[':'][1] = 061;
+	kb_to_scancode[';'][1] = 061;	     /* Sh-; = : (unshifted) */
+	kb_to_scancode[':'][1] = 061;
 
-	kb_sdl_to_scancode['!'][1] = 2 | (3<<6);
-	kb_sdl_to_scancode['"'][1] = 3 | (3<<6);
-	kb_sdl_to_scancode['#'][1] = 4 | (3<<6);
-	kb_sdl_to_scancode['$'][1] = 5 | (3<<6);
-	kb_sdl_to_scancode['%'][1] = 6 | (3<<6);
-	kb_sdl_to_scancode['&'][1] = 7 | (3<<6);
-	kb_sdl_to_scancode['('][1] = 011 | (3<<6);
-	kb_sdl_to_scancode[')'][1] = 012 | (3<<6);
-	kb_sdl_to_scancode['_'][1] = 013 | (3<<6);
-	kb_sdl_to_scancode['~'][1] = 016 | (3<<6);
-	kb_sdl_to_scancode['@'][1] = 13;
-	kb_sdl_to_scancode['^'][1] = 14;
+	kb_to_scancode['!'][1] = 2 | (3<<6);
+	kb_to_scancode['"'][1] = 3 | (3<<6);
+	kb_to_scancode['#'][1] = 4 | (3<<6);
+	kb_to_scancode['$'][1] = 5 | (3<<6);
+	kb_to_scancode['%'][1] = 6 | (3<<6);
+	kb_to_scancode['&'][1] = 7 | (3<<6);
+	kb_to_scancode['('][1] = 011 | (3<<6);
+	kb_to_scancode[')'][1] = 012 | (3<<6);
+	kb_to_scancode['_'][1] = 013 | (3<<6);
+	kb_to_scancode['~'][1] = 016 | (3<<6);
+	kb_to_scancode['@'][1] = 13;
+	kb_to_scancode['^'][1] = 14;
 
-	kb_sdl_to_scancode['Q'][1] = 20 | (3<<6);
-	kb_sdl_to_scancode['W'][1] = 21 | (3<<6);
-	kb_sdl_to_scancode['E'][1] = 22 | (3<<6);
-	kb_sdl_to_scancode['R'][1] = 23 | (3<<6);
-	kb_sdl_to_scancode['T'][1] = 24 | (3<<6);
-	kb_sdl_to_scancode['Y'][1] = 25 | (3<<6);
-	kb_sdl_to_scancode['U'][1] = 26 | (3<<6);
-	kb_sdl_to_scancode['I'][1] = 27 | (3<<6);
-	kb_sdl_to_scancode['O'][1] = 28 | (3<<6);
-	kb_sdl_to_scancode['P'][1] = 29 | (3<<6);
-	kb_sdl_to_scancode['{'][1] = 30 | (3<<6);
-	kb_sdl_to_scancode['}'][1] = 31 | (3<<6);
-	kb_sdl_to_scancode['|'][1] = 32 | (3<<6);
+	kb_to_scancode['Q'][1] = 20 | (3<<6);
+	kb_to_scancode['W'][1] = 21 | (3<<6);
+	kb_to_scancode['E'][1] = 22 | (3<<6);
+	kb_to_scancode['R'][1] = 23 | (3<<6);
+	kb_to_scancode['T'][1] = 24 | (3<<6);
+	kb_to_scancode['Y'][1] = 25 | (3<<6);
+	kb_to_scancode['U'][1] = 26 | (3<<6);
+	kb_to_scancode['I'][1] = 27 | (3<<6);
+	kb_to_scancode['O'][1] = 28 | (3<<6);
+	kb_to_scancode['P'][1] = 29 | (3<<6);
+	kb_to_scancode['{'][1] = 30 | (3<<6);
+	kb_to_scancode['}'][1] = 31 | (3<<6);
+	kb_to_scancode['|'][1] = 32 | (3<<6);
 
-	kb_sdl_to_scancode['A'][1] = 39 | (3<<6);
-	kb_sdl_to_scancode['S'][1] = 40 | (3<<6);
-	kb_sdl_to_scancode['D'][1] = 41 | (3<<6);
-	kb_sdl_to_scancode['F'][1] = 42 | (3<<6);
-	kb_sdl_to_scancode['G'][1] = 43 | (3<<6);
-	kb_sdl_to_scancode['H'][1] = 44 | (3<<6);
-	kb_sdl_to_scancode['J'][1] = 45 | (3<<6);
-	kb_sdl_to_scancode['K'][1] = 46 | (3<<6);
-	kb_sdl_to_scancode['L'][1] = 47 | (3<<6);
-	kb_sdl_to_scancode['+'][1] = 48 | (3<<6);
-	kb_sdl_to_scancode['*'][1] = 061 | (3<<6);
+	kb_to_scancode['A'][1] = 39 | (3<<6);
+	kb_to_scancode['S'][1] = 40 | (3<<6);
+	kb_to_scancode['D'][1] = 41 | (3<<6);
+	kb_to_scancode['F'][1] = 42 | (3<<6);
+	kb_to_scancode['G'][1] = 43 | (3<<6);
+	kb_to_scancode['H'][1] = 44 | (3<<6);
+	kb_to_scancode['J'][1] = 45 | (3<<6);
+	kb_to_scancode['K'][1] = 46 | (3<<6);
+	kb_to_scancode['L'][1] = 47 | (3<<6);
+	kb_to_scancode['+'][1] = 48 | (3<<6);
+	kb_to_scancode['*'][1] = 061 | (3<<6);
 
-	kb_sdl_to_scancode['Z'][1] = 53 | (3<<6);
-	kb_sdl_to_scancode['X'][1] = 54 | (3<<6);
-	kb_sdl_to_scancode['C'][1] = 55 | (3<<6);
-	kb_sdl_to_scancode['V'][1] = 56 | (3<<6);
-	kb_sdl_to_scancode['B'][1] = 57 | (3<<6);
-	kb_sdl_to_scancode['N'][1] = 58 | (3<<6);
-	kb_sdl_to_scancode['M'][1] = 59 | (3<<6);
-	kb_sdl_to_scancode['<'][1] = 60 | (3<<6);
-	kb_sdl_to_scancode['>'][1] = 61 | (3<<6);
-	kb_sdl_to_scancode['?'][1] = 62 | (3<<6);
+	kb_to_scancode['Z'][1] = 53 | (3<<6);
+	kb_to_scancode['X'][1] = 54 | (3<<6);
+	kb_to_scancode['C'][1] = 55 | (3<<6);
+	kb_to_scancode['V'][1] = 56 | (3<<6);
+	kb_to_scancode['B'][1] = 57 | (3<<6);
+	kb_to_scancode['N'][1] = 58 | (3<<6);
+	kb_to_scancode['M'][1] = 59 | (3<<6);
+	kb_to_scancode['<'][1] = 60 | (3<<6);
+	kb_to_scancode['>'][1] = 61 | (3<<6);
+	kb_to_scancode['?'][1] = 62 | (3<<6);
 
 	/* map "Delete" to rubout */
-	kb_sdl_to_scancode[0x7f][0] = 046;	     /* Delete = Rubout */
-	kb_sdl_to_scancode[0x08][0] = 046;	     /* Delete = Rubout */
+	kb_to_scancode[0x7f][0] = 046;	     /* Delete = Rubout */
+	kb_to_scancode[0x08][0] = 046;	     /* Delete = Rubout */
 
 	/* map tab to tab */
-	kb_sdl_to_scancode[9][0] = 0211;	     /* Tab = Tab */
+	kb_to_scancode[9][0] = 0211;	     /* Tab = Tab */
 
 	/* esc = esc */
-	kb_sdl_to_scancode[0x1b][0] = 0204;	     /* Esc = Esc (Terminal) */
+	kb_to_scancode[0x1b][0] = 0204;	     /* Esc = Esc (Terminal) */
 
 	/* map arrows */
-	//    kb_sdl_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
+	//    kb_to_scancode[0x2b][2] = LM_K_HAND_DOWN;
 
 	/* Add shifts */
 	for (i = 0; i < 256; i++) {
-		if (kb_sdl_to_scancode[i][1] == 0)
-			kb_sdl_to_scancode[i][1] = kb_sdl_to_scancode[i][0] |
+		if (kb_to_scancode[i][1] == 0)
+			kb_to_scancode[i][1] = kb_to_scancode[i][0] |
 				(3 << 6);
 	}
 
-	if (0) printf("kb_sdl_to_scancode[';'][1] = %x\n", kb_sdl_to_scancode[';'][1]);
+	if (0) printf("kb_to_scancode[';'][1] = %x\n", kb_to_scancode[';'][1]);
 
 #if 0   /* Don't do this */
 	/* control keys */
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
-		kb_sdl_to_scancode[k][2] = i | (3 << 10);
+		kb_to_scancode[k][2] = i | (3 << 10);
 	}
 
 	/* meta keys */
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
-		kb_sdl_to_scancode[k][3] = i | (3 << 12);
+		kb_to_scancode[k][3] = i | (3 << 12);
 	}
 #endif
 }

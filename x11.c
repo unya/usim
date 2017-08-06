@@ -9,8 +9,8 @@
 #include <signal.h>
 
 extern int run_ucode_flag;
-extern void iob_sdl_key_event(int code, int extra);
-extern void iob_sdl_mouse_event(int x, int y, int dx, int dy, int buttons);
+extern void iob_key_event(int code, int extra);
+extern void iob_mouse_event(int x, int y, int dx, int dy, int buttons);
 
 static unsigned int video_width = 768;
 static unsigned int video_height = 897 /*1024*/;
@@ -83,7 +83,7 @@ static void x11_process_key(XEvent *e, int updown)
 		printf("keysym %d, scancode %x, sym %s, state %x\n",
 		       keysym, e->xkey.keycode, buffer, e->xkey.state);
 #endif
-		iob_sdl_key_event(keysym, extra);
+		iob_key_event(keysym, extra);
 	}
 }
 
@@ -117,7 +117,7 @@ display_poll(void)
 		case MotionNotify:
 		case ButtonPress:
 		case ButtonRelease:
-			iob_sdl_mouse_event(e.xbutton.x, e.xbutton.y, 0, 0,
+			iob_mouse_event(e.xbutton.x, e.xbutton.y, 0, 0,
 					    e.xbutton.button);
 			break;
 
