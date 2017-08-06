@@ -274,7 +274,7 @@ kbd_init(void)
 	for (i = 0; i < 64; i++) {
 		char k;
 		k = kb_old_table[i][0];
-		kb_to_scancode[k][0] = i;
+		kb_to_scancode[(int)k][0] = i;
 	}
 
 	/* Modify mapping to match present-day US kbd */

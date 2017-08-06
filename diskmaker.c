@@ -682,8 +682,6 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 	int fd, fd_out, ret, p, i, result;
 	int count, offset, size;
 
-	fd = 0;
-	fd_out = 0;
 	result = -1;
 
 	fd = open(filename, O_RDONLY, 0666);

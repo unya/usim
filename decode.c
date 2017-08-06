@@ -257,13 +257,12 @@ disassemble_dest(int dest)
 }
 
 void
-disassemble_ucode_loc(int loc, ucw_t u)
+disassemble_ucode_loc(ucw_t u)
 {
 	int a_src, m_src, new_pc, dest, alu_op;
 	int r_bit, p_bit, n_bit, ir8, ir7;
 	int widthm1, pos;
 	int mr_sr_bits;
-	int jump_op;
 
 	int disp_cont, disp_addr;
 	int map, len, rot;
@@ -332,8 +331,6 @@ disassemble_ucode_loc(int loc, ucw_t u)
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 		new_pc = (u >> 12) & 037777;
-
-		jump_op = (u >> 14) & 3;
 
 		printf("a=%o m=", a_src);
 		disassemble_m_src(u, m_src);
@@ -451,7 +448,7 @@ disassemble_prom(void)
 
 		printf("%03o %016llo ", i, prom_ucode[i]);
 
-		disassemble_ucode_loc(i, u);
+		disassemble_ucode_loc(u);
 	}
 }
 
@@ -629,9 +626,9 @@ find_function_name(unsigned int the_lc)
 }
 
 void
-show_list(unsigned int lp)
+show_list(void)
 {
-	unsigned int loc, l1, v;
+	unsigned int loc, l1, v =0;
 	int i;
 
 	loc = 030301442405;
@@ -1109,7 +1106,7 @@ char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 extern int read_mem(int vaddr, unsigned int *pv);
 
 static char *
-disassemble_address(unsigned int fef, unsigned int reg, unsigned int delta)
+disassemble_address(unsigned int reg, unsigned int delta)
 {
 	static char addr[256];
 
@@ -1219,7 +1216,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	case 1: /* call0 */
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
-		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 
 		{
 			unsigned int v, tag;
@@ -1251,19 +1248,19 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	case 010: /* caar */
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
-		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
 	case 011: /* nd1 */
 		sprintf(&buffer[strlen(buffer)], "%s ", nd1_names[dest]);
-		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
 	case 012: /* nd2 */
 		sprintf(&buffer[strlen(buffer)], "%s ", nd2_names[dest]);
-		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
 	case 013: /* nd3 */
 		sprintf(&buffer[strlen(buffer)], "%s ", nd3_names[dest]);
-		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(fefptr, reg, delta));
+		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
 	case 014: /* branch */
 		sprintf(&buffer[strlen(buffer)], "%s ", branch_names[dest]);

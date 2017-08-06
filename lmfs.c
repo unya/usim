@@ -42,12 +42,11 @@ void init_access(baccess *pb, int fd)
 void *ensure_access(baccess *pb, int offset, int size)
 {
         unsigned char *ptr;
-        int blknum, boff, left, do_pad;
+        int blknum, boff, left;
 
         blknum = offset / 1008;
         boff = offset % 1008;
         left = 1008 - boff;
-        do_pad = 0;
 
         if (blknum > 3) {
                 printf("ensure_access: past end!\n");
@@ -55,7 +54,6 @@ void *ensure_access(baccess *pb, int offset, int size)
         }
 
         if (left < size) {
-                do_pad = 1;
                 blknum++;
                 boff = 0;
         }
@@ -103,9 +101,8 @@ void *advance_access(baccess *pb, int size)
 int
 remaining_access(baccess *pb)
 {
-        int blknum, boff, left;
+        int boff, left;
 
-        blknum = pb->offset / 1008;
         boff = pb->offset % 1008;
         left = 1008 - boff;
         return left;
@@ -372,7 +369,7 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
         baccess b;
         int i, woffset, wlast, bl, tot;
         struct file_header_s *fh;
-        int n, num_blocks, blocks[64];
+        int n, blocks[64];
         char *p;
 
         init_access(&b, fd);
@@ -384,14 +381,10 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
         printf("number_of_elements %d\n", fh->number_of_elements);
         for (i = 0; i < 8; i++) {
                 char n[5];
-                int woffset;
-
                 memcpy(n, fh->parts_array[i].name, 4);
                 n[4] = 0;
                 printf("%d: %s loc %d len %d\n", i, n,
                        fh->parts_array[i].location, fh->parts_array[i].length);
-
-                woffset = fh->parts_array[i].location;
         }
 
         for (i = 0; i < 8; i++) {
@@ -411,7 +404,6 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
 
                         for (j = 0; j < fm->valid_length; j++)
                                 blocks[j] = fm->element[j];
-                        num_blocks = fm->valid_length;
                 }
 
         }
@@ -443,7 +435,6 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
                 if (fdd > 0) write(fdd, p, use);
 
                 bl -= use;
-                left -= use;
 
                 p = (char *)advance_access(&b, use);
 
@@ -470,7 +461,7 @@ show_de(int fd, int record_no)
         struct directory_entry_s *de;
         int i, woffset, wlast, numentries;
         struct file_header_s *fh;
-        int n, num_blocks, blocks[64];
+        int n, blocks[64];
 
         init_access(&b, fd);
         read_record(&b, record_no);
@@ -482,14 +473,10 @@ show_de(int fd, int record_no)
         printf("number_of_elements %d\n", fh->number_of_elements);
         for (i = 0; i < 8; i++) {
                 char n[5];
-                int woffset;
-
                 memcpy(n, fh->parts_array[i].name, 4);
                 n[4] = 0;
                 printf("%d: %s loc %d len %d\n", i, n,
                        fh->parts_array[i].location, fh->parts_array[i].length);
-
-                woffset = fh->parts_array[i].location;
         }
 
         for (i = 0; i < 8; i++) {
@@ -509,7 +496,6 @@ show_de(int fd, int record_no)
 
                         for (j = 0; j < fm->valid_length; j++)
                                 blocks[j] = fm->element[j];
-                        num_blocks = fm->valid_length;
                 }
 
                 if (memcmp(fh->parts_array[i].name, "dire", 4) == 0) {
@@ -658,8 +644,6 @@ lmfs_open(char *img_filename, int offset)
                                 printf("entries_index_offset %d\n", dh->entries_index_offset);
                                 printf("uid_path_offset %d\n", dh->uid_path_offset);
                                 printf("uid_path_length %d\n", dh->uid_path_length);
-
-                                woffset += sizeof(struct directory_entry_s) / 4;
 
                                 for (i = 0; i < dh->number_of_entries; i++) {
                                         de = (struct directory_entry_s *)advance_access(&b, sizeof(struct directory_entry_s));

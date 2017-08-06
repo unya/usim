@@ -25,9 +25,6 @@ typedef struct DisplayState {
 	int height;
 } DisplayState;
 
-static DisplayState display_state;
-static DisplayState *ds = &display_state;
-
 Display *display;
 Window window;
 static int bitmap_order;
@@ -58,7 +55,7 @@ static void x11_process_key(XEvent *e, int updown)
 {
 	KeySym keysym;
 	unsigned char buffer[5];
-	int extra, ret;
+	int extra;
 
 	extra = 0;
 	if (e->xkey.state & X_META)
@@ -77,7 +74,7 @@ static void x11_process_key(XEvent *e, int updown)
 		extra |= 3 << 10;
 
 	if (updown) {
-		ret = XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
+		XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
 				    &status);
 		iob_key_event(keysym, extra);
 	}
@@ -87,8 +84,6 @@ void
 display_poll(void)
 {
 	XEvent e;
-	int mod_state;
-	int keysym;
 	void send_accumulated_updates(void);
 
 	send_accumulated_updates();
@@ -133,15 +128,12 @@ video_read(int offset, unsigned int *pv)
 {
 	if (ximage) {
 		unsigned long bits;
-		int i, h, v, n;
+		int i;
 
 		offset *= 32;
 
-		v = offset / video_width;
-		h = offset % video_width;
-
 		if (offset > video_width*video_height) {
-			if (1) printf("video: video_read past end; "
+			printf("video: video_read past end; "
 				      "offset %o\n", offset);
 			*pv = 0;
 			return;
@@ -192,7 +184,7 @@ void
 video_write(int offset, unsigned int bits)
 {
 	if (ximage) {
-		int i, h, v, n;
+		int i, h, v;
 
 		offset *= 32;
 
@@ -215,7 +207,6 @@ display_init(void)
 {
 	char *displayname;
 	unsigned long bg_pixel = 0L;
-	int pad = 0;
 	int xscreen;
 	Window root;
 	XEvent e;

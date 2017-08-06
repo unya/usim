@@ -45,7 +45,6 @@ int chaos_rcv_buffer_empty;
 int chaos_fd;
 int chaos_need_reconnect;
 static int reconnect_delay;
-static int reconnect_time;
 void chaos_force_reconect(void);
 int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_reconnect(void);
@@ -703,7 +702,7 @@ chaos_find_connection(unsigned short index)
 }
 
 chaos_connection *
-chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize)
+chaos_open_connection(int co_host, char *contact, int rwsize)
 {
 	size_t co_clength;
 	chaos_connection *conn = chaos_make_connection();

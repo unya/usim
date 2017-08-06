@@ -21,23 +21,23 @@ struct {
 	unsigned int a;
 	unsigned int v;
 } sys_com[] = {
-	{ "%SYS-COM-AREA-ORIGIN-PNTR", 0400 },
-	{ "%SYS-COM-VALID-SIZE", 0401 },
-	{ "%SYS-COM-PAGE-TABLE-PNTR", 0402 },
-	{ "%SYS-COM-PAGE-TABLE-SIZE", 0403 },
-	{ "%SYS-COM-OBARRAY-PNTR", 0404 },
-	{ "%SYS-COM-ETHER-FREE-LIST", 0405 },
-	{ "%SYS-COM-ETHER-TRANSMIT-LIST", 0406 },
-	{ "%SYS-COM-ETHER-RECEIVE-LIST", 0407 },
-	{ "%SYS-COM-BAND-FORMAT", 0410 },
-	{ "%SYS-COM-SPARE-2", 0411 },
-	{ "%SYS-COM-UNIBUS-INTERRUPT-LIST", 0412 },
-	{ "%SYS-COM-TEMPORARY", 0413 },
-	{ "%SYS-COM-FREE-AREA/#-LIST", 0414 },
-	{ "%SYS-COM-FREE-REGION/#-LIST", 0415 },
-	{ "%SYS-COM-MEMORY-SIZE", 0416 },
-	{ "%SYS-COM-WIRED-SIZE", 0417 },
-	{ (char *)0, 0 },
+	{ "%SYS-COM-AREA-ORIGIN-PNTR", 0400, 0},
+	{ "%SYS-COM-VALID-SIZE", 0401, 0},
+	{ "%SYS-COM-PAGE-TABLE-PNTR", 0402, 0},
+	{ "%SYS-COM-PAGE-TABLE-SIZE", 0403, 0},
+	{ "%SYS-COM-OBARRAY-PNTR", 0404, 0},
+	{ "%SYS-COM-ETHER-FREE-LIST", 0405, 0},
+	{ "%SYS-COM-ETHER-TRANSMIT-LIST", 0406, 0},
+	{ "%SYS-COM-ETHER-RECEIVE-LIST", 0407, 0},
+	{ "%SYS-COM-BAND-FORMAT", 0410, 0},
+	{ "%SYS-COM-SPARE-2", 0411, 0},
+	{ "%SYS-COM-UNIBUS-INTERRUPT-LIST", 0412, 0},
+	{ "%SYS-COM-TEMPORARY", 0413, 0},
+	{ "%SYS-COM-FREE-AREA/#-LIST", 0414, 0},
+	{ "%SYS-COM-FREE-REGION/#-LIST", 0415, 0},
+	{ "%SYS-COM-MEMORY-SIZE", 0416, 0},
+	{ "%SYS-COM-WIRED-SIZE", 0417, 0},
+	{ (char *)0, 0, 0},
 };
 
 /*
@@ -75,39 +75,39 @@ struct {
 	unsigned int a;
 	unsigned int v;
 } cv[] = {
-	{ "A-V-RESIDENT-SYMBOL-AREA", 0 },
-	{ "A-V-SYSTEM-COMMUNICATION-AREA", 0 },
-	{ "A-V-SCRATCH-PAD-INIT-AREA", 0 },
-	{ "A-V-MICRO-CODE-SYMBOL-AREA", 0 },
-	{ "A-V-PAGE-TABLE-AREA", 0 },
-	{ "A-V-PHYSICAL-PAGE-DATA", 0 },
-	{ "A-V-REGION-ORIGIN", 0 },
-	{ "A-V-REGION-LENGTH", 0 },
-	{ "A-V-REGION-BITS", 0 },
-	{ "A-V-ADDRESS-SPACE-MAP", 0 },
-	{ "A-V-REGION-FREE-POINTER", 0 },
-	{ "A-V-REGION-GC-POINTER", 0 },
-	{ "A-V-REGION-LIST-THREAD", 0 },
-	{ "A-V-AREA-NAME", 0 },
-	{ "A-V-AREA-REGION-LIST", 0 },
-	{ "A-V-AREA-REGION-SIZE", 0 },
-	{ "A-V-AREA-MAXIMUM-SIZE", 0 },
-	{ "A-V-AREA-SWAP-RECOMMENDATIONS", 0 },
-	{ "A-V-GC-TABLE-AREA", 0 },
-	{ "A-V-SUPPORT-ENTRY-VECTOR", 0 },
-	{ "A-V-CONSTANTS-AREA", 0 },
-	{ "A-V-EXTRA-PDL-AREA", 0 },
-	{ "A-V-MICRO-CODE-ENTRY-AREA", 0 },
-	{ "A-V-MICRO-CODE-ENTRY-NAME-AREA", 0 },
-	{ "A-V-MICRO-CODE-ENTRY-ARGS-INFO-AREA", 0 },
-	{ "A-V-MICRO-CODE-ENTRY-MAX-PDL-USAGE", 0 },
-	{ "A-V-MICRO-CODE-ENTRY-ARGLIST-AREA", 0 },
-	{ "A-V-MICRO-CODE-SYMBOL-NAME-AREA", 0 },
-	{ "A-V-LINEAR-PDL-AREA", 0 },
-	{ "A-V-LINEAR-BIND-PDL-AREA", 0 },
-	{ "A-V-INIT-LIST-AREA", 0 },
-	{ "A-V-FIRST-UNFIXED-AREA", 0 },
-	{ (char *)0, 0 }
+	{ "A-V-RESIDENT-SYMBOL-AREA", 0, 0},
+	{ "A-V-SYSTEM-COMMUNICATION-AREA", 0, 0},
+	{ "A-V-SCRATCH-PAD-INIT-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-SYMBOL-AREA", 0, 0},
+	{ "A-V-PAGE-TABLE-AREA", 0, 0},
+	{ "A-V-PHYSICAL-PAGE-DATA", 0, 0},
+	{ "A-V-REGION-ORIGIN", 0, 0},
+	{ "A-V-REGION-LENGTH", 0, 0},
+	{ "A-V-REGION-BITS", 0, 0},
+	{ "A-V-ADDRESS-SPACE-MAP", 0, 0},
+	{ "A-V-REGION-FREE-POINTER", 0, 0},
+	{ "A-V-REGION-GC-POINTER", 0, 0},
+	{ "A-V-REGION-LIST-THREAD", 0, 0},
+	{ "A-V-AREA-NAME", 0, 0},
+	{ "A-V-AREA-REGION-LIST", 0, 0},
+	{ "A-V-AREA-REGION-SIZE", 0, 0},
+	{ "A-V-AREA-MAXIMUM-SIZE", 0, 0},
+	{ "A-V-AREA-SWAP-RECOMMENDATIONS", 0, 0},
+	{ "A-V-GC-TABLE-AREA", 0, 0},
+	{ "A-V-SUPPORT-ENTRY-VECTOR", 0, 0},
+	{ "A-V-CONSTANTS-AREA", 0, 0},
+	{ "A-V-EXTRA-PDL-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-ENTRY-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-ENTRY-NAME-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-ENTRY-ARGS-INFO-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-ENTRY-MAX-PDL-USAGE", 0, 0},
+	{ "A-V-MICRO-CODE-ENTRY-ARGLIST-AREA", 0, 0},
+	{ "A-V-MICRO-CODE-SYMBOL-NAME-AREA", 0, 0},
+	{ "A-V-LINEAR-PDL-AREA", 0, 0},
+	{ "A-V-LINEAR-BIND-PDL-AREA", 0, 0},
+	{ "A-V-INIT-LIST-AREA", 0, 0},
+	{ "A-V-FIRST-UNFIXED-AREA", 0, 0},
+	{ (char *)0, 0, 0}
 };
 
 struct {
@@ -115,11 +115,11 @@ struct {
 	unsigned int a;
 	unsigned int v;
 } sv[] = {
-	{ "A-INITIAL-FEF", 0 },
-	{ "A-QTRSTKG", 0 },
-	{ "A-QCSTKG", 0 },
-	{ "A-QISTKG", 0 },
-	{ (char *)0, 0 }
+	{ "A-INITIAL-FEF", 0, 0},
+	{ "A-QTRSTKG", 0, 0},
+	{ "A-QCSTKG", 0, 0},
+	{ "A-QISTKG", 0, 0},
+	{ (char *)0, 0, 0}
 };
 
 int lodfd, swapfd;
@@ -195,7 +195,7 @@ unstr4(unsigned long s)
 int
 read_partition_table(void)
 {
-	int i, ret, p, count, size;
+	int i, ret, p, count;
 
 	ret = read(swapfd, buf, 256*4);
 	if (ret != 256*4) {
@@ -215,7 +215,6 @@ read_partition_table(void)
 	}
 
 	count = buf[0200];
-	size = buf[0201];
 	p = 0202;
 
 	part_count = 0;
@@ -376,7 +375,7 @@ find_and_dump_fef(unsigned int pc)
 
 	width = set_wide ? 25 : 24;
 	addr = pc >> 2;
-	if (1) printf("pc %o, addr %o\n", pc, addr);
+	printf("pc %o, addr %o\n", pc, addr);
 
 	/* find fef */
 	for (i = 0; i < 512; i--) {
@@ -469,7 +468,8 @@ main(int argc, char *argv[])
 {
 	unsigned int com;
 	int i, c;
-	unsigned int pc, addr;
+	unsigned int pc = 0;
+	unsigned int addr =0;
 
 	while ((c = getopt(argc, argv, "l:i:csfgp:a:m:w")) != -1) {
 		switch (c) {

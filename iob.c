@@ -111,7 +111,9 @@ get_us_clock()
 {
 	unsigned long v;
 #ifdef US_CLOCK_IS_WALL_CLOCK
-	static unsigned long last_hz60, hz60;
+	#ifdef USE_US_CLOCK_FOR_60HZ
+		static unsigned long last_hz60;
+		#endif
 	static struct timeval tv;
 	struct timeval tv2;
 	unsigned long ds, du;
@@ -119,7 +121,9 @@ get_us_clock()
 	if (tv.tv_sec == 0) {
 		gettimeofday(&tv, 0);
 		v = 0;
+#ifdef USE_US_CLOCK_FOR_60HZ		
 		last_hz60 = 0;
+		#endif
 	} else {
 		gettimeofday(&tv2, 0);
 
@@ -133,6 +137,7 @@ get_us_clock()
 		v = (ds * 1000*1000) + du;
 
 #ifdef USE_US_CLOCK_FOR_60HZ
+
 		hz60 = v / 16000;
 		if (hz60 > last_hz60) {
 			last_hz60 = hz60;

@@ -1647,7 +1647,7 @@ run(void)
 		char invert_sense, take_jump;
 		int a_src, m_src, new_pc, dest, aluop;
 		int r_bit, p_bit, n_bit;
-		int m_src_value, a_src_value;
+		int m_src_value = 0, a_src_value;
 
 		int widthm1, pos;
 		int mr_sr_bits;
@@ -1794,7 +1794,7 @@ run(void)
 
 		/* calculate M source value */
 		if (m_src & 040) {
-			unsigned int l2_data, l1_data;
+			unsigned int l2_data, l1_data =0;
 
 			switch (m_src & 037) {
 			case 0: /* dispatch constant */
@@ -2116,8 +2116,6 @@ run(void)
 				       alu_out, alu_out, alu_out);
 				break;
 			}
-			
-			take_jump = 0;
 			
 			/* Q control */
 			old_q = q;

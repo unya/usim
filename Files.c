@@ -626,56 +626,6 @@ settreeroot(const char *root)
 #endif
 }
 
-static void
-dumpbuffer(u_char *buf, ssize_t cnt)
-{
-	ssize_t j;
-	int offset, skipping;
-	char cbuf[17];
-	char line[80];
-
-	offset = 0;
-	skipping = 0;
-	while (cnt > 0) {
-		if (offset > 0 && memcmp(buf, buf-16, 16) == 0) {
-			skipping = 1;
-		} else {
-			if (skipping) {
-				skipping = 0;
-				fprintf(stderr,"...\n");
-			}
-		}
-
-		if (!skipping) {
-			for (j = 0; j < 16; j++) {
-				char *pl = line+j*3;
-
-				if (j >= cnt) {
-					strcpy(pl, "xx ");
-					cbuf[j] = 'x';
-				} else {
-					sprintf(pl, "%02x ", buf[j]);
-					cbuf[j] = buf[j] < ' ' ||
-						buf[j] > '~' ? '.' : (char)buf[j];
-				}
-				pl[3] = 0;
-			}
-			cbuf[16] = 0;
-
-			fprintf(stderr,"%08x %s %s\n", offset, line, cbuf);
-		}
-
-		buf += 16;
-		cnt -= 16;
-		offset += 16;
-	}
-
-	if (skipping) {
-		fprintf(stderr,"%08x ...\n", offset-16);
-	}
-	fflush(stderr);
-}
-
 static void *_processdata(void *conn)
 {
 	register struct transaction *t;
@@ -1347,7 +1297,7 @@ dataconn(register struct transaction *t)
 		}
 
 	extern int chaos_addr;
-	chaos_connection *conn = chaos_open_connection(chaos_addr, ofhname, 2, 1, 0);
+	chaos_connection *conn = chaos_open_connection(chaos_addr, ofhname, 0);
 
 	ifh = salloc(file_handle);
 	ofh = salloc(file_handle);
@@ -2148,7 +2098,7 @@ diropen(struct xfer *ax, register struct transaction *t)
 
 	if (x->x_glob) {
 		char **badfile = NOBLK;
-		int baderrno;
+		int baderrno =0;
 		/*
 		 * We still need to check for the case where the only
 		 * matching files (which don't necessarily exists) are
@@ -2525,7 +2475,7 @@ xclose(struct xfer *ax)
 
 			chaosfile_log(LOG_INFO, "xclose (3b)\n");
 
-			struct utimbuf *timep;
+			struct utimbuf *timep = NULL;
 
 			timep->actime = (x->x_options&O_PRESERVE ||
 				    x->x_flags&X_ATIME) ? x->x_atime :
@@ -4803,6 +4753,7 @@ _processmini(void *conn)
 			break;
 		}
 	}
+	return NULL;
 }
 
 static pthread_t processmini_thread;

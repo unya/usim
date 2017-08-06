@@ -84,11 +84,10 @@ int
 read_d_mem(int fd, int start, int size)
 {
 	int i;
-	unsigned int v1, v2;
 
 	for (i = 0; i < size; i++) {
-		v1 = read16(fd);
-		v2 = read16(fd);
+		read16(fd);
+	        read16(fd);
 	}
 
 	return 0;
@@ -119,14 +118,10 @@ read_a_mem(int fd, int start, int size)
 int
 read_main_mem(int fd, int start, int size)
 {
-	unsigned int v1;
-	off_t o;
-	/*unsigned int b[256]; */
-
-	v1 = read32(fd);
+	read32(fd);
 	printf("start %d, size %d\n", start, size);
 
-	o = lseek(fd, 0, SEEK_CUR);
+	lseek(fd, 0, SEEK_CUR);
 
 	return 0;
 }

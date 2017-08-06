@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #include "ucode.h"
 #include "decode.h"
@@ -187,7 +188,6 @@ int cc_clock(void);
 int cc_send(unsigned char *b, int len)
 {
 	int i, ret;
-	char bb[5];
 
 	/* send slowly so as not to confuse hardware */
 	for (i = 0; i < len; i++) {
@@ -424,9 +424,7 @@ cc_read_status(void)
 int
 cc_write_diag_ir(uint64_t ir)
 {
-	int tries;
-
-	if (debug || verbose) disassemble_ucode_loc(0, ir);
+	if (debug || verbose) disassemble_ucode_loc(ir);
 	cc_set(wr_spy_ir_high, (uint16_t)((ir >> 32) & 0xffff));
 	cc_set(wr_spy_ir_med,  (uint16_t)((ir >> 16) & 0xffff));
 	cc_set(wr_spy_ir_low,  (uint16_t)((ir >>  0) & 0xffff));
@@ -441,7 +439,7 @@ cc_write_diag_ir(uint64_t ir)
 int
 cc_write_ir(uint64_t ir)
 {
-	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
+	if (debug || verbose) printf("ir %" PRIu64 " (0x%016llx)\n", ir, ir);
 	cc_write_diag_ir(ir);
 	return cc_noop_debug_clock();
 }
@@ -450,7 +448,7 @@ int
 cc_execute_r(uint64_t ir)
 {
 	int ret;
-	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
+	if (debug || verbose) printf("ir %" PRIu64 " (0x%016" PRIx64 ")\n", ir, ir);
 
  again:
 	cc_write_diag_ir(ir);
@@ -468,7 +466,7 @@ int
 cc_execute_w(uint64_t ir)
 {
 	int ret;
-	if (debug || verbose) printf("ir %llo (0x%016llx)\n", ir, ir);
+	if (debug || verbose) printf("ir %" PRIu64 " (0x%016" PRIx64 ")\n", ir, ir);
 
  again:
 	cc_write_diag_ir(ir);
@@ -487,7 +485,7 @@ cc_execute_w(uint64_t ir)
 int
 cc_execute(int op, uint64_t ir)
 {
-	if (debug) disassemble_ucode_loc(0, ir);
+	if (debug) disassemble_ucode_loc(ir);
 	if (op == WRITE) {
 		return cc_execute_w(ir);
 	}
@@ -551,7 +549,8 @@ cc_write_md(uint32_t md)
 		cc_set(wr_spy_md_low,  (uint16_t)(md >>  0) & 0xffff);
 	}
 
-}
+	return 0;
+	}
 
 uint32_t
 cc_read_vma(void)
@@ -571,20 +570,20 @@ cc_write_vma(uint32_t vma)
 		cc_set(wr_spy_vma_low,  (uint16_t)(vma >>  0) & 0xffff);
 	}
 
-}
+	return 0;}
 
 
 int
 cc_write_md_1s(void)
 {
 	cc_write_md(0xffffffff);
-}
+	return 0;}
 
 int
 cc_write_md_0s(void)
 {
 	cc_write_md(0x00000000);
-}
+	return 0;}
 
 uint32_t
 cc_read_a_mem(uint32_t adr)
@@ -611,7 +610,7 @@ cc_write_a_mem(uint32_t loc, uint32_t val)
 		   ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 		   ir_pair(CONS_IR_OB, CONS_OB_ALU) |
 		   ir_pair(CONS_IR_A_MEM_DEST, CONS_A_MEM_DEST_INDICATOR + loc));
-}
+	return 0;}
 
 uint32_t
 cc_read_m_mem(uint32_t adr)
@@ -721,8 +720,8 @@ cc_report_pc_and_ir(uint32_t *ppc)
 	uint64_t ir;
 	PC = cc_read_pc();
 	ir = cc_read_ir();
-	printf("PC=%011o (%08x) ir=%llo ", PC, PC, ir);
-	disassemble_ucode_loc(0, ir);
+	printf("PC=%011o (%08x) ir=%" PRIu64 " ", PC, PC, ir);
+		disassemble_ucode_loc(ir);
 
 	*ppc = PC;
 	return 0;
@@ -736,8 +735,8 @@ cc_report_pc_md_ir(uint32_t *ppc)
 	PC = cc_read_pc();
 	MD = cc_read_md();
 	ir = cc_read_ir();
-	printf("PC=%011o MD=%011o (%08x) ir=%llo ", PC, MD, MD, ir);
-	disassemble_ucode_loc(0, ir);
+	printf("PC=%011o MD=%011o (%08x) ir=%" PRIu64 " ", PC, MD, MD, ir);
+		disassemble_ucode_loc(ir);
 
 	*ppc = PC;
 	return 0;
@@ -766,13 +765,13 @@ cc_report_status(void)
 	if (f2 & (1 << 3)) printf("vmaok ");
 	if (f2 & (1 << 4)) printf("nop ");
 	printf(") ");
-}
+	return 0;}
 
 int
 cc_pipe(void)
 {
 	uint64_t isn;
-	int adr, ret;
+	int adr;
 
 	for (adr = 0; adr < 8; adr++) {
 
@@ -782,17 +781,17 @@ cc_pipe(void)
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU);
 
-		printf("%llo ", isn);
-		disassemble_ucode_loc(0, isn);
+		printf("%" PRIu64 " ", isn);
+			disassemble_ucode_loc(isn);
 
 		cc_write_diag_ir(isn);
 		cc_noop_debug_clock();
 		printf(" obus1 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-		ret = cc_debug_clock();
+		cc_debug_clock();
 		printf(" obus2 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
-		ret = cc_debug_clock();
+		 cc_debug_clock();
 		printf(" obus3 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 
 		cc_clock();
@@ -810,7 +809,7 @@ cc_pipe2(void)
 {
 	int r;
 	uint64_t isn;
-	uint32_t val, v2;
+	uint32_t v2;
 	for (r = 0; r < 8; r++) {
 		printf("val %o:\n", r);
 		cc_write_md(r);
@@ -825,8 +824,8 @@ cc_pipe2(void)
 			ir_pair(CONS_IR_OB, CONS_OB_ALU) |
 			ir_pair(CONS_IR_M_MEM_DEST, r);
 
-		printf("%llo ", isn);
-		disassemble_ucode_loc(0, isn);
+		printf("%" PRIu64 " ", isn);
+			disassemble_ucode_loc(isn);
 
 		cc_write_diag_ir(isn);
 		cc_noop_debug_clock();
@@ -844,7 +843,7 @@ cc_pipe2(void)
 		cc_debug_clock();
 		printf(" obus5 %o %o %o\n", cc_read_obus(), cc_read_obus_(), cc_read_m_bus());
 	}
-}
+	return 0;}
 
 uint64_t setup_map_inst[] = {
 	04000000000110003, // (alu) SETZ a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[2]
@@ -923,7 +922,7 @@ cc_report_ide_regs(void)
 	printf("a[4]=%0o\n", cc_read_a_mem(4));
 	printf("a[5]=%0o\n", cc_read_a_mem(5));
 	printf("a[6]=%0o\n", cc_read_a_mem(6));
-}
+	return 0;}
 
 int
 _test_scratch(uint16_t v)
@@ -976,21 +975,21 @@ cc_test_scratch(void)
 	_test_scratch(0123456);
 	_test_scratch(0x2222);
 	_test_scratch(++vv);
-}
+	return 0;}
 
 int
 _test_ir(uint64_t isn)
 {
 	uint64_t iv;
 
-	printf("test ir %llo ", isn);
+	printf("test ir %" PRIu64 " ", isn);
 
 	cc_write_ir(isn);
 	iv = cc_read_ir();
 	if (iv == isn) {
 		printf("ok\n");
 	} else {
-		printf("bad (want 0x%llx got 0x%llx)\n", isn, iv);
+		printf("bad (want 0x%" PRIx64 " got 0x%" PRIx64 ")\n", isn, iv);
 		printf(" reread; ");
 		iv = cc_read_ir();
 		if (iv == isn) {
@@ -1076,7 +1075,7 @@ main(int argc, char *argv[])
 	done = 0;
 	while (!done) {
 		int c, i, arg;
-		uint32_t A, M, PC, MD, VMA, v;
+		uint32_t PC, v;
 		char line[256];
 
 		printf("> "); fflush(stdout);
@@ -1307,10 +1306,10 @@ char *
 sym_find_by_type_val(int mcr, int t, int v)
 {
 	// Dummy.
-}
+	return NULL;}
 
 int
 read_mem(int vaddr, unsigned int *pv)
 {
 	// Dummy.
-}
+	return 0;}

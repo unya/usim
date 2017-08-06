@@ -222,7 +222,7 @@ _swaplongbytes(unsigned int *buf, int word_count)
 int
 _disk_read(int block_no, unsigned int *buffer)
 {
-	off_t offset, ret;
+	off_t offset;
 	int size;
 
 	offset = block_no * (256*4);
@@ -244,7 +244,7 @@ _disk_read(int block_no, unsigned int *buffer)
 int
 _disk_write(int block_no, unsigned int *buffer)
 {
-	off_t offset, ret;
+	off_t offset;
 	int size;
 
 	offset = block_no * (256*4);
@@ -406,7 +406,7 @@ void
 disk_start_read(void)
 {
 	unsigned int ccw;
-	unsigned int vma;
+	unsigned int vma = 0;
 	int i;
 
 	disk_decode_addr();
@@ -465,7 +465,7 @@ disk_start_write(void)
 	disk_show_cur_addr();
 #else
 	unsigned int ccw;
-	unsigned int vma;
+	unsigned int vma = 0;
 	int i;
 
 	disk_decode_addr();
@@ -651,7 +651,7 @@ disk_init(char *filename)
 
 	struct stat s;
 	fstat(disk_fd, &s);
-	printf("disk: size: %d bytes\n", s.st_size);
+	printf("disk: size: %zd bytes\n", s.st_size);
 	disk_mm = mmap(NULL, s.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, disk_fd, 0);
 
 	ret = _disk_read(0, label);
