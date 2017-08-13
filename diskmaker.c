@@ -331,7 +331,7 @@ int
 parse_template(char *template)
 {
 	FILE *f;
-	char line[256], what[256], str[256];
+	char line[256], what[256], str[256], label[256];
 	int mode, start, size;
 
 	f = fopen(template, "r");
@@ -388,12 +388,12 @@ parse_template(char *template)
 			break;
 		case 3:
 			start = size = 0;
-			what[0] = str[0] = 0;
-			sscanf(line, "%s\t%o\t%o\t%s",
-			       what, &start, &size, str);
+			what[0] = str[0] = label[0] = 0;
+			sscanf(line, "%s\t%o\t%o\t%s\t%[^\n]%*s",
+			       what, &start, &size, str, label);
 			if (what[0] && start > 0 && size > 0) {
 				add_partition(strdup(what), start, size,
-					      0, "", strdup(str));
+					      0, strdup(label), strdup(str));
 			}
 			break;
 		}
@@ -666,10 +666,11 @@ show_partition_info(char *filename)
 	printf("partitions:\n");
 
 	for (i = 0; i < part_count; i++) {
-		printf("%s\t0%o\t0%o\t%s\n",
+		printf("%s\t0%o\t0%o\t%s\t%s\n",
 		       parts[i].name,
 		       parts[i].start, parts[i].size,
-		       parts[i].filename ? parts[i].filename : "");
+		       parts[i].filename ? parts[i].filename : "",
+		       parts[i].label ? parts[i].label : "");
 	}
 
 	close(fd);
