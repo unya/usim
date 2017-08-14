@@ -1,3 +1,5 @@
+// ---!!! Split this out into seperate header, shared with decode.c
+
 char *op_names[16] = {
 	"CALL",
 	"CALL0",
@@ -131,7 +133,6 @@ struct {
 	{ "%STORE-IN-HIGHER-CONTEXT", 0302 },
 	{ "%DATA-TYPE", 0303 },
 	{ "%POINTER", 0304 },
-	/* 305-307 FREE */
 	{ "%MAKE-POINTER", 0310 },
 	{ "%SPREAD", 0311 },
 	{ "%P-STORE-CONTENTS", 0312 },
@@ -206,13 +207,13 @@ struct {
 	{ "%STRING-EQUAL", 0416 },
 	{ "NTH", 0417 },
 	{ "NTHCDR", 0420 },
-	{ "(*PLUS . M-+)", 0421  },
-	{ "(*DIF . M--)", 0422  },
-	{ "(*TIMES . M-*)", 0423  },
-	{ "(*QUO . M-//)", 0424  },
-	{ "(*LOGAND . M-LOGAND)", 0425  },
-	{ "(*LOGXOR . M-LOGXOR)", 0426  },
-	{ "(*LOGIOR . M-LOGIOR)", 0427  },
+	{ "(*PLUS . M-+)", 0421 },
+	{ "(*DIF . M--)", 0422 },
+	{ "(*TIMES . M-*)", 0423 },
+	{ "(*QUO . M-//)", 0424 },
+	{ "(*LOGAND . M-LOGAND)", 0425 },
+	{ "(*LOGXOR . M-LOGXOR)", 0426 },
+	{ "(*LOGIOR . M-LOGIOR)", 0427 },
 	{ "ARRAY-LEADER", 0430 },
 	{ "STORE-ARRAY-LEADER", 0431 },
 	{ "GET-LIST-POINTER-INTO-ARRAY", 0432 },
@@ -232,10 +233,8 @@ struct {
 	{ "%P-STORE-CDR-CODE", 0450 },
 	{ "%P-STORE-DATA-TYPE", 0451 },
 	{ "%P-STORE-POINTER", 0452 },
-	/* 453-455 FREE */
 	{ "%CATCH-OPEN", 0456 },
 	{ "%CATCH-OPEN-MV", 0457 },
-	/* 461, 0462 FREE */
 	{ "%FEXPR-CALL", 0462 },
 	{ "%FEXPR-CALL-MV", 0463 },
 	{ "%LEXPR-CALL", 0464 },
@@ -247,7 +246,7 @@ struct {
 	{ "%P-LDB", 0472 },
 	{ "%P-DPB", 0473 },
 	{ "MASK-FIELD", 0474 },
-	{ "%P-MASK-FIELD", 0475},
+	{ "%P-MASK-FIELD", 0475 },
 	{ "DEPOSIT-FIELD", 0476 },
 	{ "%P-DEPOSIT-FIELD", 0477 },
 	{ "COPY-ARRAY-CONTENTS", 0500 },
@@ -384,21 +383,19 @@ struct {
 	{ "%COLOR-TRANSFORM", 0704 },
 	{ "%RECORD-EVENT", 0705 },
 	{ "%AOS-TRIANGLE", 0706 },
-	{ "%SET-MOUSE-SCREEN", 0707  },
+	{ "%SET-MOUSE-SCREEN", 0707 },
 	{ "%OPEN-MOUSE-CURSOR", 0710 },
 	{ "%ether-wakeup", 0711 },
 	{ "%checksum-pup", 0712 },
 	{ "%decode-pup", 0713 },
-	{ (char *)0, 0 }
+	{ (char *) 0, 0 }
 };
 
 static int misc_inst_vector[1024];
 static int misc_inst_vector_setup;
 
 void
-disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
-       unsigned int width)
-
+disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width)
 {
 	int op, dest, reg, delta, adr;
 	int to;
@@ -414,21 +411,20 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 		}
 		misc_inst_vector_setup = 1;
 	}
-
 	op = (inst >> 011) & 017;
 	dest = (inst >> 015) & 07;
 	reg = (inst >> 6) & 07;
 	delta = (inst >> 0) & 077;
-	printf("%011o%c %06o %s ", loc, even ? 'e':'o', inst, op_names[op]);
+	printf("%011o%c %06o %s ", loc, even ? 'e' : 'o', inst, op_names[op]);
 
 	switch (op) {
-	case 0: /* call */
+	case 0: // CALL
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
-
 		{
 			unsigned int v, tag;
+
 			v = get(fefptr + delta);
 			tag = (v >> width) & 037;
 			switch (tag) {
@@ -443,29 +439,30 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 				break;
 			default:
 				v = get(v);
-				show_fef_func_name( v , width);
+				show_fef_func_name(v, width);
 			}
 		}
 		break;
-	case 2: /* move */
-	case 3: /* car */
-	case 4: /* cdr */
-	case 5: /* cadr */
+	case 2: // MOVE.
+	case 3: // CAR
+	case 4: // CDR.
+	case 5: // CADR.
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
 		break;
-	case 011: /* nd1 */
+	case 011: // ND1.
 		printf("%s ", nd1_names[dest]);
 		break;
-	case 012: /* nd2 */
+	case 012: // ND2.
 		printf("%s ", nd2_names[dest]);
 		break;
-	case 013: /* nd3 */
+	case 013: // ND3.
 		printf("%s ", nd3_names[dest]);
 		break;
-	case 014: /* branch */
+	case 014: // BRANCH.
 		printf("type %s, ", branch_names[dest]);
+
 		to = (inst & 03777) << 1;
 		to |= (inst & 0x8000) ? 1 : 0;
 
@@ -475,26 +472,23 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst,
 			to |= ~01777;
 		}
 
-		nlc = (loc*2 + (even?0:1)) + to;
+		nlc = (loc * 2 + (even ? 0 : 1)) + to;
 
 		if (to > 0) {
-			printf("+%o; %o%c ",
-			       to, nlc/2, (nlc & 1) ? 'o' : 'e');
+			printf("+%o; %o%c ", to, nlc / 2, (nlc & 1) ? 'o' : 'e');
 		} else {
-			printf("-%o; %o%c ",
-			       -to, nlc/2, (nlc & 1) ? 'o' : 'e');
+			printf("-%o; %o%c ", -to, nlc / 2, (nlc & 1) ? 'o' : 'e');
 		}
 		break;
-	case 015: /* misc */
+	case 015: // MISC.
 		adr = inst & 0777;
 		if (adr < 1024 && misc_inst_vector[adr]) {
-			printf("%s ", misc_inst[ misc_inst_vector[adr] ].name);
+			printf("%s ", misc_inst[misc_inst_vector[adr]].name);
 		} else {
 			printf("%o ", adr);
 		}
 		printf("dest %s, ", dest_names[dest]);
 		break;
 	}
-
 	printf("\n");
 }
