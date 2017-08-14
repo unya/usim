@@ -19,32 +19,31 @@ int chaos_init(void);
 int chaos_reconnect(void);
 
 #define CHAOS_SERVER_ADDRESS 0404
-#define CHAOS_SERVER_NAME    "server"
+#define CHAOS_SERVER_NAME "server"
 
-#define CHAOS_OPCODE_RFC        1
-#define CHAOS_OPCODE_OPN        2
-#define CHAOS_OPCODE_CLS        3
-#define CHAOS_OPCODE_FWD        4
-#define CHAOS_OPCODE_ANS        5
-#define CHAOS_OPCODE_SNS        6
-#define CHAOS_OPCODE_STS        7
-#define CHAOS_OPCODE_RUT        8
-#define CHAOS_OPCODE_LOS        9
-#define CHAOS_OPCODE_LSN        10
-#define CHAOS_OPCODE_MNT        11
-#define CHAOS_OPCODE_EOF        12
-#define CHAOS_OPCODE_UNC        13
-#define CHAOS_OPCODE_BRD        14
-#define CHAOS_OPCODE_DATA       128
-#define CHAOS_OPCODE_DWD        192
+#define CHAOS_OPCODE_RFC 1
+#define CHAOS_OPCODE_OPN 2
+#define CHAOS_OPCODE_CLS 3
+#define CHAOS_OPCODE_FWD 4
+#define CHAOS_OPCODE_ANS 5
+#define CHAOS_OPCODE_SNS 6
+#define CHAOS_OPCODE_STS 7
+#define CHAOS_OPCODE_RUT 8
+#define CHAOS_OPCODE_LOS 9
+#define CHAOS_OPCODE_LSN 10
+#define CHAOS_OPCODE_MNT 11
+#define CHAOS_OPCODE_EOF 12
+#define CHAOS_OPCODE_UNC 13
+#define CHAOS_OPCODE_BRD 14
+#define CHAOS_OPCODE_DATA 128
+#define CHAOS_OPCODE_DWD 192
 
-// compare packet numbers which wrap to 0
+// Compare packet numbers which wrap to zero.
 #define cmp_gt(a,b) (0100000 & (b - a))
 
 #define CHAOS_PACKET_HEADER_SIZE (8 * sizeof(unsigned short))
 
-typedef struct chaos_packet
-{
+typedef struct chaos_packet {
 	unsigned short opcode;
 	unsigned short length;
 	unsigned short destaddr;
@@ -56,10 +55,9 @@ typedef struct chaos_packet
 	unsigned char data[488];
 } chaos_packet;
 
-#define CHSTATNAME	32	/* Length of node name in STATUS protocol */
+#define CHSTATNAME 32 // Length of node name in STATUS protocol.
 
-typedef struct chaos_status
-{
+typedef struct chaos_status {
 	char name[CHSTATNAME];
 	unsigned short subnetident;
 	unsigned short subnetnumshorts;
@@ -73,23 +71,19 @@ typedef struct chaos_status
 	int rejected;
 } chaos_status;
 
-typedef struct packet_queue
-{
+typedef struct packet_queue {
 	struct packet_queue *next;
-
 	chaos_packet *packet;
 } packet_queue;
 
-typedef enum connection_state
-{
+typedef enum connection_state {
 	cs_closed,
 	cs_rfc,
 	cs_rfcsent,
 	cs_open,
 } connection_state;
 
-typedef struct chaos_connection
-{
+typedef struct chaos_connection {
 	unsigned short packetnumber;
 	unsigned short lastacked;
 	unsigned short localaddr;
