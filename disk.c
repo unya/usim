@@ -1,3 +1,8 @@
+// disk.c -- emulate a Trident disk
+//
+// Each disk block contains one Lisp Machine page worth of data,
+// i.e. 256. words or 1024. bytes.
+
 #include "usim.h"
 
 #include <stdio.h>
@@ -5,11 +10,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -22,131 +25,6 @@ extern void assert_xbus_interrupt(void);
 
 #define DELAY_DISK_INTERRUPT
 #define ALLOW_DISK_WRITE
-
-
-/*
- *  Note: original CADR disk controller wrote LS bit first, LS byte first.
- *
- *	disk controller registers:
- *	  0 read status
- *	  1 read ma
- *	  2 read da
- *	  3 read ecc
- *	  4 load cmd
- *	  5 load clp (command list pointer)
- *	  6 load da (disk address)
- *	  7 start
- *
- *	Commands (cmd reg)
- *	  00 read
- *	  10 read compare
- *	  11 write
- *	  02 read all
- *	  13 write all
- *	  04 seek
- *	  05 at ease
- *	  1005 recalibreate
- *	  405 fault clear
- *	  06 offset clear
- *	  16 stop,reset
- *
- *	Command bits
- *	  0
- *	  1 cmd
- *	  2
- *	  3 cmd to memory
- *	  4 servo offset plus
- *	  5 servo offset
- *	  6 data strobe early
- *	  7 data strobe late
- *	  8 fault clear
- *	  9 recalibrate
- *	  10 attn intr enb
- *	  11 done intr enb
- *
- *	Status bits (status reg)
- *	  0 active-
- *	  1 any attention
- *	  2 sel unit attention
- *	  3 intr
- *	  4 multiple select
- *	  5 no select
- *	  6 sel unit fault
- *	  7 sel unit read only
- *	  8 on cyl sync-
- *	  9 sel unit on line-
- *	  10 sel unit seek error
- *	  11 timeout error
- *	  12 start block error
- *	  13 stopped by error
- *	  14 overrun
- *	  15 ecc.soft
- *
- *	  16 ecc.hard
- *	  17 header ecc err
- *	  18 header compare err
- *	  19 mem parity err
- *	  20 nmx error
- *	  21 ccw cyc
- *	  22 read comp diff
- *	  23 internal parity err
- *
- *	  24-31 block.ctr
- *
- *	Disk address (da reg)
- *	  31 n/c
- *	  30 unit2
- *	  29 unit1
- *	  28 unit0
- *
- *	  27 cyl11
- *	  ...
- *	  16 cyl0
- *
- *	  15 head7
- *	  ...
- *	  8  head0
- *
- *	  7  block7
- *	  ...
- *	  0  block0
- *
- *	  ---
- *
- *	  CLP (command list pointer) points to list of CCW's
- *	  Each CCW is phy address to write block
- *
- *	  clp register (22 bits)
- *	  [21:16][15:0]
- *	  fixed  counts up
- *
- *	  clp address is used to read in new ccw
- *	  ccw's are read (up to 65535)
- *
- *	  ccw is used to produce dma address
- *	  dma address comes from ccw + 8 bit counter
- *
- *	  ccw
- *	  [21:1][1]
- *          physr  |
- *	  addr   0 = last ccw, 1 = more ccw's
- *
- *	  ccw   counter
- *	  [21:8][7:0]
- *
- *	  ---
- *
- *	  read ma register
- *	   t0  t1 CLP
- *	  [23][22][21:0]
- *            |   |
- *            |   type 1 (show how controller is strapped; i.e. what type of
- *            type 0      disk drive)
- *
- *	    (trident is type 0)
- *
- *
- */
 
 int disk_fd;
 uint8_t *disk_mm;
@@ -188,7 +66,6 @@ void
 disk_set_cmd(int v)
 {
 	disk_cmd = v;
-
 	if ((disk_cmd & 06000) == 0)
 		deassert_xbus_interrupt();
 }
@@ -196,15 +73,13 @@ disk_set_cmd(int v)
 int cyls, heads, blocks_per_track;
 int cur_unit, cur_cyl, cur_head, cur_block;
 
+// Words in the disk image are written as little endian, this routine
+// will swap bytes around so that on disk word values will be in
+// little endian order match if we are reading the file on a big
+// endian machine.
 void
 _swaplongbytes(unsigned int *buf, int word_count)
 {
-	/* buf contains bytes from the file. Words in that file were written
-	 *   as little endian. The macintosh will interpret the word values
-	 *   as big-endian, however. This routine will swap bytes around so
-	 *   that the DISK_word values in the array will match what would
-	 *   have been read on a little-endian machine
-	 */
 	int i;
 
 	for (i = 0; i < word_count; i++) {
@@ -212,30 +87,21 @@ _swaplongbytes(unsigned int *buf, int word_count)
 	}
 }
 
-/*
- * Disk Structure
- *
- * Each disk block contains one Lisp machine page worth of data,
- * i.e. 256. words or 1024. bytes.
- */
-
 int
 _disk_read(int block_no, unsigned int *buffer)
 {
 	off_t offset;
 	int size;
 
-	offset = block_no * (256*4);
+	offset = block_no * (256 * 4);
 
-	tracedio("disk: file image block %d(10), offset %ld(10)\n",
-		 block_no, (long)offset);
+	tracedio("disk: file image block %d(10), offset %ld(10)\n", block_no, (long) offset);
 
-	size = 256*4;
-	memcpy(buffer, disk_mm+offset, size);
+	size = 256 * 4;
+	memcpy(buffer, disk_mm + offset, size);
 
-	/* byte order fixups? */
 	if (disk_byteswap) {
-		_swaplongbytes((unsigned int *)buffer, 256);
+		_swaplongbytes((unsigned int *) buffer, 256);
 	}
 
 	return 0;
@@ -247,17 +113,15 @@ _disk_write(int block_no, unsigned int *buffer)
 	off_t offset;
 	int size;
 
-	offset = block_no * (256*4);
+	offset = block_no * (256 * 4);
 
-	tracedio("disk: file image block %d, offset %ld\n",
-		 block_no, (long)offset);
+	tracedio("disk: file image block %d, offset %ld\n", block_no, (long) offset);
 
-	size = 256*4;
-	memcpy(disk_mm+offset, buffer, size);
+	size = 256 * 4;
+	memcpy(disk_mm + offset, buffer, size);
 
-	/* byte order fixups? */
 	if (disk_byteswap) {
-		_swaplongbytes((unsigned int *)buffer, 256);
+		_swaplongbytes((unsigned int *) buffer, 256);
 	}
 
 	return 0;
@@ -269,13 +133,9 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 	int block_no, i;
 	unsigned int buffer[256];
 
-	block_no =
-		(cyl * blocks_per_track * heads) +
-		(head * blocks_per_track) + block;
-
+	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
 	if (disk_fd) {
-		if (_disk_read(block_no, buffer) < 0)
-		{
+		if (_disk_read(block_no, buffer) < 0) {
 			printf("disk_read_block: error reading block_no %d\n", block_no);
 			return -1;
 		}
@@ -285,25 +145,23 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 		return 0;
 	}
 
-#define LABEL_LABL 	011420440514ULL
-#define LABEL_BLANK	020020020020ULL
-
-	/* hack to fake a disk label when no image is present */
+	// Hack to fake a disk label when no disk image is present.
+#define LABEL_LABL 011420440514ULL
+#define LABEL_BLANK 020020020020ULL
 	if (unit == 0 && cyl == 0 && head == 0 && block == 0) {
-		write_phy_mem(vma + 0, LABEL_LABL); /* label LABL */
-		write_phy_mem(vma + 1, 000000000001); /* version = 1 */
-		write_phy_mem(vma + 2, 000000001000); /* # cyls */
-		write_phy_mem(vma + 3, 000000000004); /* # heads */
-		write_phy_mem(vma + 4, 000000000100); /* # blocks */
-		write_phy_mem(vma + 5, 000000000400); /* heads*blocks */
-		write_phy_mem(vma + 6, 000000001234); /* name of micr part */
-		write_phy_mem(vma + 0200, 1); /* # of partitions */
-		write_phy_mem(vma + 0201, 1); /* words / partition */
+		write_phy_mem(vma + 0, LABEL_LABL);   // Label magic.
+		write_phy_mem(vma + 1, 000000000001); // Version.
+		write_phy_mem(vma + 2, 000000001000); // Number of cylinders
+		write_phy_mem(vma + 3, 000000000004); // Number of heades.
+		write_phy_mem(vma + 4, 000000000100); // Number of blocks.
+		write_phy_mem(vma + 5, 000000000400); // Heads * blocks.
+		write_phy_mem(vma + 6, 000000001234); // Name of microcode partition.
+		write_phy_mem(vma + 0200, 1); // Number of partitions.
+		write_phy_mem(vma + 0201, 1); // Words per partition.
+		write_phy_mem(vma + 0202, 01234); // Start of partition info.
+		write_phy_mem(vma + 0203, 01000); // Microcode address.
+		write_phy_mem(vma + 0204, 010);	  // Number of blocks.
 
-		write_phy_mem(vma + 0202, 01234); /* start of partition info */
-		write_phy_mem(vma + 0203, 01000); /* micr address */
-		write_phy_mem(vma + 0204, 010);   /* # blocks */
-		/* pack text label - offset 020, 32 bytes */
 		return 0;
 	}
 
@@ -316,26 +174,24 @@ disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 	int block_no, i;
 	unsigned int buffer[256];
 
-	block_no =
-		(cyl * blocks_per_track * heads) +
-		(head * blocks_per_track) + block;
+	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
 
 	if (disk_fd) {
 		for (i = 0; i < 256; i++) {
 			read_phy_mem(vma + i, &buffer[i]);
 		}
 		_disk_write(block_no, buffer);
+
 		return 0;
 	}
 
 	return 0;
 }
-
 void
 disk_throw_interrupt(void)
 {
 	tracedio("disk: throw interrupt\n");
-	disk_status |= 1<<3;
+	disk_status |= 1 << 3;
 	assert_xbus_interrupt();
 }
 
@@ -359,14 +215,16 @@ disk_poll()
 	}
 }
 #else
-void disk_poll() {}
+void
+disk_poll()
+{
+}
 #endif
 
 void
 disk_show_cur_addr(void)
 {
-	tracedio("disk: unit %d, CHB %o/%o/%o\n",
-		 cur_unit, cur_cyl, cur_head, cur_block);
+	tracedio("disk: unit %d, CHB %o/%o/%o\n", cur_unit, cur_cyl, cur_head, cur_block);
 }
 
 void
@@ -411,16 +269,14 @@ disk_start_read(void)
 
 	disk_decode_addr();
 
-	/* process ccw's */
+	// Process CCW's.
 	for (i = 0; i < 65535; i++) {
 		int f;
 
 		f = read_phy_mem(disk_clp, &ccw);
 		if (f) {
-			printf("disk: mem[clp=%o] yielded fault (no page)\n",
-			       disk_clp);
-
-			/* huh.  what to do now? */
+			// Huh.  what to do now?
+			printf("disk: mem[clp=%o] yielded fault (no page)\n", disk_clp);
 			return;
 		}
 
@@ -471,16 +327,14 @@ disk_start_write(void)
 
 	disk_decode_addr();
 
-	/* process ccw's */
+	// Process CCW's.
 	for (i = 0; i < 65535; i++) {
 		int f;
 
 		f = read_phy_mem(disk_clp, &ccw);
 		if (f) {
-			printf("disk: mem[clp=%o] yielded fault (no page)\n",
-			       disk_clp);
-
-			/* huh.  what to do now? */
+			// Huh.  what to do now?
+			printf("disk: mem[clp=%o] yielded fault (no page)\n", disk_clp);
 			return;
 		}
 
@@ -497,7 +351,6 @@ disk_start_write(void)
 			tracedio("disk: last ccw\n");
 			break;
 		}
-
 		disk_incr_block();
 
 		disk_clp++;
@@ -554,11 +407,11 @@ disk_xbus_write(int offset, unsigned int v)
 
 	switch (offset) {
 	case 0370:
-		tracedio/*tracef*/("disk: load status %o\n", v);
+		tracedio("disk: load status %o\n", v);
 		break;
 	case 0374:
 		disk_set_cmd(v);
-		tracedio/*tracef*/("disk: load cmd %o\n", v);
+		tracedio("disk: load cmd %o\n", v);
 		break;
 	case 0375:
 		tracedio("disk: load clp %o (phys page %o)\n", v, v << 8);
@@ -603,7 +456,6 @@ disk_xbus_read(int offset, unsigned int *pv)
 		break;
 	case 0374:
 		tracef("disk: status read\n");
-		/* disk ready */
 		*pv = disk_get_status();
 		break;
 	case 0375:
@@ -617,8 +469,7 @@ disk_xbus_read(int offset, unsigned int *pv)
 		break;
 	default:
 		tracedio("disk: unknown reg read %o\n", offset);
-		if (offset != 0)
-		{
+		if (offset != 0) {
 			extern int trace_mcr_labels_flag;
 			extern int get_u_pc();
 			trace_mcr_labels_flag = 1;
@@ -626,7 +477,6 @@ disk_xbus_read(int offset, unsigned int *pv)
 		}
 		break;
 	}
-
 	return 0;
 }
 
@@ -657,7 +507,6 @@ disk_init(char *filename)
 	disk_mm = mmap(NULL, s.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, disk_fd, 0);
 
 	ret = _disk_read(0, label);
-
 	if (ret < 0 || label[0] != LABEL_LABL) {
 		printf("disk: invalid pack label - disk image ignored\n");
 		printf("label %o\n", label[0]);
@@ -672,14 +521,15 @@ disk_init(char *filename)
 
 	printf("disk: image CHB %o/%o/%o\n", cyls, heads, blocks_per_track);
 
-	/* hack to find mcr symbol file from disk pack label */
+	// Hack to find MCR symbol file via disk pack label.
 	if (label[030] != 0 && label[030] != LABEL_BLANK) {
 		char fn[1024], *s;
+
 		memset(fn, 0, sizeof(fn));
-		strcpy(fn, (char *)&label[030]);
+		strcpy(fn, (char *) &label[030]);
 #ifdef __BIG_ENDIAN__
-		memcpy(fn, (char *)&label[030], 32);
-		_swaplongbytes((unsigned int *)fn, 8);
+		memcpy(fn, (char *) &label[030], 32);
+		_swaplongbytes((unsigned int *) fn, 8);
 #endif
 		printf("disk: pack label comment '%s'\n", fn);
 		s = strstr(fn, ".mcr.");
