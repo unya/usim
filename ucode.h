@@ -7,10 +7,11 @@ typedef unsigned long long uint64;
 typedef uint64_t ucw_t;
 
 extern int trace;
-#define tracef	if (trace) printf
+
+#define tracef if (trace) printf
 
 extern int trace_io_flag;
-#define traceio	if (trace_io_flag) printf
+#define traceio if (trace_io_flag) printf
 
 extern int trace_disk_flag;
 #define tracedio if (trace_disk_flag) printf
@@ -51,4 +52,3 @@ extern int tracelabel_set_mcr(char *arg);
 
 extern int read_phy_mem(int paddr, unsigned int *pv);
 extern int write_phy_mem(int paddr, unsigned int v);
-
