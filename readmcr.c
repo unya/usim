@@ -11,7 +11,8 @@
 int showmcr;
 int debug;
 int needswap;
-ucw_t ucode[16*1024];
+
+ucw_t ucode[16 * 1024];
 
 unsigned int
 read16(int fd)
@@ -63,12 +64,11 @@ read_i_mem(int fd, int start, int size)
 		w2 = read16(fd);
 		w3 = read16(fd);
 		w4 = read16(fd);
-
 		ll =
-			((unsigned long long)w1 << 48) |
-			((unsigned long long)w2 << 32) |
-			((unsigned long long)w3 << 16) |
-			((unsigned long long)w4 << 0);
+			((unsigned long long) w1 << 48) |
+			((unsigned long long) w2 << 32) |
+			((unsigned long long) w3 << 16) |
+			((unsigned long long) w4 << 0);
 
 		if (showmcr)
 			printf("%03o %016Lo\n", loc, ll);
@@ -76,7 +76,6 @@ read_i_mem(int fd, int start, int size)
 		ucode[loc] = ll;
 		loc++;
 	}
-
 	return 0;
 }
 
@@ -87,12 +86,11 @@ read_d_mem(int fd, int start, int size)
 
 	for (i = 0; i < size; i++) {
 		read16(fd);
-	        read16(fd);
+		read16(fd);
 	}
 
 	return 0;
 }
-
 int
 read_a_mem(int fd, int start, int size)
 {
@@ -102,12 +100,9 @@ read_a_mem(int fd, int start, int size)
 	printf("a-memory; start %o, size %o\n", start, size);
 	for (i = 0; i < size; i++) {
 		v = read32(fd);
-		if (
-			(i >= 0347 && i <= 0400) |
-			(i >= 0600 && i <= 0610) |
-			(i < 010)
-			)
-		{
+		if ((i >= 0347 && i <= 0400) |
+		    (i >= 0600 && i <= 0610) |
+		    (i < 010)) {
 			printf("%o <- %o\n", i, v);
 		}
 	}
@@ -120,9 +115,7 @@ read_main_mem(int fd, int start, int size)
 {
 	read32(fd);
 	printf("start %d, size %d\n", start, size);
-
 	lseek(fd, 0, SEEK_CUR);
-
 	return 0;
 }
 
@@ -131,10 +124,9 @@ usage(void)
 {
 	fprintf(stderr, "readmcr <mcr-filename>\n");
 	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "-b	swap bytes\n");
-	fprintf(stderr, "-d	extra debug info\n");
-	fprintf(stderr, "-s<n>	skip N * 32-bit values\n");
-
+	fprintf(stderr, "-b swap bytes\n");
+	fprintf(stderr, "-d extra debug info\n");
+	fprintf(stderr, "-s<n> skip N * 32-bit values\n");
 	exit(1);
 }
 
@@ -185,8 +177,7 @@ main(int argc, char *argv[])
 			start = read32(fd);
 			size = read32(fd);
 
-			printf("code %d, start %o, size %o\n",
-			       code, start, size);
+			printf("code %d, start %o, size %o\n", code, start, size);
 
 			switch (code) {
 			case 1:
