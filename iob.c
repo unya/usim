@@ -1,10 +1,13 @@
+// iob.c --- CADR I/O board
+
+// ---!!! Order this into proper sections: IOB, Mouse, TV, ...
+
 #include "usim.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <signal.h>
-
 #include <sys/time.h>
 
 #include "ucode.h"
@@ -18,90 +21,18 @@ int mouse_head, mouse_middle, mouse_tail;
 int mouse_rawx, mouse_rawy;
 int mouse_poll_delay;
 
-/* location in A memory of micrcode mouse state */
+// Location in A memory of microcode mouse state.
 static int mouse_sync_amem_x;
 static int mouse_sync_amem_y;
 
 extern int mouse_sync_flag;
+
 extern int get_u_pc();
 extern unsigned int read_a_mem(int loc);
 extern int sym_find(int mcr, char *name, int *pval);
 
 void tv_post_60hz_interrupt(void);
 void chaos_xmit_pkt(void);
-
-/*
- * CADR i/o board
- *
- * interrupt vectors:
- * 260 kdb/mouse
- * 264 serial
- * 270 chaos int
- * 274 clock
- * 400 ether xmit done
- * 404 ether rcv done
- * 410 ether collision
- *
- * 764100
- * 0	0 read kbd
- * 2	1 read kbd
- * 4	2 read mouse y (12 bits)
- * 6	3 read mouse x (12 bits)
- * 10	4 click audio
- * 12	5 kbd/mouse csr
- *
- * csr - write
- * 0 remote mouse enable
- * 1 mouse int enable
- * 2 kbd int enable
- * 3 clock int enable
- *
- * csr - read
- * 0 remote mouse eable
- * 1 mouse int enable
- * 2 kbd int enable
- * 3 clock int enable
- * 4 mouse ready
- * 5 kbd ready
- * 6 clock ready
- * 7 ser int enable
- *
- * keyboard
- * ; 		5-0	keycode
- * ; 		7-6	shift
- * ; 		9-8	top
- * ; 		11-10	control
- * ; 		13-12	meta
- * ; 		14	shift-lock
- * ; 		15	unused
- *
- */
-
-/*
- * 764100
- * 0 read kbd
- * 1 read kbd
- * 2 read mouse y (12 bits)
- * 3 read mouse x (12 bits)
- * 4 click audio
- * 5 kbd/mouse csr
- *
- * csr - write
- * 0 remote mouse enable
- * 1 mouse int enable
- * 2 kbd int enable
- * 3 clock int enable
- *
- * csr - read
- * 0 remote mouse eable
- * 1 mouse int enable
- * 2 kbd int enable
- * 3 clock int enable
- * 4 mouse ready
- * 5 kbd ready
- * 6 clock ready
- * 7 ser int enable
- */
 
 #define US_CLOCK_IS_WALL_CLOCK
 #define USE_SIGVTARLM_FOR_60HZ
@@ -110,10 +41,11 @@ unsigned long
 get_us_clock()
 {
 	unsigned long v;
+
 #ifdef US_CLOCK_IS_WALL_CLOCK
-	#ifdef USE_US_CLOCK_FOR_60HZ
-		static unsigned long last_hz60;
-		#endif
+#ifdef USE_US_CLOCK_FOR_60HZ
+	static unsigned long last_hz60;
+#endif
 	static struct timeval tv;
 	struct timeval tv2;
 	unsigned long ds, du;
@@ -121,23 +53,20 @@ get_us_clock()
 	if (tv.tv_sec == 0) {
 		gettimeofday(&tv, 0);
 		v = 0;
-#ifdef USE_US_CLOCK_FOR_60HZ		
+#ifdef USE_US_CLOCK_FOR_60HZ
 		last_hz60 = 0;
-		#endif
+#endif
 	} else {
 		gettimeofday(&tv2, 0);
-
 		if (tv2.tv_usec < tv.tv_usec) {
 			tv2.tv_sec--;
-			tv2.tv_usec += 1000*1000;
+			tv2.tv_usec += 1000 * 1000;
 		}
 		ds = tv2.tv_sec - tv.tv_sec;
 		du = tv2.tv_usec - tv.tv_usec;
-
-		v = (ds * 1000*1000) + du;
+		v = (ds * 1000 * 1000) + du;
 
 #ifdef USE_US_CLOCK_FOR_60HZ
-
 		hz60 = v / 16000;
 		if (hz60 > last_hz60) {
 			last_hz60 = hz60;
@@ -146,9 +75,10 @@ get_us_clock()
 #endif
 	}
 #else
-	/* assume 200ns cycle, we want 1us */
+
+	// Assume 200ns cycle, we want 1us.
 	extern long cycles;
-	v = cycles * (1000/200);
+	v = cycles * (1000 / 200);
 #endif
 
 	return v;
@@ -166,20 +96,19 @@ get_us_clock_low(void)
 unsigned int
 get_us_clock_high(void)
 {
-	return (unsigned int)(cv >> 16);
+	return (unsigned int) (cv >> 16);
 }
 
-unsigned int get_60hz_clock(void)
+unsigned int
+get_60hz_clock(void)
 {
 	return 0;
 }
 
-
 void
 iob_unibus_read(int offset, int *pv)
 {
-	/* default, for now */
-	*pv = 0;
+	*pv = 0;		// For now default to zero.
 
 	switch (offset) {
 	case 0100:
@@ -194,7 +123,8 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0104:
 		traceio("unibus: mouse y\n");
-		*pv = (mouse_tail << 12) |
+		*pv =
+			(mouse_tail << 12) |
 			(mouse_middle << 13) |
 			(mouse_head << 14) |
 			(mouse_y & 07777);
@@ -207,12 +137,14 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0106:
 		traceio("unibus: mouse x\n");
-		*pv = (mouse_rawx << 12) | (mouse_rawy << 14) |
+		*pv =
+			(mouse_rawx << 12) |
+			(mouse_rawy << 14) |
 			(mouse_x & 07777);
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
-		fprintf(stderr,"\a"); /* alert - beep */
+		fprintf(stderr, "\a"); // Beep!
 		break;
 	case 0112:
 		*pv = iob_kbd_csr;
@@ -252,8 +184,7 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	default:
 		if (offset > 0140 && offset <= 0153)
-			printf/*traceio*/("unibus: chaos read other %o\n",
-					  offset);
+			printf("unibus: chaos read other %o\n", offset);
 		chaos_xmit_pkt();
 		break;
 	}
@@ -280,8 +211,7 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0112:
 		traceio("unibus: kbd csr\n");
-		iob_kbd_csr =
-			(iob_kbd_csr & ~017) | (v & 017);
+		iob_kbd_csr = (iob_kbd_csr & ~017) | (v & 017);
 		break;
 	case 0120:
 		traceio("unibus: usec clock\n");
@@ -293,8 +223,7 @@ iob_unibus_write(int offset, int v)
 		printf("unibus: START 60hz clock\n");
 		break;
 	case 0140:
-		traceio("unibus: chaos write %011o, u_pc %011o ",
-			v, get_u_pc());
+		traceio("unibus: chaos write %011o, u_pc %011o ", v, get_u_pc());
 #ifdef CHAOS_DEBUG
 		show_label_closest(get_u_pc());
 		printf("\n");
@@ -302,13 +231,12 @@ iob_unibus_write(int offset, int v)
 		chaos_set_csr(v);
 		break;
 	case 0142:
-		traceio("unibus: chaos write-buffer write %011o, u_pc %011o\n",
-			v, get_u_pc());
+		traceio("unibus: chaos write-buffer write %011o, u_pc %011o\n", v, get_u_pc());
 		chaos_put_xmit_buffer(v);
 		break;
 	default:
 		if (offset > 0140 && offset <= 0152)
-			printf/*traceio*/("unibus: chaos write other\n");
+			printf("unibus: chaos write other\n");
 		break;
 	}
 }
@@ -319,22 +247,21 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0264);
 
+	// Move mouse closer to where microcode thinks it is.
 	if (mouse_sync_flag) {
 		int mcx, mcy, dx, dy;
 
-		/* move mouse closer to where microcode thinks it is */
 		mcx = read_a_mem(mouse_sync_amem_x);
 		mcy = read_a_mem(mouse_sync_amem_y);
 
 		dx = x - mcx;
 		dy = y - mcy;
-
 		mouse_x += dx;
 		mouse_y += dy;
 	} else {
-		/* convert SDL coods in to mouse loc */
-		mouse_x = (x*4)/3;
-		mouse_y = (y*5)/3;
+		// Convert X11 coordinates into mouse location.
+		mouse_x = (x * 4) / 3;
+		mouse_y = (y * 5) / 3;
 	}
 
 	if (buttons & 4)
@@ -345,10 +272,8 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 		mouse_tail = 1;
 }
 
-/*
- * create simulated mouse motion to keep SDL cursor
- * and microcode cursor in sync
- */
+// Create simulated mouse motion to keep X11 cursor
+// and microcode cursor in sync.
 void
 iob_mouse_poll(int x, int y)
 {
@@ -370,7 +295,6 @@ iob_mouse_poll(int x, int y)
 #define POLL_DELAY 20
 
 	if (dx || dy) {
-
 		if (mouse_poll_delay) {
 			mouse_poll_delay--;
 			if (mouse_poll_delay > 0)
@@ -392,7 +316,6 @@ iob_mouse_poll(int x, int y)
 	}
 }
 
-
 int tv_csr;
 
 int
@@ -407,16 +330,13 @@ tv_xbus_write(int offset, unsigned int v)
 {
 	if ((tv_csr & 4) != (v & 4)) {
 	}
+
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);
 	deassert_xbus_interrupt();
+
 	return 0;
 }
-
-//xxx tv interrupt
-// tv csr @ base, 1<<4 = interrupt flag
-// writing back clears int
-// 60hz
 
 void
 tv_post_60hz_interrupt(void)
@@ -442,8 +362,8 @@ void
 iob_poll(unsigned long cycles)
 {
 #ifndef USE_SIGVTARLM_FOR_60HZ
-	/* assume 200ns cycle, we want 16ms */
-	if ((cycles % ((16*1000*1000)/200)) == 0) {
+	// Assume 200ns cycle, we want 16ms.
+	if ((cycles % ((16 * 1000 * 1000) / 200)) == 0) {
 		tv_post_60hz_interrupt();
 	}
 #endif
@@ -454,17 +374,13 @@ mouse_sync_init(void)
 {
 	int val;
 
-	//A-MOUSE-CURSOR-X A-MEM 516
-	//A-MOUSE-CURSOR-Y A-MEM 517
-
-	mouse_sync_amem_x = 334;
-	mouse_sync_amem_y = 335;
+	mouse_sync_amem_x = 334; // A-MOUSE-CURSOR-X
+	mouse_sync_amem_y = 335; // A-MOUSE-CURSOR-Y
 
 	if (sym_find(1, "A-MOUSE-CURSOR-X", &val)) {
 		printf("can't find A-MOUSE-CURSOR-X in microcode symbols\n");
 	} else
 		mouse_sync_amem_x = val;
-
 	if (sym_find(1, "A-MOUSE-CURSOR-Y", &val)) {
 		printf("can't find A-MOUSE-CURSOR-Y in microcode symbols\n");
 	} else
@@ -484,9 +400,7 @@ iob_init(void)
 	{
 		struct itimerval itimer;
 		int usecs;
-
 		signal(SIGVTALRM, sigalrm_handler);
-
 		usecs = 16000;
 
 		itimer.it_interval.tv_sec = 0;
