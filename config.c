@@ -21,7 +21,6 @@ config_get_mcrsym_filename(void)
 {
 	if (mcrsym_filename)
 		return mcrsym_filename;
-
 	return "../sys/ubin/ucadr.sym";
 }
 
@@ -31,13 +30,11 @@ config_set_mcrsym_filename(const char *fn)
 	mcrsym_filename = strdup(fn);
 }
 
-
 const char *
 config_get_disk_filename(void)
 {
 	if (disk_filename)
 		return disk_filename;
-
 	return "disk.img";
 }
 
