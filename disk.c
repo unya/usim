@@ -70,8 +70,13 @@ disk_set_cmd(int v)
 		deassert_xbus_interrupt();
 }
 
-int cyls, heads, blocks_per_track;
-int cur_unit, cur_cyl, cur_head, cur_block;
+int cyls;
+int heads;
+int blocks_per_track;
+int cur_unit;
+int cur_cyl;
+int cur_head;
+int cur_block;
 
 // Words in the disk image are written as little endian, this routine
 // will swap bytes around so that on disk word values will be in
@@ -80,9 +85,7 @@ int cur_unit, cur_cyl, cur_head, cur_block;
 void
 _swaplongbytes(unsigned int *buf, int word_count)
 {
-	int i;
-
-	for (i = 0; i < word_count; i++) {
+	for (int i = 0; i < word_count; i++) {
 		buf[i] = SWAP_LONG(buf[i]);
 	}
 }
