@@ -438,22 +438,6 @@ read_mem(int vaddr, unsigned int *pv)
 	return 0;
 }
 
-int
-read_mem_debug(int vaddr, unsigned int *pv)
-{
-	int save_access_fault_bit = access_fault_bit;
-	int save_write_fault_bit = write_fault_bit;
-	int save_page_fault_flag = page_fault_flag;
-
-	read_mem(vaddr, pv);
-
-	access_fault_bit = save_access_fault_bit;
-	write_fault_bit = save_write_fault_bit;
-	page_fault_flag = save_page_fault_flag;
-
-	return 0;
-}
-
 // Write virtual memory.
 int
 write_mem(int vaddr, unsigned int v)
