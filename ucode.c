@@ -1521,7 +1521,7 @@ run(void)
 		int do_add;
 		int do_sub;
 		unsigned int out_bus;
-		int64 lv;
+		int64_t lv;
 		ucw_t u;
 		ucw_t w;
 #define p0 u

@@ -1,8 +1,10 @@
-typedef long long int64;
-typedef unsigned long long uint64;
+#include <stdint.h>
 
 #define NOP_MASK 03777777777767777LL
+
+#ifndef O_BINARY
 #define O_BINARY 0
+#endif
 
 typedef uint64_t ucw_t;
 
