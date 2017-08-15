@@ -376,8 +376,8 @@ _cc_read_triple(int r1, int r2, int r3)
 }
 
 // See SYS; LCADR: LCADRD LISP and SYS;LCADR:LCADMC LISP for details.
-// 
-// ---!!! Split this into "lcadrd.c", and add comments from LCADMC LISP. 
+//
+// ---!!! Split this into "lcadrd.c", and add comments from LCADMC LISP.
 
 uint32_t
 cc_read_obus(void)
@@ -1211,7 +1211,7 @@ main(int argc, char *argv[])
 		case 'd':
 			cc_write_md_1s();
 			printf("write md ones MD=%011o\n", cc_read_md());
-	
+
 			cc_write_md_0s();
 			printf("write md zeros MD=%011o\n", cc_read_md());
 
