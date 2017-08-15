@@ -202,7 +202,7 @@ display_init(void)
 	XTextProperty iconName;
 	XTextProperty *pIconName = &iconName;
 	XWMHints *wm_hints;
-	char *window_name = (char *) "CADR Emulator";
+	char *window_name = (char *) "CADR";
 	char *icon_name = (char *) "CADR";
 
 	displayname = getenv("DISPLAY");
