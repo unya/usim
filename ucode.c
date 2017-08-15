@@ -358,7 +358,7 @@ read_mem(int vaddr, unsigned int *pv)
 	pn = map & 037777;
 
 	if ((map & (1 << 23)) == 0) {
-		// no access permission.
+		// No access permission.
 		access_fault_bit = 1;
 		page_fault_flag = 1;
 		opc = pn;
@@ -690,9 +690,9 @@ advance_lc(int *ppc)
 	int old_lc = lc & 0377777777;
 
 	if (lc_byte_mode_flag) {
-		lc++;// Byte mode.
+		lc++;		// Byte mode.
 	} else {
-		lc += 2; // 16-bit mode.
+		lc += 2;	// 16-bit mode.
 	}
 
 	macro_pc_incrs++;
@@ -748,7 +748,7 @@ show_pdl_local(void)
 	}
 }
 
-// write value to decoded destination.
+// Write value to decoded destination.
 void
 write_dest(ucw_t u, int dest, unsigned int out_bus)
 {
@@ -758,7 +758,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 	}
 
 	switch (dest >> 5) {
-	case 1: // LC (location counter) 26 bits.
+	case 1:			// LC (location counter) 26 bits.
 		tracef("writing LC <- %o\n", out_bus);
 		lc = (lc & ~0377777777) | (out_bus & 0377777777);
 
@@ -783,7 +783,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			printf("\n");
 		}
 		break;
-	case 2: // Interrrupt Control <29-26>.
+	case 2:			// Interrrupt Control <29-26>.
 		tracef("writing IC <- %o\n", out_bus);
 		interrupt_control = out_bus;
 
@@ -811,55 +811,55 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		lc = (lc & ~(017 << 26)) | // Preserve flags.
 			(interrupt_control & (017 << 26));
 		break;
-	case 010: // PDL (addressed by pointer)
+	case 010:		// PDL (addressed by pointer)
 		tracef("writing pdl[%o] <- %o\n", pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
 		break;
-	case 011: // PDL (addressed by pointer, push)
+	case 011:		// PDL (addressed by pointer, push)
 		pdl_ptr = (pdl_ptr + 1) & 01777;
 		tracef("writing pdl[%o] <- %o, push\n", pdl_ptr, out_bus);
 		write_pdl_mem(USE_PDL_PTR, out_bus);
 		break;
-	case 012: // PDL (address by index).
+	case 012:		// PDL (address by index).
 		tracef("writing pdl[%o] <- %o\n", pdl_index, out_bus);
 		write_pdl_mem(USE_PDL_INDEX, out_bus);
 		break;
-	case 013:// PDL index.
+	case 013:		// PDL index.
 		tracef("pdl-index <- %o\n", out_bus);
 		pdl_index = out_bus & 01777;
 		break;
-	case 014: // PDL pointer.
+	case 014:		// PDL pointer.
 		tracef("pdl-ptr <- %o\n", out_bus);
 		pdl_ptr = out_bus & 01777;
 		break;
-	case 015: // SPC data, push.
+	case 015:		// SPC data, push.
 		push_spc(out_bus);
 		break;
-	case 016: // Next instruction modifier (lo).
+	case 016:		// Next instruction modifier (lo).
 		oa_reg_lo = out_bus & 0377777777;
 		oa_reg_lo_set = 1;
 		tracef("setting oa_reg lo %o\n", oa_reg_lo);
 		break;
-	case 017: // Next instruction modifier (hi).
+	case 017:		// Next instruction modifier (hi).
 		oa_reg_hi = out_bus;
 		oa_reg_hi_set = 1;
 		tracef("setting oa_reg hi %o\n", oa_reg_hi);
 		break;
-	case 020:// VMA register (memory address).
+	case 020:		// VMA register (memory address).
 		vma = out_bus;
 		break;
-	case 021:// VMA register, start main memory read.
+	case 021:	      // VMA register, start main memory read.
 		vma = out_bus;
 		if (read_mem(vma, &new_md)) {
 		}
 		new_md_delay = 2;
 		break;
-	case 022:// VMA register, start main memory write.
+	case 022:	     // VMA register, start main memory write.
 		vma = out_bus;
 		if (write_mem(vma, md)) {
 		}
 		break;
-	case 023:// VMA register, write map.
+	case 023:		// VMA register, write map.
 		vma = out_bus;
 		tracevm("vma-write-map md=%o, vma=%o (addr %o)\n", md, vma, md >> 13);
 	write_map:
@@ -887,7 +887,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 			add_new_page_no(l2_data & 037777);
 		}
 		break;
-	case 030: // MD register (memory data).
+	case 030:		// MD register (memory data).
 		md = out_bus;
 		tracef("md<-%o\n", md);
 		break;
@@ -902,7 +902,7 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 		if (write_mem(vma, md)) {
 		}
 		break;
-	case 033: // MD register, write map (like 23).
+	case 033:		// MD register, write map (like 23).
 		md = out_bus;
 		tracef("memory-data-write-map md=%o, vma=%o (addr %o)\n", md, vma, md >> 13);
 		goto write_map;
@@ -1438,7 +1438,7 @@ run(void)
 	int p0_pc = 0, p1_pc = 0;
 	char no_exec_next = 0;
 
-	phys_ram_pages = 8192; // 2 MW.
+	phys_ram_pages = 8192;	// 2 MW.
 
 	u_pc = 0;
 	prom_enabled_flag = 1;
@@ -1655,7 +1655,7 @@ run(void)
 
 		// Decode isntruction.
 		switch (op_code = (u >> 43) & 03) {
-		case 0: // ALU
+		case 0:		// ALU
 
 			// NOP short cut.
 			if ((u & NOP_MASK) == 0) {
@@ -1753,57 +1753,57 @@ run(void)
 				break;
 
 				// Boolean.
-			case 000:			// [SETZ]
+			case 000: // [SETZ]
 				alu_out = 0;
 				break;
-			case 001:			// [AND]
+			case 001: // [AND]
 				alu_out = m_src_value & a_src_value;
 				break;
-			case 002:			// [ANDCA]
+			case 002: // [ANDCA]
 				alu_out = m_src_value & ~a_src_value;
 				break;
-			case 003:			// [SETM]
+			case 003: // [SETM]
 				alu_out = m_src_value;
 				break;
-			case 004:			// [ANDCM]
+			case 004: // [ANDCM]
 				alu_out = ~m_src_value & a_src_value;
 				break;
-			case 005:			// [SETA]
+			case 005: // [SETA]
 				alu_out = a_src_value;
 				break;
-			case 006:			// [XOR]
+			case 006: // [XOR]
 				alu_out = m_src_value ^ a_src_value;
 				break;
-			case 007:			// [IOR]
+			case 007: // [IOR]
 				alu_out = m_src_value | a_src_value;
 				break;
-			case 010:			// [ANDCB]
+			case 010: // [ANDCB]
 				alu_out = ~a_src_value & ~m_src_value;
 				break;
-			case 011:			// [EQV]
+			case 011: // [EQV]
 				alu_out = a_src_value == m_src_value;
 				break;
-			case 012:			// [SETCA]
+			case 012: // [SETCA]
 				alu_out = ~a_src_value;
 				break;
-			case 013:			// [ORCA]
+			case 013: // [ORCA]
 				alu_out = m_src_value | ~a_src_value;
 				break;
-			case 014:			// [SETCM]
+			case 014: // [SETCM]
 				alu_out = ~m_src_value;
 				break;
-			case 015:			// [ORCM]
+			case 015: // [ORCM]
 				alu_out = ~m_src_value | a_src_value;
 				break;
-			case 016:			// [ORCB]
+			case 016: // [ORCB]
 				alu_out = ~m_src_value | ~a_src_value;
 				break;
-			case 017:			// [SETO]
+			case 017: // [SETO]
 				alu_out = ~0;
 				break;
 
 				// Conditioanl ALU operation.
-			case 040:// Multiply step
+			case 040: // Multiply step
 				do_add = q & 1;
 				if (do_add) {
 					add32(a_src_value, m_src_value, carry_in, alu_out, alu_carry);
@@ -1812,7 +1812,7 @@ run(void)
 					alu_carry = alu_out & 0x80000000 ? 1 : 0;
 				}
 				break;
-			case 041:		// Divide step
+			case 041: // Divide step
 				do_sub = q & 1;
 				tracef("do_sub %d\n", do_sub);
 				if (do_sub) {
@@ -1821,7 +1821,7 @@ run(void)
 					add32(m_src_value, a_src_value, carry_in, alu_out, alu_carry);
 				}
 				break;
-			case 045:			// Remainder correction
+			case 045: // Remainder correction
 				do_sub = q & 1;
 				tracef("do_sub %d\n", do_sub);
 				if (do_sub) {
@@ -1830,7 +1830,7 @@ run(void)
 					add32(alu_out, a_src_value, carry_in, alu_out, alu_carry);
 				}
 				break;
-			case 051:		// Initial divide step
+			case 051: // Initial divide step
 				tracef("divide-first-step\n");
 				tracef("divide: %o / %o \n", q, a_src_value);
 				sub32(m_src_value, a_src_value, !carry_in, alu_out, alu_carry);
@@ -1882,7 +1882,7 @@ run(void)
 			write_dest(u, dest, out_bus);
 			tracef("alu_out 0x%08x, alu_carry %d, q 0x%08x\n", alu_out, alu_carry, q);
 			break;
-		case 1: // JUMP
+		case 1:		// JUMP
 			new_pc = (u >> 12) & 037777;
 			tracef("a=%o (%o), m=%o (%o)\n", a_src, a_src_value, m_src, m_src_value);
 			r_bit = (u >> 9) & 1;
@@ -1971,7 +1971,7 @@ run(void)
 				popj = 0;
 			}
 			break;
-		case 2: // DISPATCH.
+		case 2:		// DISPATCH.
 			disp_const = (u >> 32) & 01777;
 			n_plus1 = (u >> 25) & 1;
 			enable_ish = (u >> 24) & 1;
@@ -2088,7 +2088,7 @@ run(void)
 			goto process_jump;
 		dispatch_done:
 			break;
-		case 3: // BYTE.
+		case 3:		// BYTE.
 			dest = (u >> 14) & 07777;
 			mr_sr_bits = (u >> 12) & 3;
 			tracef("a=%o (%o), m=%o (%o), dest=%o\n", a_src, a_src_value, m_src, m_src_value, dest);
