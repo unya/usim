@@ -66,10 +66,10 @@ int cc_clock(void);
 int
 cc_send(unsigned char *b, int len)
 {
-	int i, ret;
+	int ret;
 
 	// Send slowly so as not to confuse hardware.
-	for (i = 0; i < len; i++) {
+	for (int i = 0; i < len; i++) {
 		ret = write(fd, b + i, 1);
 		if (ret != 1)
 			perror("write");
@@ -88,7 +88,10 @@ reg_get(int base, int reg)
 {
 	unsigned char buffer[64];
 	unsigned char nibs[4];
-	int ret, i, mask, loops, off;
+	int ret;
+	int mask;
+	int loops;
+	int off;
 	uint16_t v;
 
  again:
@@ -130,8 +133,10 @@ reg_get(int base, int reg)
 	// Response should be 0x3x, 0x4x, 0x5x, 0x6x, but hardware can
 	// sometimes repeat characters.
 	mask = 0;
-	for (i = 0; i < ret; i++) {
-		int nib = (buffer[i] & 0xf0) >> 4;
+	for (int i = 0; i < ret; i++) {
+		int nib;
+
+		nib = (buffer[i] & 0xf0) >> 4;
 		switch (nib) {
 		case 3:
 			mask |= 8;
@@ -231,7 +236,8 @@ cc_go(void)
 uint32_t
 _cc_read_pair(int r1, int r2)
 {
-	uint32_t v1, v2;
+	uint32_t v1;
+	uint32_t v2;
 
 	v1 = cc_get(r1);
 	v2 = cc_get(r2);
@@ -243,7 +249,8 @@ uint64_t
 _cc_read_triple(int r1, int r2, int r3)
 {
 	uint64_t v1;
-	uint32_t v2, v3;
+	uint32_t v2;
+	uint32_t v3;
 
 	v1 = cc_get(r1);
 	v2 = cc_get(r2);
@@ -301,7 +308,9 @@ cc_read_scratch(void)
 uint32_t
 cc_read_status(void)
 {
-	uint16_t v1, v2, v3;
+	uint16_t v1;
+	uint16_t v2;
+	uint16_t v3;
 
 	v1 = cc_get(rd_spy_flag_1);
 	v2 = cc_get(rd_spy_flag_2);
@@ -395,10 +404,11 @@ cc_execute(int op, uint64_t ir)
 uint32_t
 bitmask(int wid)
 {
-	int i;
-	uint32_t m = 0;
+	uint32_t m;
 
-	for (i = 0; i < wid; i++) {
+	m = 0;
+
+	for (int i = 0; i < wid; i++) {
 		m <<= 1;
 		m |= 1;
 	}
@@ -408,9 +418,10 @@ bitmask(int wid)
 uint64_t
 ir_pair(int field, uint32_t val)
 {
-	uint64_t ir = 0;
+	uint64_t ir;
 	uint32_t mask;
-	int shift, width;
+	int shift;
+	int width;
 
 	shift = field >> 6;
 	width = field & 077;
@@ -578,7 +589,11 @@ cc_single_step(void)
 int
 cc_report_basic_regs(void)
 {
-	uint32_t A, M, PC, MD, VMA;
+	uint32_t A;
+	uint32_t M;
+	uint32_t PC;
+	uint32_t MD;
+	uint32_t VMA;
 
 	A = cc_read_a_bus();
 	printf("A = %011o (%08x)\n", A, A);
@@ -596,7 +611,9 @@ cc_report_basic_regs(void)
 	printf("VMA= %011o (%08x)\n", VMA, VMA);
 
 	{
-		uint32_t disk, bd, mmc;
+		uint32_t disk;
+		uint32_t bd;
+		uint32_t mmc;
 
 		disk = cc_get(rd_spy_disk);
 		bd = cc_get(rd_spy_bd);
@@ -626,7 +643,8 @@ cc_report_pc(uint32_t *ppc)
 int
 cc_report_pc_and_md(uint32_t *ppc)
 {
-	uint32_t PC, MD;
+	uint32_t PC;
+	uint32_t MD;
 
 	PC = cc_read_pc();
 	MD = cc_read_md();
@@ -654,7 +672,8 @@ cc_report_pc_and_ir(uint32_t *ppc)
 int
 cc_report_pc_md_ir(uint32_t *ppc)
 {
-	uint32_t PC, MD;
+	uint32_t PC;
+	uint32_t MD;
 	uint64_t ir;
 
 	PC = cc_read_pc();
@@ -670,7 +689,9 @@ cc_report_pc_md_ir(uint32_t *ppc)
 int
 cc_report_status(void)
 {
-	uint32_t s, f1, f2;
+	uint32_t s;
+	uint32_t f1;
+	uint32_t f2;
 
 	s = cc_read_status();
 	f1 = s >> 16;
@@ -706,11 +727,10 @@ int
 cc_pipe(void)
 {
 	uint64_t isn;
-	int adr;
 
-	for (adr = 0; adr < 8; adr++) {
-		printf("addr %o:\n", adr);
-		isn = ir_pair(CONS_IR_M_SRC, adr) |
+	for (int i = 0; i < 8; i++) {
+		printf("addr %o:\n", i);
+		isn = ir_pair(CONS_IR_M_SRC, i) |
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU);
 		printf("%" PRIu64 " ", isn);
@@ -739,21 +759,20 @@ cc_pipe(void)
 int
 cc_pipe2(void)
 {
-	int r;
 	uint64_t isn;
 	uint32_t v2;
 
-	for (r = 0; r < 8; r++) {
-		printf("val %o:\n", r);
-		cc_write_md(r);
+	for (int i = 0; i < 8; i++) {
+		printf("val %o:\n", i);
+		cc_write_md(i);
 		v2 = cc_read_md();
-		if (v2 != r) {
-			printf("cc_pipe2; md readback error (got=%o wanted=%o)\n", v2, r);
+		if (v2 != i) {
+			printf("cc_pipe2; md readback error (got=%o wanted=%o)\n", v2, i);
 		}
 		isn = ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU) |
-			ir_pair(CONS_IR_M_MEM_DEST, r);
+			ir_pair(CONS_IR_M_MEM_DEST, i);
 		printf("%" PRIu64 " ", isn);
 		disassemble_ucode_loc(isn);
 		cc_write_diag_ir(isn);
@@ -796,9 +815,7 @@ uint64_t setup_map_inst[] = {
 int
 cc_setup_map(void)
 {
-	int i;
-
-	for (i = 0; 1; i++) {
+	for (int i = 0; 1; i++) {
 		if (setup_map_inst[i] == 0)
 			break;
 		printf("%d ", i);
@@ -812,7 +829,6 @@ cc_setup_map(void)
 int
 cc_report_ide_regs(void)
 {
-	int r;
 	uint32_t v;
 
 	printf("setting up map...\n");
@@ -824,8 +840,8 @@ cc_report_ide_regs(void)
 	cc_write_a_mem(4, 0774);
 	cc_write_a_mem(5, 0777);
 
-	for (r = 0; r < 8; r++) {
-		cc_write_a_mem(1, r | 020);
+	for (int i = 0; i < 8; i++) {
+		cc_write_a_mem(1, i | 020);
 		cc_execute_r(0000040060010050); // alu seta a=1 ->md
 		cc_execute_r(0000140044010050); // alu seta a=3 alu-> ->vma+write
 
@@ -836,7 +852,7 @@ cc_report_ide_regs(void)
 
 		cc_execute_w(0000140042010050); // alu seta a=3 alu-> ->vma+read */
 		v = cc_read_md();
-		printf("ide[%d] = 0x%08x 0x%02x\n", r, v, v & 0xff);
+		printf("ide[%d] = 0x%08x 0x%02x\n", i, v, v & 0xff);
 	}
 
 	printf("a[1]=%0o\n", cc_read_a_mem(1));
@@ -852,7 +868,8 @@ cc_report_ide_regs(void)
 int
 _test_scratch(uint16_t v)
 {
-	uint16_t s1, s2;
+	uint16_t s1;
+	uint16_t s2;
 
 	s1 = cc_read_scratch();
 	cc_set(wr_spy_scratch, v);
@@ -955,8 +972,11 @@ char *serial_devicename2 = "/dev/ttyUSB2";
 int
 main(int argc, char *argv[])
 {
-	int ret, done, r;
-	struct termios oldtio, newtio;
+	int ret;
+	int done;
+	int r;
+	struct termios oldtio;
+	struct termios newtio;
 
 	if (argc > 1)
 		debug++;
