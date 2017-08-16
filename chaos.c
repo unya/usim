@@ -17,7 +17,6 @@
 #include <sys/uio.h>
 
 #include "ucode.h"
-#include "endian.h"
 #include "chaos.h"
 
 #ifndef CHAOS_MY_ADDRESS

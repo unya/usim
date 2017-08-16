@@ -18,7 +18,6 @@
 
 #include "ucode.h"
 #include "config.h"
-#include "endian.h"
 
 extern void deassert_xbus_interrupt(void);
 extern void assert_xbus_interrupt(void);
@@ -85,6 +84,11 @@ int cur_block;
 void
 _swaplongbytes(unsigned int *buf, int word_count)
 {
+#define SWAP_LONG(x) ( (((x) & 0xff000000) >> 24) |	\
+		       (((x) & 0x00ff0000) >> 8) |	\
+		       (((x) & 0x0000ff00) << 8) |	\
+		       (((x) & 0x000000ff) << 24) )
+
 	for (int i = 0; i < word_count; i++) {
 		buf[i] = SWAP_LONG(buf[i]);
 	}
