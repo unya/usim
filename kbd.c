@@ -13,60 +13,37 @@
 #include <X11/Xos.h>
 #include <X11/keysym.h>
 
-// Lisp Machine keycodes.
+extern unsigned int iob_key_scan;
+extern unsigned int iob_kbd_csr;
+
+// See SYS:LMIO;RDDEFS LISP for details.
+#define LM_K_NULL 0200
 #define LM_K_BREAK 0201
 #define LM_K_CLEAR 0202
 #define LM_K_CALL 0203
 #define LM_K_ESC 0204
-#define LM_K_BACK 0205
+#define LM_K_BACK_NEXT 0205
 #define LM_K_HELP 0206
 #define LM_K_RUBOUT 0207
-#define LM_K_CR 0215
-#define LM_K_ALTMODE 033
-#define LM_K_BREAK 0201
-#define LM_K_CLEAR_INPUT 0202
-#define LM_K_CALL 0203
-#define LM_K_TERMINAL 0204
-#define LM_K_MACRO 0205
-#define LM_K_HELP 0206
-#define LM_K_RUBOUT 0207
-#define LM_K_OVERSTRIKE 0210
+#define LM_K_BS 0210
 #define LM_K_TAB 0211
 #define LM_K_LINE 0212
-#define LM_K_DELETE 0213
-#define LM_K_PAGE 0214
-#define LM_K_CLEAR_SCREEN 0214
-#define LM_K_RETURN 0215
-#define LM_K_QUOTE 0216
-#define LM_K_HOLD_OUTPUT 0217
-#define LM_K_STOP_OUTPUT 0220
+#define LM_K_VT 0213
+#define LM_K_FORM 0214
+#define LM_K_CR 0215
 #define LM_K_ABORT 0221
-#define LM_K_RESUME 0222
-#define LM_K_STATUS 0223
 #define LM_K_END 0224
-#define LM_K_ROMAN_I 0225
-#define LM_K_ROMAN_II 0226
-#define LM_K_ROMAN_III 0227
-#define LM_K_ROMAN_IV 0230
-#define LM_K_HAND_UP 0231
-#define LM_K_HAND_DOWN 0232
-#define LM_K_HAND_LEFT 0233
-#define LM_K_HAND_RIGHT 0234
-#define LM_K_SYSTEM 0235
+#define LM_K_SYSTEM 0235 
 #define LM_K_NETWORK 0236
-
-extern unsigned int iob_key_scan;
-extern unsigned int iob_kbd_csr;
-
-// ---!!! Map octal values to names.
+#define LM_K_SP 040
 
 // See SYS:LMWIN;COLD LISP for details.
 //
 // Keyboard translate table is a 3 X 64 array.
 // 3 entries for each of 100 keys.  First is vanilla, second shift, third top.
 unsigned char kb_old_table[64][3] = {
-	0201, 0201, LM_K_NETWORK,
-	0204, 0204, LM_K_SYSTEM,
+	LM_K_BREAK, LM_K_BREAK, LM_K_NETWORK,
+	LM_K_ESC, LM_K_ESC, LM_K_SYSTEM,
 	'1', '!', '!',
 	'2', '"', '"',
 	'3', '#', '#',
@@ -80,10 +57,10 @@ unsigned char kb_old_table[64][3] = {
 	'-', '=', '=',
 	'@', '`', '`',
 	'^', '~', '~',
-	0210, 0210, 0210,
-	0203, 0203, LM_K_ABORT,
-	0202, 0202, 0202,
-	0211, 0211, 0211,
+	LM_K_BS, LM_K_BS, LM_K_BS,
+	LM_K_CALL, LM_K_CALL, LM_K_ABORT,
+	LM_K_CLEAR, LM_K_CLEAR, LM_K_CLEAR,
+	LM_K_TAB, LM_K_TAB, LM_K_TAB,
 	'', '', '',
 	'q', 'Q', '',
 	'w', 'W', '',
@@ -99,25 +76,25 @@ unsigned char kb_old_table[64][3] = {
 	']', '}', '}',
 	'\\', '|', '|',
 	'/', '', '',
-	'', 0215, 0,
-	0215, 0211, 0211,
-	0214, 0214, 0214,
-	0213, 0213, 0213,
-	0207, 0207, 0207,
+	'', LM_K_CR, LM_K_NULL,
+	LM_K_CR, LM_K_TAB, LM_K_TAB,
+	LM_K_FORM, LM_K_FORM, LM_K_FORM,
+	LM_K_VT, LM_K_VT, LM_K_VT,
+	LM_K_RUBOUT, LM_K_RUBOUT, LM_K_RUBOUT,
 	'a', 'A', '',
 	's', 'S', '',
 	'd', 'D', '',
 	'f', 'F', '',
-	'g', 'G', '\032',
-	'h', 'H', 0206,
+	'g', 'G', '',
+	'h', 'H', LM_K_HELP,
 	'j', 'J', '',
 	'k', 'K', '',
 	'l', 'L', '',
 	';', '+', '+',
 	':', '*', '*',
-	0215, 0215, LM_K_END,
-	0212, 0212, 0212,
-	0205, 0205, 0205,
+	LM_K_CR, LM_K_CR, LM_K_END,
+	LM_K_LINE, LM_K_LINE, LM_K_LINE,
+	LM_K_BACK_NEXT, LM_K_BACK_NEXT, LM_K_BACK_NEXT,
 	'z', 'Z', '',
 	'x', 'X', '',
 	'c', 'C', '',
@@ -128,7 +105,7 @@ unsigned char kb_old_table[64][3] = {
 	',', '<', '<',
 	'.', '>', '>',
 	'/', '?', '?',
-	' ', ' ', ' '
+	LM_K_SP, LM_K_SP, LM_K_SP,
 };
 
 unsigned short kb_to_scancode[256][4];
@@ -136,8 +113,6 @@ unsigned short kb_to_scancode[256][4];
 void
 iob_key_event(int code, int extra)
 {
-	int newkbd = 0;		// Keys found on the "new" keyboard.
-
 	if (code == XK_Shift_L ||
 	    code == XK_Shift_R ||
 	    code == XK_Control_L ||
@@ -181,22 +156,6 @@ iob_key_event(int code, int extra)
 	case XK_Return:		// Return.
 		iob_key_scan = 50;
 		break;
-	case XK_Down:
-		iob_key_scan = 0176;
-		newkbd = 1;
-		break;
-	case XK_Left:
-		iob_key_scan = 0117;
-		newkbd = 1;
-		break;
-	case XK_Right:
-		iob_key_scan = 017;
-		newkbd = 1;
-		break;
-	case XK_Up:
-		iob_key_scan = 0106;
-		newkbd = 1;
-		break;
 	case XK_Tab:
 		iob_key_scan = 18;
 		break;
@@ -219,10 +178,7 @@ iob_key_event(int code, int extra)
 		iob_key_scan |= extra;
 	}
 
-	if (newkbd)
-		iob_key_scan |= 1 << 16;
-	else
-		iob_key_scan |= 0xffff0000;
+	iob_key_scan |= 0xffff0000;
 
 	iob_kbd_csr |= 1 << 5;
 	assert_unibus_interrupt(0260);
