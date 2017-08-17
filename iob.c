@@ -118,29 +118,29 @@ iob_unibus_read(int offset, int *pv)
 		break;
 	case 0102:
 		*pv = (iob_key_scan >> 16) & 0177777;
-		iob_kbd_csr &= ~(1 << 5);
 		traceio("unibus: kbd high %011o\n", *pv);
+		iob_kbd_csr &= ~(1 << 5);
 		break;
 	case 0104:
-		traceio("unibus: mouse y\n");
 		*pv =
 			(mouse_tail << 12) |
 			(mouse_middle << 13) |
 			(mouse_head << 14) |
 			(mouse_y & 07777);
-
+		traceio("unibus: mouse y %011o\n", *pv);
+		
 		mouse_tail = 0;
 		mouse_middle = 0;
 		mouse_head = 0;
-
+		
 		iob_kbd_csr &= ~(1 << 4);
 		break;
 	case 0106:
-		traceio("unibus: mouse x\n");
 		*pv =
 			(mouse_rawx << 12) |
 			(mouse_rawy << 14) |
 			(mouse_x & 07777);
+		traceio("unibus: mouse x %011o\n", *pv);
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
@@ -151,23 +151,23 @@ iob_unibus_read(int offset, int *pv)
 		traceio("unibus: kbd csr %011o\n", *pv);
 		break;
 	case 0120:
-		traceio("unibus: usec clock low\n");
 		*pv = get_us_clock_low();
+		traceio("unibus: usec clock low\n");
 		break;
 	case 0122:
-		traceio("unibus: usec clock high\n");
 		*pv = get_us_clock_high();
+		traceio("unibus: usec clock high\n");
 		break;
 	case 0124:
-		printf("unibus: 60hz clock\n");
 		*pv = get_60hz_clock();
+		traceio("unibus: 60hz clock\n");
 		break;
 	case 0140:
 		*pv = chaos_get_csr();
 		break;
 	case 0142:
-		tracenet("unibus: chaos read my-number\n");
 		*pv = chaos_get_addr();
+		tracenet("unibus: chaos read my-number\n");
 		break;
 	case 0144:
 		*pv = chaos_get_rcv_buffer();
@@ -374,6 +374,7 @@ mouse_sync_init(void)
 {
 	int val;
 
+	// Defaults if we cannot find them in the symbol table.
 	mouse_sync_amem_x = 334; // A-MOUSE-CURSOR-X
 	mouse_sync_amem_y = 335; // A-MOUSE-CURSOR-Y
 
@@ -381,6 +382,7 @@ mouse_sync_init(void)
 		printf("can't find A-MOUSE-CURSOR-X in microcode symbols\n");
 	} else
 		mouse_sync_amem_x = val;
+
 	if (sym_find(1, "A-MOUSE-CURSOR-Y", &val)) {
 		printf("can't find A-MOUSE-CURSOR-Y in microcode symbols\n");
 	} else
