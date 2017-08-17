@@ -25,9 +25,7 @@ struct symtab_s {
 struct symtab_s sym_prom;
 struct symtab_s sym_mcr;
 
-extern int prom_enabled_flag;
-
-static int
+static void
 _sym_add(struct symtab_s *tab, int memory, char *name, int v)
 {
 	struct sym_s *s;
@@ -41,8 +39,6 @@ _sym_add(struct symtab_s *tab, int memory, char *name, int v)
 		s->next = tab->syms;
 		tab->syms = s;
 	}
-
-	return 0;
 }
 
 static char *
@@ -193,7 +189,7 @@ _sym_sort(struct symtab_s *tab)
 	return 0;
 }
 
-int
+void
 read_sym_files(void)
 {
 	_sym_read_file(&sym_prom, config_get_promsym_filename());
@@ -201,8 +197,6 @@ read_sym_files(void)
 
 	_sym_read_file(&sym_mcr, config_get_mcrsym_filename());
 	_sym_sort(&sym_mcr);
-
-	return 0;
 }
 
 int

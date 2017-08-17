@@ -23,7 +23,7 @@ extern int display_init(void);
 extern void display_poll(void);
 extern int disk_init(const char *filename);
 extern int read_prom_files(void);
-extern int read_sym_files(void);
+extern void read_sym_files(void);
 extern int iob_init(void);
 extern int chaos_init(void);
 extern void iob_warm_boot_key(void);
