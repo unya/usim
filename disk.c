@@ -407,7 +407,7 @@ disk_start(void)
 	return 0;
 }
 
-int
+void
 disk_xbus_write(int offset, unsigned int v)
 {
 	tracef("disk register write, offset %o <- %o\n", offset, v);
@@ -435,11 +435,9 @@ disk_xbus_write(int offset, unsigned int v)
 		tracedio("disk: unknown reg write %o\n", offset);
 		break;
 	}
-
-	return 0;
 }
 
-int
+void
 disk_xbus_read(int offset, unsigned int *pv)
 {
 	tracef("disk register read, offset %o\n", offset);
@@ -484,7 +482,6 @@ disk_xbus_read(int offset, unsigned int *pv)
 		}
 		break;
 	}
-	return 0;
 }
 
 int

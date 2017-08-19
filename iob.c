@@ -1,4 +1,15 @@
 // iob.c --- CADR I/O board
+//
+// The IOB board consits of the following devices:
+//
+// - General-Purpose I/O
+// - Clocks
+// - Command/Status register (CSR)
+// - Keyboard
+// - Mouse
+// - Chaosnet
+//
+// See SYS:DOC;IOB TEXT for details.
 
 // ---!!! Order this into proper sections: IOB, Mouse, TV, ...
 
@@ -34,18 +45,10 @@ extern int sym_find(int mcr, char *name, int *pval);
 void tv_post_60hz_interrupt(void);
 void chaos_xmit_pkt(void);
 
-#define US_CLOCK_IS_WALL_CLOCK
-#define USE_SIGVTARLM_FOR_60HZ
-
 unsigned long
 get_us_clock()
 {
 	unsigned long v;
-
-#ifdef US_CLOCK_IS_WALL_CLOCK
-#ifdef USE_US_CLOCK_FOR_60HZ
-	static unsigned long last_hz60;
-#endif
 	static struct timeval tv;
 	struct timeval tv2;
 	unsigned long ds, du;
@@ -53,9 +56,6 @@ get_us_clock()
 	if (tv.tv_sec == 0) {
 		gettimeofday(&tv, 0);
 		v = 0;
-#ifdef USE_US_CLOCK_FOR_60HZ
-		last_hz60 = 0;
-#endif
 	} else {
 		gettimeofday(&tv2, 0);
 		if (tv2.tv_usec < tv.tv_usec) {
@@ -65,21 +65,7 @@ get_us_clock()
 		ds = tv2.tv_sec - tv.tv_sec;
 		du = tv2.tv_usec - tv.tv_usec;
 		v = (ds * 1000 * 1000) + du;
-
-#ifdef USE_US_CLOCK_FOR_60HZ
-		hz60 = v / 16000;
-		if (hz60 > last_hz60) {
-			last_hz60 = hz60;
-			tv_post_60hz_interrupt();
-		}
-#endif
 	}
-#else
-
-	// Assume 200ns cycle, we want 1us.
-	extern long cycles;
-	v = cycles * (1000 / 200);
-#endif
 
 	return v;
 }
@@ -272,60 +258,15 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 		mouse_tail = 1;
 }
 
-// Create simulated mouse motion to keep X11 cursor
-// and microcode cursor in sync.
-void
-iob_mouse_poll(int x, int y)
-{
-	int mcx, mcy, dx, dy;
-
-	if (iob_kbd_csr & (1 << 4))
-		return;
-
-	mcx = read_a_mem(mouse_sync_amem_x);
-	mcy = read_a_mem(mouse_sync_amem_y);
-
-	if (mcx == 0 && mcy == 0)
-		return;
-
-	dx = x - mcx;
-	dy = y - mcy;
-
-#define MAX_MOTION 5
-#define POLL_DELAY 20
-
-	if (dx || dy) {
-		if (mouse_poll_delay) {
-			mouse_poll_delay--;
-			if (mouse_poll_delay > 0)
-				return;
-		}
-
-		if (dx > MAX_MOTION)
-			dx = MAX_MOTION;
-		if (dy > MAX_MOTION)
-			dy = MAX_MOTION;
-
-		mouse_x += dx;
-		mouse_y += dy;
-
-		iob_kbd_csr |= 1 << 4;
-		assert_unibus_interrupt(0264);
-
-		mouse_poll_delay = POLL_DELAY;
-	}
-}
-
 int tv_csr;
 
-int
+void
 tv_xbus_read(int offset, unsigned int *pv)
 {
 	*pv = tv_csr;
-	return 0;
 }
 
-int
+void
 tv_xbus_write(int offset, unsigned int v)
 {
 	if ((tv_csr & 4) != (v & 4)) {
@@ -334,8 +275,6 @@ tv_xbus_write(int offset, unsigned int v)
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);
 	deassert_xbus_interrupt();
-
-	return 0;
 }
 
 void
@@ -343,13 +282,6 @@ tv_post_60hz_interrupt(void)
 {
 	tv_csr |= 1 << 4;
 	assert_xbus_interrupt();
-}
-
-void
-iob_clock_event()
-{
-	iob_kbd_csr |= 1 << 6;
-	assert_unibus_interrupt(0274);
 }
 
 void
@@ -361,12 +293,6 @@ sigalrm_handler(int arg)
 void
 iob_poll(unsigned long cycles)
 {
-#ifndef USE_SIGVTARLM_FOR_60HZ
-	// Assume 200ns cycle, we want 16ms.
-	if ((cycles % ((16 * 1000 * 1000) / 200)) == 0) {
-		tv_post_60hz_interrupt();
-	}
-#endif
 }
 
 void
@@ -389,7 +315,7 @@ mouse_sync_init(void)
 		mouse_sync_amem_y = val;
 }
 
-int
+void
 iob_init(void)
 {
 	kbd_init();
@@ -398,7 +324,6 @@ iob_init(void)
 		mouse_sync_init();
 	}
 
-#ifdef USE_SIGVTARLM_FOR_60HZ
 	{
 		struct itimerval itimer;
 		int usecs;
@@ -411,7 +336,4 @@ iob_init(void)
 		itimer.it_value.tv_usec = usecs;
 		setitimer(ITIMER_VIRTUAL, &itimer, 0);
 	}
-#endif
-
-	return 0;
 }

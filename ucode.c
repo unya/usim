@@ -115,12 +115,12 @@ extern void video_read(int offset, unsigned int *pv);
 extern void video_write(int offset, unsigned int bits);
 extern void iob_unibus_read(int offset, int *pv);
 extern void iob_unibus_write(int offset, int v);
-extern int disk_xbus_read(int offset, unsigned int *pv);
-extern int disk_xbus_write(int offset, unsigned int v);
-extern int tv_xbus_read(int offset, unsigned int *pv);
-extern int tv_xbus_write(int offset, unsigned int v);
-extern int uart_xbus_read(int, unsigned int *);
-extern int uart_xbus_write(int, unsigned int);
+extern void disk_xbus_read(int offset, unsigned int *pv);
+extern void disk_xbus_write(int offset, unsigned int v);
+extern void tv_xbus_read(int offset, unsigned int *pv);
+extern void tv_xbus_write(int offset, unsigned int v);
+extern void uart_xbus_read(int, unsigned int *);
+extern void uart_xbus_write(int, unsigned int);
 
 extern void disassemble_ucode_loc(int loc, ucw_t u);
 extern int sym_find(int mcr, char *name, int *pval);
@@ -426,17 +426,22 @@ read_mem(int vaddr, unsigned int *pv)
 
 	// Disk & TV controller on XBUS.
 	if (pn == 036777) {
-		if (offset >= 0370) // Disk.
-			return disk_xbus_read(offset, pv);
-		if (offset == 0360) // TV.
-			return tv_xbus_read(offset, pv);
+		if (offset >= 0370) { // Disk.
+			 disk_xbus_read(offset, pv);
+			 return 0;
+		}
+		if (offset == 0360) { // TV.
+			 tv_xbus_read(offset, pv);
+			 return 0;
+		}
 		printf("xbus read %o %o\n", offset, vaddr);
 		*pv = 0;
 		return 0;
 	}
 
 	if (pn == 036776) {
-		return uart_xbus_read(offset, pv);
+		uart_xbus_read(offset, pv);
+		return 0;
 	}
 
 	// Page fault.
@@ -567,14 +572,19 @@ write_mem(int vaddr, unsigned int v)
 	}
 
 	if (pn == 036777) {
-		if (offset >= 0370)
-			return disk_xbus_write(offset, v);
-		if (offset == 0360)
-			return tv_xbus_write(offset, v);
+		if (offset >= 0370) {
+			 disk_xbus_write(offset, v);
+			 return 0;
+		}
+		if (offset == 0360) {
+			 tv_xbus_write(offset, v);
+			 return 0;
+		}
 	}
 
 	if (pn == 036776) {
-		return uart_xbus_write(offset, v);
+		uart_xbus_write(offset, v);
+		return 0;
 	}
 
 	// Catch questionable accesses.

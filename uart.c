@@ -10,14 +10,13 @@
 
 extern int trace;
 
-int
+void
 uart_xbus_read(int offset, unsigned int *pv)
 {
 	*pv = 0;
-	return 0;
 }
 
-int
+void
 uart_xbus_write(int offset, unsigned int v)
 {
 	if (offset == 0) {
@@ -26,5 +25,4 @@ uart_xbus_write(int offset, unsigned int v)
 	} else if (offset == 1) {
 		trace = v;
 	}
-	return 0;
 }
