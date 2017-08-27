@@ -918,6 +918,7 @@ usage(void)
 	fprintf(stderr, "-m <partition-name> modify partition\n");
 	fprintf(stderr, "-b <partition-name> mark current partition\n");
 	fprintf(stderr, "-B <partition-name> mark current mcr\n");
+	fprintf(stderr, "-d output debug information\n");
 	exit(1);
 }
 
