@@ -62,7 +62,7 @@ diskmaker: diskmaker.c
 lmfs: lmfs.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-lod: lod.c macro.c
+lod: lod.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 cc: cc.c decode.c
