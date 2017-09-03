@@ -1,86 +1,44 @@
-#
-# usim CADR simulator
-# $Id$
-#
+VERSION = 0.9-ams
 
-DISPLAY = SDL
-KEYBOARD = NEW
+CC = gcc
+CFLAGS = -g3 -O3 -std=gnu99
 
-USIM_SRC = usim.c decode.c ucode.c x11.c kbd.c disk.c iob.c chaos.c uart.c syms.c config.c 
-USIM_HDR = ucode.h config.h
-
-ifeq ($(DISPLAY), SDL)
-DISPLAY_SRC = sdl.c
-DISPLAY_LIBS = $(shell sdl-config --libs)
-DISPLAY_DEFINES =  $(shell sdl-config --cflags) -DDISPLAY_SDL
-endif
-
-ifeq ($(DISPLAY), X11)
-DISPLAY_SRC = x11.c
-DISPLAY_LIBS = -lX11 -lpthread
-DISPLAY_DEFINES = -DDISPLAY_X11
-endif
-
-ifeq ($(KEYBOARD), OLD)
-KEYBOARD_SRC = kbd_old.c
-endif
-
-ifeq ($(KEYBOARD), NEW)
-KEYBOARD_SRC = kbd_new.c
-endif
-
-# Linux / BSD / OS X
-LFLAGS = -L/usr/lib -lpthread
-OPTFLAGS = -mtune=native -O2
-DBGFLAGS = -g3
-#DBGFLAGS += -DKBD_DEBUG=1
-#DBGFLAGS += -DCHAOS_DEBUG=1
-CFLAGS = -std=c99 -D_XOPEN_SOURCE=600
-CFLAGS += $(OPTFLAGS) $(DBGFLAGS) $(DEFINES)
-
-# built-in CHAOS FILE: server at 0404
-DEFINES += -DMAP_SITE_TREE_DIRECTORY
-USIM_SRC += Files.c glob.c
-USIM_HDR += Files.h glob.h
-
-USIM_OBJ = $(USIM_SRC:.c=.o) $(DISPLAY_SRC:.c=.o) $(KEYBOARD_SRC:.c=.o)
+USIM_LDFLAGS = -lpthread -lX11
 
 all: TAGS usim readmcr diskmaker lod lmfs cc disk.img
 
-usim: $(USIM_OBJ)
-	$(CC) $(CFLAGS) -o $@ $(USIM_OBJ) $(LFLAGS) $(DISPLAY_LIBS)
+usim: usim.o decode.o ucode.o x11.o kbd.o disk.o iob.o chaos.o uart.o syms.o config.o Files.o glob.o
+	$(CC) $(CFLAGS) -o $@ $^ $(USIM_LDFLAGS)
 
-run:
-	./usim >xx
-
-readmcr: readmcr.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-diskmaker: diskmaker.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-lmfs: lmfs.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-lod: lod.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-cc: cc.c decode.c
+readmcr: readmcr.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-disk.img:
+diskmaker: diskmaker.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+lmfs: lmfs.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+lod: lod.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+cc: cc.o decode.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+disk.img: diskmaker
 	./diskmaker -c -f disk.img -t disk.cfg
 
 clean:
-	rm -f *.o usim lod readmcr diskmaker lmfs cc xx
+	rm -f *.o
 	rm -f *~
+	rm -f xx
+	rm -f usim lod readmcr diskmaker lmfs cc
 
-x11.c: DEFINES+=$(DISPLAY_DEFINES)
-sdl.o: DEFINES+=$(DISPLAY_DEFINES)
-iob.o: DEFINES+=$(DISPLAY_DEFINES)
-kbd_new.o: DEFINES+=$(DISPLAY_DEFINES)
-kbd_old.o: DEFINES+=$(DISPLAY_DEFINES)
-main.o: DEFINES+=$(DISPLAY_DEFINES)
-
-TAGS: $(USIM_SRC) $(USIM_HDR) readmcr.c diskmaker.c lmfs.c lod.c macro.c cc.c 
+TAGS:
 	find . -type f -iname "*.[ch]" | etags -
+
+dist:
+	rm -rf usim-$(VERSION)
+	svn export . usim-$(VERSION)
+	tar zcf usim-$(VERSION).tar.gz usim-$(VERSION)
+
