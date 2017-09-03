@@ -122,11 +122,12 @@ read_main_mem(int fd, int start, int size)
 void
 usage(void)
 {
-	fprintf(stderr, "readmcr <mcr-filename>\n");
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "-b swap bytes\n");
-	fprintf(stderr, "-d extra debug info\n");
-	fprintf(stderr, "-s<n> skip N * 32-bit values\n");
+	fprintf(stderr, "usage: readmcr FILE>\n");
+	fprintf(stderr, "dump a microcode file\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "  -b             swap bytes\n");
+	fprintf(stderr, "  -d             extra debug info\n");
+	fprintf(stderr, "  -s N           skip N * 32-bit values\n");
 	exit(1);
 }
 

@@ -412,18 +412,20 @@ find_and_dump_fef(unsigned int pc)
 void
 usage(void)
 {
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "-l <load-band filename>\n");
-	fprintf(stderr, "-i <disk-image filename>\n");
+	fprintf(stderr, "usage: lod -l FILE [OPTION]...\n");
+	fprintf(stderr, "  or:  lod -i FILE [OPTION]...\n");
+	fprintf(stderr, "\n");	
+	fprintf(stderr, "  -l FILE        LOD band file\n");
+	fprintf(stderr, "  -i FILE        disk image\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "-c dump system communication area\n");
-	fprintf(stderr, "-s dump scratch-pad area\n");
-	fprintf(stderr, "-f find and disassemble initial FEF\n");
-	fprintf(stderr, "-g dump initial stack group\n");
-	fprintf(stderr, "-p <pc> find and disassemble FEF for given pc\n");
-	fprintf(stderr, "-a <addr> find and disassemble FEF for given address\n");
-	fprintf(stderr, "-m <addr> dump memory\n");
-	fprintf(stderr, "-w decode 25-bit pointers\n");
+	fprintf(stderr, "  -c             dump system communication area\n");
+	fprintf(stderr, "  -s             dump scratch-pad area\n");
+	fprintf(stderr, "  -f             find and disassemble initial FEF\n");
+	fprintf(stderr, "  -g             dump initial stack group\n");
+	fprintf(stderr, "  -p PC          find and disassemble FEF for given pc\n");
+	fprintf(stderr, "  -a addr        find and disassemble FEF for given address\n");
+	fprintf(stderr, "  -m ADDR        dump memory\n");
+	fprintf(stderr, "  -w             decode 25-bit pointers\n");
 	exit(1);
 }
 

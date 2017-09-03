@@ -910,18 +910,19 @@ set_current_mcr(const char *filename, const char *partition_name)
 void
 usage(void)
 {
+	fprintf(stderr, "usage: diskmaker [OPTION]...\n");
 	fprintf(stderr, "CADR diskmaker\n");
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "-p show existing disk image\n");
-	fprintf(stderr, "-c create new disk image\n");
-	fprintf(stderr, "-l rewrite label\n");
-	fprintf(stderr, "-t <template-filename> template file\n");
-	fprintf(stderr, "-f <disk-image-filename> disk image\n");
-	fprintf(stderr, "-x <partition-name> extract partition\n");
-	fprintf(stderr, "-m <partition-name> modify partition\n");
-	fprintf(stderr, "-b <partition-name> mark current partition\n");
-	fprintf(stderr, "-B <partition-name> mark current mcr\n");
-	fprintf(stderr, "-d output debug information\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "  -p             show existing disk image\n");
+	fprintf(stderr, "  -c             create new disk image\n");
+	fprintf(stderr, "  -l             rewrite label\n");
+	fprintf(stderr, "  -t FILE        template file\n");
+	fprintf(stderr, "  -f FILE        disk image\n");
+	fprintf(stderr, "  -x PART        extract partition\n");
+	fprintf(stderr, "  -m PART        modify partition\n");
+	fprintf(stderr, "  -b PART        mark current partition\n");
+	fprintf(stderr, "  -B PART        mark current mcr\n");
+	fprintf(stderr, "  -d             output debug information\n");
 	exit(1);
 }
 

@@ -639,12 +639,13 @@ lmfs_write_file(char *path)
 void
 usage(void)
 {
+	fprintf(stderr, "usage: lmfs [OPTION]...\n");
 	fprintf(stderr, "LMFS file extract\n");
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "-f <disk-image-filename>\n");
-	fprintf(stderr, "-d <path> show files in dir\n");
-	fprintf(stderr, "-r <path> read file\n");
-	fprintf(stderr, "-w <path> write file\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "  -f FILE        LMFS image\n");
+	fprintf(stderr, "  -d DIR         show files in directory\n");
+	fprintf(stderr, "  -r FILE        read file\n");
+	fprintf(stderr, "  -w FILE        write file\n");
 	exit(1);
 }
 
