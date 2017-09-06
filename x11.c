@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <signal.h>
 
-
 extern unsigned char kb_old_table[64][3];
 extern unsigned short kb_to_scancode[256][4];
 
@@ -49,7 +48,8 @@ static XImage *ximage;
 #define X_ALT 8
 #define X_META 16
 
-unsigned long Black, White;
+unsigned long Black;
+unsigned long White;
 
 static int old_run_state;
 
@@ -82,8 +82,7 @@ process_key(XEvent *e, int keydown)
 		extra |= 3 << 10;
 
 	if (keydown) {
-		XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
-			      &status);
+		XLookupString(&e->xkey, (char *) buffer, 5, &keysym, &status);
 
 		if (keysym == XK_Shift_L ||
 		    keysym == XK_Shift_R ||
@@ -94,38 +93,38 @@ process_key(XEvent *e, int keydown)
 			return;
 
 		switch (keysym) {
-		case XK_F1:		// Terminal.
+		case XK_F1:	// Terminal.
 			lmcode = 1;
 			break;
-		case XK_F2:		// System.
+		case XK_F2:	// System.
 			lmcode = 1 | (3 << 8);
 			break;
-		case XK_F3:		// Network.
+		case XK_F3:	// Network.
 			lmcode = 0 | (3 << 8);
 			break;
-		case XK_F4:		// Abort.
+		case XK_F4:	// Abort.
 			lmcode = 16 | (3 << 8);
 			break;
-		case XK_F5:		// Clear.
+		case XK_F5:	// Clear.
 			lmcode = 17;
 			break;
-		case XK_F6:		// Help.
+		case XK_F6:	// Help.
 			lmcode = 44 | (3 << 8);
 			break;
-		case XK_F11:		// End.
+		case XK_F11:	// End.
 			lmcode = 50 | (3 << 8);
 			break;
-		case XK_F7:		// Call.
+		case XK_F7:	// Call.
 			lmcode = 16;
 			break;
-		case XK_F12:		// Break.
+		case XK_F12:	// Break.
 		case XK_Break:
 			lmcode = 0;
 			break;
-		case XK_BackSpace:	// Rubout.
+		case XK_BackSpace: // Rubout.
 			lmcode = 046;
 			break;
-		case XK_Return:		// Return.
+		case XK_Return: // Return.
 			lmcode = 50;
 			break;
 		case XK_Tab:
@@ -214,7 +213,10 @@ video_read(int offset, unsigned int *pv)
 	}
 }
 
-int u_minh = 0x7fffffff, u_maxh, u_minv = 0x7fffffff, u_maxv;
+int u_minh = 0x7fffffff;
+int u_maxh;
+int u_minv = 0x7fffffff;
+int u_maxv;
 
 void
 accumulate_update(int h, int v, int hs, int vs)
@@ -232,7 +234,8 @@ accumulate_update(int h, int v, int hs, int vs)
 void
 send_accumulated_updates(void)
 {
-	int hs, vs;
+	int hs;
+	int vs;
 
 	hs = u_maxh - u_minh;
 	vs = u_maxv - u_minv;
@@ -251,7 +254,9 @@ void
 video_write(int offset, unsigned int bits)
 {
 	if (ximage) {
-		int i, h, v;
+		int i;
+		int h;
+		int v;
 
 		offset *= 32;
 

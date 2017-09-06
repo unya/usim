@@ -137,7 +137,8 @@ _disk_write(int block_no, unsigned int *buffer)
 int
 disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 {
-	int block_no, i;
+	int block_no;
+	int i;
 	unsigned int buffer[256];
 
 	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
@@ -178,7 +179,8 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 int
 disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 {
-	int block_no, i;
+	int block_no;
+	int i;
 	unsigned int buffer[256];
 
 	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
@@ -194,6 +196,7 @@ disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
 
 	return 0;
 }
+
 void
 disk_throw_interrupt(void)
 {
@@ -282,7 +285,7 @@ disk_start_read(void)
 
 		f = read_phy_mem(disk_clp, &ccw);
 		if (f) {
-			// Huh.  what to do now?
+			// Huh. what to do now?
 			printf("disk: mem[clp=%o] yielded fault (no page)\n", disk_clp);
 			return;
 		}
@@ -340,7 +343,7 @@ disk_start_write(void)
 
 		f = read_phy_mem(disk_clp, &ccw);
 		if (f) {
-			// Huh.  what to do now?
+			// Huh. what to do now?
 			printf("disk: mem[clp=%o] yielded fault (no page)\n", disk_clp);
 			return;
 		}
@@ -527,7 +530,8 @@ disk_init(char *filename)
 
 	// Hack to find MCR symbol file via disk pack label.
 	if (label[030] != 0 && label[030] != LABEL_BLANK) {
-		char fn[1024], *s;
+		char fn[1024];
+		char *s;
 
 		memset(fn, 0, sizeof(fn));
 		strcpy(fn, (char *) &label[030]);

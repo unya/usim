@@ -48,7 +48,8 @@ iob_queue_key_event(int ev)
 	}
 }
 
-void iob_dequeue_key_event()
+void
+iob_dequeue_key_event()
 {
 	if (iob_kbd_csr & (1 << 5)) // Already something to be read.
 		return;
@@ -77,7 +78,7 @@ iob_key_event(int code, int keydown)
 	v = ((!keydown) << 8) | code;
 
 	if (iob_kbd_csr & (1 << 5))
-		iob_queue_key_event(v);	// Already something there, queue this.
+		iob_queue_key_event(v); // Already something there, queue this.
 	else {
 		iob_key_scan = (1 << 16) | v;
 		traceio("iob_key_event() - 0%o\n", iob_key_scan);
@@ -96,7 +97,7 @@ iob_warm_boot_key(void)
 }
 
 void
-old_kbd_init (void)
+old_kbd_init(void)
 {
 	// ---!!! Handle multiple modifiers!
 	memset((char *) kb_to_scancode, 0, sizeof(kb_to_scancode));

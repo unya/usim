@@ -15,7 +15,7 @@
 #define LM_K_CR 0215
 #define LM_K_ABORT 0221
 #define LM_K_END 0224
-#define LM_K_SYSTEM 0235 
+#define LM_K_SYSTEM 0235
 #define LM_K_NETWORK 0236
 #define LM_K_SP 040
 

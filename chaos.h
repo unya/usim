@@ -55,7 +55,7 @@ typedef struct chaos_packet {
 	unsigned char data[488];
 } chaos_packet;
 
-#define CHSTATNAME 32 // Length of node name in STATUS protocol.
+#define CHSTATNAME 32	    // Length of node name in STATUS protocol.
 
 typedef struct chaos_status {
 	char name[CHSTATNAME];

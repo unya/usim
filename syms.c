@@ -117,8 +117,10 @@ _sym_read_file(struct symtab_s *tab, const char *filename)
 	fgets(line, sizeof(line), f);
 
 	while (fgets(line, sizeof(line), f) != NULL) {
-		char sym[64], symtype[64];
-		int loc, n;
+		char sym[64];
+		char symtype[64];
+		int loc;
+		int n;
 
 		if (first) {
 			strcpy(line, line + 3);
@@ -176,7 +178,7 @@ _sym_sort(struct symtab_s *tab)
 	if (tab->sorted_syms == 0)
 		return -1;
 
-// Fill in vector.
+	// Fill in vector.
 	i = 0;
 	for (s = tab->syms; s; s = s->next) {
 		tab->sorted_syms[i++] = s;

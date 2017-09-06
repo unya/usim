@@ -53,11 +53,15 @@ read32(int fd)
 int
 read_i_mem(int fd, int start, int size)
 {
-	int i, loc;
+	int i;
+	int loc;
 
 	loc = start;
 	for (i = 0; i < size; i++) {
-		unsigned int w1, w2, w3, w4;
+		unsigned int w1;
+		unsigned int w2;
+		unsigned int w3;
+		unsigned int w4;
 		unsigned long long ll;
 
 		w1 = read16(fd);
@@ -91,6 +95,7 @@ read_d_mem(int fd, int start, int size)
 
 	return 0;
 }
+
 int
 read_a_mem(int fd, int start, int size)
 {
@@ -137,7 +142,10 @@ extern int optind;
 int
 main(int argc, char *argv[])
 {
-	int c, fd, done, skip;
+	int c;
+	int fd;
+	int done;
+	int skip;
 
 	showmcr = 0;
 	needswap = 1;
@@ -165,7 +173,9 @@ main(int argc, char *argv[])
 
 	fd = open(argv[optind], O_RDONLY);
 	if (fd) {
-		int code, start, size;
+		int code;
+		int start;
+		int size;
 
 		if (skip) {
 			while (skip--)

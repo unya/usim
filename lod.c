@@ -23,23 +23,23 @@ struct {
 	unsigned int a;
 	unsigned int v;
 } sys_com[] = {
-	{ "%SYS-COM-AREA-ORIGIN-PNTR", 0400, 0 },
-	{ "%SYS-COM-VALID-SIZE", 0401, 0 },
-	{ "%SYS-COM-PAGE-TABLE-PNTR", 0402, 0 },
-	{ "%SYS-COM-PAGE-TABLE-SIZE", 0403, 0 },
-	{ "%SYS-COM-OBARRAY-PNTR", 0404, 0 },
-	{ "%SYS-COM-ETHER-FREE-LIST", 0405, 0 },
-	{ "%SYS-COM-ETHER-TRANSMIT-LIST", 0406, 0 },
-	{ "%SYS-COM-ETHER-RECEIVE-LIST", 0407, 0 },
-	{ "%SYS-COM-BAND-FORMAT", 0410, 0 },
-	{ "%SYS-COM-SPARE-2", 0411, 0 },
-	{ "%SYS-COM-UNIBUS-INTERRUPT-LIST", 0412, 0 },
-	{ "%SYS-COM-TEMPORARY", 0413, 0 },
-	{ "%SYS-COM-FREE-AREA/#-LIST", 0414, 0 },
-	{ "%SYS-COM-FREE-REGION/#-LIST", 0415, 0 },
-	{ "%SYS-COM-MEMORY-SIZE", 0416, 0 },
-	{ "%SYS-COM-WIRED-SIZE", 0417, 0 },
-	{ (char *) 0, 0, 0 },
+	{"%SYS-COM-AREA-ORIGIN-PNTR", 0400, 0},
+	{"%SYS-COM-VALID-SIZE", 0401, 0},
+	{"%SYS-COM-PAGE-TABLE-PNTR", 0402, 0},
+	{"%SYS-COM-PAGE-TABLE-SIZE", 0403, 0},
+	{"%SYS-COM-OBARRAY-PNTR", 0404, 0},
+	{"%SYS-COM-ETHER-FREE-LIST", 0405, 0},
+	{"%SYS-COM-ETHER-TRANSMIT-LIST", 0406, 0},
+	{"%SYS-COM-ETHER-RECEIVE-LIST", 0407, 0},
+	{"%SYS-COM-BAND-FORMAT", 0410, 0},
+	{"%SYS-COM-SPARE-2", 0411, 0},
+	{"%SYS-COM-UNIBUS-INTERRUPT-LIST", 0412, 0},
+	{"%SYS-COM-TEMPORARY", 0413, 0},
+	{"%SYS-COM-FREE-AREA/#-LIST", 0414, 0},
+	{"%SYS-COM-FREE-REGION/#-LIST", 0415, 0},
+	{"%SYS-COM-MEMORY-SIZE", 0416, 0},
+	{"%SYS-COM-WIRED-SIZE", 0417, 0},
+	{(char *) 0, 0, 0},
 };
 
 struct {
@@ -47,54 +47,54 @@ struct {
 	unsigned int a;
 	unsigned int v;
 } cv[] = {
-	{ "A-V-RESIDENT-SYMBOL-AREA", 0, 0 },
-	{ "A-V-SYSTEM-COMMUNICATION-AREA", 0, 0 },
-	{ "A-V-SCRATCH-PAD-INIT-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-SYMBOL-AREA", 0, 0 },
-	{ "A-V-PAGE-TABLE-AREA", 0, 0 },
-	{ "A-V-PHYSICAL-PAGE-DATA", 0, 0 },
-	{ "A-V-REGION-ORIGIN", 0, 0 },
-	{ "A-V-REGION-LENGTH", 0, 0 },
-	{ "A-V-REGION-BITS", 0, 0 },
-	{ "A-V-ADDRESS-SPACE-MAP", 0, 0 },
-	{ "A-V-REGION-FREE-POINTER", 0, 0 },
-	{ "A-V-REGION-GC-POINTER", 0, 0 },
-	{ "A-V-REGION-LIST-THREAD", 0, 0 },
-	{ "A-V-AREA-NAME", 0, 0 },
-	{ "A-V-AREA-REGION-LIST", 0, 0 },
-	{ "A-V-AREA-REGION-SIZE", 0, 0 },
-	{ "A-V-AREA-MAXIMUM-SIZE", 0, 0 },
-	{ "A-V-AREA-SWAP-RECOMMENDATIONS", 0, 0 },
-	{ "A-V-GC-TABLE-AREA", 0, 0 },
-	{ "A-V-SUPPORT-ENTRY-VECTOR", 0, 0 },
-	{ "A-V-CONSTANTS-AREA", 0, 0 },
-	{ "A-V-EXTRA-PDL-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-ENTRY-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-ENTRY-NAME-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-ENTRY-ARGS-INFO-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-ENTRY-MAX-PDL-USAGE", 0, 0 },
-	{ "A-V-MICRO-CODE-ENTRY-ARGLIST-AREA", 0, 0 },
-	{ "A-V-MICRO-CODE-SYMBOL-NAME-AREA", 0, 0 },
-	{ "A-V-LINEAR-PDL-AREA", 0, 0 },
-	{ "A-V-LINEAR-BIND-PDL-AREA", 0, 0 },
-	{ "A-V-INIT-LIST-AREA", 0, 0 },
-	{ "A-V-FIRST-UNFIXED-AREA", 0, 0 },
-	{ (char *) 0, 0, 0 }
-};
+	{"A-V-RESIDENT-SYMBOL-AREA", 0, 0},
+	{"A-V-SYSTEM-COMMUNICATION-AREA", 0, 0},
+	{"A-V-SCRATCH-PAD-INIT-AREA", 0, 0},
+	{"A-V-MICRO-CODE-SYMBOL-AREA", 0, 0},
+	{"A-V-PAGE-TABLE-AREA", 0, 0},
+	{"A-V-PHYSICAL-PAGE-DATA", 0, 0},
+	{"A-V-REGION-ORIGIN", 0, 0},
+	{"A-V-REGION-LENGTH", 0, 0},
+	{"A-V-REGION-BITS", 0, 0},
+	{"A-V-ADDRESS-SPACE-MAP", 0, 0},
+	{"A-V-REGION-FREE-POINTER", 0, 0},
+	{"A-V-REGION-GC-POINTER", 0, 0},
+	{"A-V-REGION-LIST-THREAD", 0, 0},
+	{"A-V-AREA-NAME", 0, 0},
+	{"A-V-AREA-REGION-LIST", 0, 0},
+	{"A-V-AREA-REGION-SIZE", 0, 0},
+	{"A-V-AREA-MAXIMUM-SIZE", 0, 0},
+	{"A-V-AREA-SWAP-RECOMMENDATIONS", 0, 0},
+	{"A-V-GC-TABLE-AREA", 0, 0},
+	{"A-V-SUPPORT-ENTRY-VECTOR", 0, 0},
+	{"A-V-CONSTANTS-AREA", 0, 0},
+	{"A-V-EXTRA-PDL-AREA", 0, 0},
+	{"A-V-MICRO-CODE-ENTRY-AREA", 0, 0},
+	{"A-V-MICRO-CODE-ENTRY-NAME-AREA", 0, 0},
+	{"A-V-MICRO-CODE-ENTRY-ARGS-INFO-AREA", 0, 0},
+	{"A-V-MICRO-CODE-ENTRY-MAX-PDL-USAGE", 0, 0},
+	{"A-V-MICRO-CODE-ENTRY-ARGLIST-AREA", 0, 0},
+	{"A-V-MICRO-CODE-SYMBOL-NAME-AREA", 0, 0},
+	{"A-V-LINEAR-PDL-AREA", 0, 0},
+	{"A-V-LINEAR-BIND-PDL-AREA", 0, 0},
+	{"A-V-INIT-LIST-AREA", 0, 0},
+	{"A-V-FIRST-UNFIXED-AREA", 0, 0},
+	{(char *) 0, 0, 0}};
 
 struct {
 	char *name;
 	unsigned int a;
 	unsigned int v;
 } sv[] = {
-	{ "A-INITIAL-FEF", 0, 0 },
-	{ "A-QTRSTKG", 0, 0 },
-	{ "A-QCSTKG", 0, 0 },
-	{ "A-QISTKG", 0, 0 },
-	{ (char *) 0, 0, 0 }
+	{"A-INITIAL-FEF", 0, 0},
+	{"A-QTRSTKG", 0, 0},
+	{"A-QCSTKG", 0, 0},
+	{"A-QISTKG", 0, 0},
+	{(char *) 0, 0, 0}
 };
 
-int lodfd, swapfd;
+int lodfd;
+int swapfd;
 int partoff;
 int bnum = -1;
 unsigned int buf[256];
@@ -103,7 +103,8 @@ unsigned int
 read_virt(int fd, int addr)
 {
 	int b;
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 
 	addr &= 077777777;
 	b = addr / 256;
@@ -168,7 +169,10 @@ unstr4(unsigned long s)
 int
 read_partition_table(void)
 {
-	int i, ret, p, count;
+	int i;
+	int ret;
+	int p;
+	int count;
 
 	ret = read(swapfd, buf, 256 * 4);
 	if (ret != 256 * 4) {
@@ -205,7 +209,7 @@ set_swap(void)
 {
 	int i;
 
- 	// Nice hack, eh?  Swap starts at block 0524 - see diskmaker.c.
+	// Nice hack, eh? Swap starts at block 0524 - see diskmaker.c.
 	partoff = 0524;
 
 	for (i = 0; i < part_count; i++) {
@@ -225,7 +229,7 @@ set_lod1(void)
 
 	bnum = -1;
 
-	 	// Nice hack, eh?  Swap starts at block 0524 - see diskmaker.c.
+	// Nice hack, eh? Swap starts at block 0524 - see diskmaker.c.
 	partoff = 021210;
 
 	for (i = 0; i < part_count; i++) {
@@ -295,7 +299,9 @@ swap_show(int a, int cr)
 void
 showstr(int a, int cr)
 {
-	int t, i, j;
+	int t;
+	int i;
+	int j;
 	unsigned int n;
 	char s[256];
 
@@ -317,7 +323,8 @@ showstr(int a, int cr)
 void
 show_fef_func_name(unsigned int fefptr, unsigned int width)
 {
-	unsigned int n, v;
+	unsigned int n;
+	unsigned int v;
 	int tag;
 
 	n = get(fefptr + 2);
@@ -337,12 +344,17 @@ show_fef_func_name(unsigned int fefptr, unsigned int width)
 void
 disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width)
 {
-	int op, dest, reg, delta, adr;
+	int op;
+	int dest;
+	int reg;
+	int delta;
+	int adr;
 	int to;
 	unsigned int nlc;
 
 	if (!misc_inst_vector_setup) {
-		int i, index;
+		int i;
+		int index;
 		for (i = 0; i < 1024; i++) {
 			if (misc_inst[i].name == 0)
 				break;
@@ -358,12 +370,13 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	printf("%011o%c %06o %s ", loc, even ? 'e' : 'o', inst, op_names[op]);
 
 	switch (op) {
-	case 0: // CALL
+	case 0:			// CALL
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
 		{
-			unsigned int v, tag;
+			unsigned int v;
+			unsigned int tag;
 
 			v = get(fefptr + delta);
 			tag = (v >> width) & 037;
@@ -383,24 +396,24 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			}
 		}
 		break;
-	case 2: // MOVE.
-	case 3: // CAR
-	case 4: // CDR.
-	case 5: // CADR.
+	case 2:			// MOVE.
+	case 3:			// CAR
+	case 4:			// CDR.
+	case 5:			// CADR.
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
 		break;
-	case 011: // ND1.
+	case 011:		// ND1.
 		printf("%s ", nd1_names[dest]);
 		break;
-	case 012: // ND2.
+	case 012:		// ND2.
 		printf("%s ", nd2_names[dest]);
 		break;
-	case 013: // ND3.
+	case 013:		// ND3.
 		printf("%s ", nd3_names[dest]);
 		break;
-	case 014: // BRANCH.
+	case 014:		// BRANCH.
 		printf("type %s, ", branch_names[dest]);
 
 		to = (inst & 03777) << 1;
@@ -420,7 +433,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			printf("-%o; %o%c ", -to, nlc / 2, (nlc & 1) ? 'o' : 'e');
 		}
 		break;
-	case 015: // MISC.
+	case 015:		// MISC.
 		adr = inst & 0777;
 		if (adr < 1024 && misc_inst_vector[adr]) {
 			printf("%s ", misc_inst[misc_inst_vector[adr]].name);
@@ -437,8 +450,15 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 int
 find_and_dump_fef(unsigned int pc)
 {
-	unsigned int addr, v, n, o;
-	int i, j, tag, icount, max;
+	unsigned int addr;
+	unsigned int v;
+	unsigned int n;
+	unsigned int o;
+	int i;
+	int j;
+	int tag;
+	int icount;
+	int max;
 	unsigned short ib[512];
 	unsigned int width;
 
@@ -447,7 +467,7 @@ find_and_dump_fef(unsigned int pc)
 	addr = pc >> 2;
 	printf("pc %o, addr %o\n", pc, addr);
 
-// Find FEF>
+	// Find FEF>
 	for (i = 0; i < 512; i--) {
 		n = get(addr);
 		tag = (n >> width) & 037;
@@ -469,7 +489,8 @@ find_and_dump_fef(unsigned int pc)
 
 	j = 0;
 	for (i = 0; i < max; i++) {
-		unsigned int loc, inst;
+		unsigned int loc;
+		unsigned int inst;
 
 		loc = addr + i;
 		inst = get(loc);
@@ -514,7 +535,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: lod -l FILE [OPTION]...\n");
 	fprintf(stderr, "  or:  lod -i FILE [OPTION]...\n");
-	fprintf(stderr, "\n");	
+	fprintf(stderr, "\n");
 	fprintf(stderr, "  -l FILE        LOD band file\n");
 	fprintf(stderr, "  -i FILE        disk image\n");
 	fprintf(stderr, "\n");
@@ -536,7 +557,8 @@ int
 main(int argc, char *argv[])
 {
 	unsigned int com;
-	int i, c;
+	int i;
+	int c;
 	unsigned int pc = 0;
 	unsigned int addr = 0;
 

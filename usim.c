@@ -41,8 +41,10 @@ timing_start()
 void
 timing_stop()
 {
-	struct timeval tv2, td;
-	double t, cps;
+	struct timeval tv2;
+	struct timeval td;
+	double t;
+	double cps;
 
 	gettimeofday(&tv2, NULL);
 
@@ -96,7 +98,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: usim [OPTION]...\n");
 	fprintf(stderr, "CADR simulator\n");
-	fprintf(stderr, "\n");	
+	fprintf(stderr, "\n");
 	fprintf(stderr, "  -a             use alternate prom file\n");
 	fprintf(stderr, "  -b NAME        set breakpoint in microcode\n");
 	fprintf(stderr, "  -B N           start tracing after # microcode cycles\n");

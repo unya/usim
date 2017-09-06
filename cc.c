@@ -730,7 +730,8 @@ cc_pipe(void)
 
 	for (int i = 0; i < 8; i++) {
 		printf("addr %o:\n", i);
-		isn = ir_pair(CONS_IR_M_SRC, i) |
+		isn =
+			ir_pair(CONS_IR_M_SRC, i) |
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU);
 		printf("%" PRIu64 " ", isn);
@@ -769,7 +770,8 @@ cc_pipe2(void)
 		if (v2 != i) {
 			printf("cc_pipe2; md readback error (got=%o wanted=%o)\n", v2, i);
 		}
-		isn = ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
+		isn =
+			ir_pair(CONS_IR_M_SRC, CONS_M_SRC_MD) |
 			ir_pair(CONS_IR_ALUF, CONS_ALU_SETM) |
 			ir_pair(CONS_IR_OB, CONS_OB_ALU) |
 			ir_pair(CONS_IR_M_MEM_DEST, i);
@@ -1017,8 +1019,11 @@ main(int argc, char *argv[])
 
 	done = 0;
 	while (!done) {
-		int c, i, arg;
-		uint32_t PC, v;
+		int c;
+		int i;
+		int arg;
+		uint32_t PC;
+		uint32_t v;
 		char line[256];
 
 		printf("> ");
@@ -1126,7 +1131,7 @@ main(int argc, char *argv[])
 			break;
 		case 'm':
 			cc_write_a_mem(2, 0);
-			cc_execute_r(04000100042310050ULL); //  (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+			cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 			v = cc_read_md();
 			printf("@0 MD=%011o (0x%x)\n", v, v);
 			break;
@@ -1134,14 +1139,14 @@ main(int argc, char *argv[])
 			for (i = 0; i < 4; i++) {
 				cc_write_a_mem(2, i);
 				verbose = 1;
-				cc_execute_r(04000100042310050ULL); //  (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+				cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 				verbose = 0;
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
 			for (i = 0776; i < 01000; i++) {
 				cc_write_a_mem(2, i);
-				cc_execute_r(04000100042310050ULL); //  (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+				cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
@@ -1150,7 +1155,7 @@ main(int argc, char *argv[])
 			cc_execute_w(04600101442330007ULL); // (byte) a=2 m=m[3] dpb pos=7, width=1 ->VMA,start-read ,m[6]
 			printf("@200 MD=%011o\n", cc_read_md());
 
-			cc_execute_w(00002003042310310ULL); //  (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6]
+			cc_execute_w(00002003042310310ULL); // (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6]
 			printf("@201 MD=%011o\n", cc_read_md());
 
 			cc_execute_r(00002003000310310ULL); // (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6]
@@ -1211,7 +1216,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-/* Dummy stuff; not used */
+// Dummy stuff; not used.
 
 unsigned int a_memory[1024];
 int disk_fd;

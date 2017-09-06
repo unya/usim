@@ -18,7 +18,9 @@
 
 char *template_filename;
 char *img_filename;
-int cyls, heads, blocks_per_track;
+int cyls;
+int heads;
+int blocks_per_track;
 char *mcr_name;
 char *lod_name;
 char *part_name;
@@ -59,7 +61,9 @@ _swaplongbytes(unsigned int *buf, int words)
 	unsigned char *p = (unsigned char *) buf;
 
 	for (i = 0; i < words * 4; i += 4) {
-		unsigned char t, u, v;
+		unsigned char t;
+		unsigned char u;
+		unsigned char v;
 
 		t = p[i];
 		u = p[i + 1];
@@ -135,12 +139,12 @@ make_labl(int fd)
 
 	memset((char *) buffer, 0, sizeof(buffer));
 
-	buffer[0] = str4("LABL");     // Label magic.
-	buffer[1] = 1;		      // Version.		     
-	buffer[2] = cyls;	      // Number of cylinders	     
-	buffer[3] = heads;	      // Number of heades.	     
-	buffer[4] = blocks_per_track; // Number of blocks.	     
-	buffer[5] = heads * blocks_per_track; // Heads * blocks.	     
+	buffer[0] = str4("LABL");	      // Label magic.
+	buffer[1] = 1;			      // Version.
+	buffer[2] = cyls;		      // Number of cylinders
+	buffer[3] = heads;		      // Number of heades.
+	buffer[4] = blocks_per_track;	      // Number of blocks.
+	buffer[5] = heads * blocks_per_track; // Heads * blocks.
 	buffer[6] = str4(mcr_name); // Name of microcode partition.
 	buffer[7] = str4(lod_name); // Name of LOD partition.
 
@@ -201,7 +205,8 @@ make_labl(int fd)
 int
 read_block(int fd, int block_no, unsigned char *buf)
 {
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 	int size;
 
 	offset = block_no * (256 * 4);
@@ -225,7 +230,8 @@ read_block(int fd, int block_no, unsigned char *buf)
 int
 write_block(int fd, int block_no, unsigned char *buf)
 {
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 	int size;
 
 	offset = block_no * (256 * 4);
@@ -249,7 +255,10 @@ write_block(int fd, int block_no, unsigned char *buf)
 int
 make_one_partition(int fd, int index)
 {
-	int ret, count, fd1, offset;
+	int ret;
+	int count;
+	int fd1;
+	int offset;
 	unsigned char b[256 * 4];
 
 	printf("making %s... ", parts[index].name);
@@ -326,8 +335,13 @@ int
 parse_template(char *template)
 {
 	FILE *f;
-	char line[256], what[256], str[256], label[256];
-	int mode, start, size;
+	char line[256];
+	char what[256];
+	char str[256];
+	char label[256];
+	int mode;
+	int start;
+	int size;
 
 	f = fopen(template, "r");
 	if (f == NULL) {
@@ -400,7 +414,9 @@ parse_template(char *template)
 int
 fillout_image_file(int fd)
 {
-	int i, last_block_no, ret;
+	int i;
+	int last_block_no;
+	int ret;
 	off_t offset;
 
 	// Find highest block number + 1.
@@ -454,7 +470,9 @@ create_disk(char *template)
 int
 modify_disk(char *template, char *img_filename, char *part_name)
 {
-	int i, fd, part_index;
+	int i;
+	int fd;
+	int part_index;
 
 	if (template == NULL) {
 		fprintf(stderr, "missing template filename\n");
@@ -568,8 +586,12 @@ default_template(void)
 int
 show_partition_info(char *filename)
 {
-	int fd, ret, p, i;
-	int count, size;
+	int fd;
+	int ret;
+	int p;
+	int i;
+	int count;
+	int size;
 
 	fd = open(filename, O_RDONLY, 0666);
 	if (fd < 0) {
@@ -582,7 +604,6 @@ show_partition_info(char *filename)
 		perror(filename);
 		return -1;
 	}
-
 #ifdef NEED_SWAP
 	_swaplongbytes(&buffer[0], 8);
 	_swaplongbytes(&buffer[0200], 128);
@@ -657,8 +678,15 @@ show_partition_info(char *filename)
 int
 extract_partition(char *filename, char *extract_filename, char *part_name)
 {
-	int fd, fd_out, ret, p, i, result;
-	int count, offset, size;
+	int fd;
+	int fd_out;
+	int ret;
+	int p;
+	int i;
+	int result;
+	int count;
+	int offset;
+	int size;
 
 	result = -1;
 
@@ -764,8 +792,11 @@ int
 read_labl(const char *filename)
 {
 	ssize_t ret;
-	int fd, p;
-	unsigned int i, count, size;
+	int fd;
+	int p;
+	unsigned int i;
+	unsigned int count;
+	unsigned int size;
 
 	fd = open(filename, O_RDONLY, 0666);
 	if (fd < 0) {

@@ -51,7 +51,9 @@ read_prom_files(void)
 {
 	char *name = "../bands/promh.mcr.9";
 	int fd;
-	unsigned int code, start, size;
+	unsigned int code;
+	unsigned int start;
+	unsigned int size;
 
 	if (alt_prom_flag) {
 		sprintf(name, "../sys/ubin/promh.mcr");
@@ -70,7 +72,10 @@ read_prom_files(void)
 
 	int loc = start;
 	for (int i = 0; i < size; i++) {
-		unsigned int w1, w2, w3, w4;
+		unsigned int w1;
+		unsigned int w2;
+		unsigned int w3;
+		unsigned int w4;
 
 		w1 = read16(fd);
 		w2 = read16(fd);
@@ -268,19 +273,31 @@ disassemble_dest(int dest)
 void
 disassemble_ucode_loc(ucw_t u)
 {
-	int a_src, m_src, new_pc, dest, alu_op;
-	int r_bit, p_bit, n_bit, ir8, ir7;
-	int widthm1, pos;
+	int a_src;
+	int m_src;
+	int new_pc;
+	int dest;
+	int alu_op;
+	int r_bit;
+	int p_bit;
+	int n_bit;
+	int ir8;
+	int ir7;
+	int widthm1;
+	int pos;
 	int mr_sr_bits;
-	int disp_cont, disp_addr;
-	int map, len, rot;
+	int disp_cont;
+	int disp_addr;
+	int map;
+	int len;
+	int rot;
 	int out_bus;
 
 	if ((u >> 42) & 1)
 		printf("popj; ");
 
 	switch ((u >> 43) & 03) {
-	case 0: // ALU.
+	case 0:			// ALU.
 		printf("(alu) ");
 
 		if ((u & NOP_MASK) == 0) {
@@ -352,7 +369,7 @@ disassemble_ucode_loc(ucw_t u)
 		}
 		disassemble_dest(dest);
 		break;
-	case 1: // JUMP.
+	case 1:			// JUMP.
 		printf("(jump) ");
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -401,7 +418,7 @@ disassemble_ucode_loc(ucw_t u)
 			printf("m-rot<< %o", (int) u & 037);
 		}
 		break;
-	case 2: // DISPATCH.
+	case 2:			// DISPATCH.
 		printf("(dispatch) ");
 		disp_cont = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -420,7 +437,7 @@ disassemble_ucode_loc(ucw_t u)
 
 		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ", disp_cont, disp_addr, map, len, rot);
 		break;
-	case 3: // BYTE.
+	case 3:			// BYTE.
 		printf("(byte) ");
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -436,13 +453,13 @@ disassemble_ucode_loc(ucw_t u)
 		switch (mr_sr_bits) {
 		case 0:
 			break;
-		case 1: // LDB.
+		case 1:		// LDB.
 			printf("ldb pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
 		case 2:
 			printf("sel dep (a<-m&mask) pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
-		case 3: // DPB.
+		case 3:		// DPB.
 			printf("dpb pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
 		}
@@ -458,7 +475,9 @@ disassemble_ucode_loc(ucw_t u)
 void
 disassemble_prom(void)
 {
-	unsigned int i, start, finish;
+	unsigned int i;
+	unsigned int start;
+	unsigned int finish;
 
 	start = 0;
 	finish = 512;
@@ -488,7 +507,10 @@ static int
 find_disk_partition_table(int fd)
 {
 	off_t ret;
-	unsigned int p, count, nw, i;
+	unsigned int p;
+	unsigned int count;
+	unsigned int nw;
+	unsigned int i;
 	off_t offset;
 
 	printf("looking for partition\n");
@@ -524,7 +546,8 @@ static unsigned int
 read_virt(int fd, unsigned int addr, unsigned int *pv)
 {
 	int b;
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 
 	addr &= 077777777;
 
@@ -555,7 +578,9 @@ static char *
 read_string(unsigned int loc)
 {
 	unsigned int v;
-	unsigned int t, i, j;
+	unsigned int t;
+	unsigned int i;
+	unsigned int j;
 	static char s[256];
 
 	if (read_virt(disk_fd, loc, &v) == 0) {
@@ -595,7 +620,8 @@ show_string(unsigned int loc)
 char *
 find_function_name(unsigned int the_lc)
 {
-	int i, tag = 0;
+	int i;
+	int tag = 0;
 	unsigned int loc = (unsigned int) (the_lc >> 2);
 	unsigned int v;
 
@@ -603,7 +629,7 @@ find_function_name(unsigned int the_lc)
 		find_disk_partition_table(disk_fd);
 	}
 
-// Search backward to find the function header.
+	// Search backward to find the function header.
 	for (i = 0; i < 512; i++) {
 		if (read_virt(disk_fd, loc, &v))
 			break;
@@ -614,7 +640,7 @@ find_function_name(unsigned int the_lc)
 	}
 
 	if (tag == 7) {
-				// Find function symbol pointer.
+		// Find function symbol pointer.
 		if (read_virt(disk_fd, loc + 2, &v) == 0) {
 			loc = v;
 			tag = (v >> 24) & 077;
@@ -636,21 +662,24 @@ find_function_name(unsigned int the_lc)
 void
 show_list(void)
 {
-	unsigned int loc, l1, v = 0;
+	unsigned int loc;
+	unsigned int l1;
+	unsigned int v = 0;
 	int i;
 
 	loc = 030301442405;
 	read_virt(disk_fd, loc, &v);
 
 	for (i = 0; i < 10; i++) {
-		int tag, cdr, addr;
+		int tag;
+		int cdr;
+		int addr;
 
 		read_virt(disk_fd, loc, &v);
 
 		tag = (v >> 24) & 077;
 		cdr = (v >> 30) & 3;
-		addr = v & 0x00ffffff
-;
+		addr = v & 0x00ffffff;
 		printf(" %011o %011o %03o %1o\n", loc, v, tag, cdr);
 
 		if (cdr == 2)
@@ -664,8 +693,8 @@ show_list(void)
 				tag = (v >> 24) & 077;
 				cdr = (v >> 30) & 3;
 				printf(" %011o %011o %03o %1o\n", l1, v, tag, cdr);
-	
-			l1 = v;
+
+				l1 = v;
 				read_virt(disk_fd, l1, &v);
 				tag = (v >> 24) & 077;
 				cdr = (v >> 30) & 3;
@@ -680,8 +709,8 @@ show_list(void)
 				tag = (v >> 24) & 077;
 				cdr = (v >> 30) & 3;
 				printf(" %011o %011o %03o %1o\n", l1, v, tag, cdr);
-	
-			show_string(l1);
+
+				show_string(l1);
 				printf("\n");
 				break;
 			case 016:
@@ -757,14 +786,19 @@ disassemble_address(unsigned int reg, unsigned int delta)
 char *
 disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width)
 {
-	unsigned int op, dest, reg, delta, adr;
+	unsigned int op;
+	unsigned int dest;
+	unsigned int reg;
+	unsigned int delta;
+	unsigned int adr;
 	int to;
 	unsigned int nlc;
 	static char buffer[1024];
 
 	// Search for FEF pointer.
 	{
-		int i, tag = 0;
+		int i;
+		int tag = 0;
 		unsigned int addr = (unsigned int) (loc >> 2);
 		unsigned int v;
 
@@ -784,7 +818,8 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 		fefptr = addr;
 	}
 	if (!misc_inst_vector_setup) {
-		int i, index;
+		int i;
+		int index;
 
 		for (i = 0; i < 1024; i++) {
 			if (misc_inst[i].name == 0)
@@ -801,13 +836,14 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	sprintf(buffer, "%011o%c %06o ", loc, even ? 'e' : 'o', inst);
 
 	switch (op) {
-	case 0: // CALL
-	case 1: // CALL0
+	case 0:			// CALL
+	case 1:			// CALL0
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		{
-			unsigned int v, tag;
+			unsigned int v;
+			unsigned int tag;
 			v = get(fefptr + (delta & 077));
 			tag = (v >> width) & 037;
 			switch (tag) {
@@ -826,30 +862,30 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			}
 		}
 		break;
-	case 2: // MOVE.
-	case 3: // CAR.
-	case 4: // CDR.
-	case 5: // CADR.
-	case 6: // CDDR.
-	case 7: // CDAR.
-	case 010: // CAAR.
+	case 2:			// MOVE.
+	case 3:			// CAR.
+	case 4:			// CDR.
+	case 5:			// CADR.
+	case 6:			// CDDR.
+	case 7:			// CDAR.
+	case 010:		// CAAR.
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
-	case 011: // ND1.
+	case 011:		// ND1.
 		sprintf(&buffer[strlen(buffer)], "%s ", nd1_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
-	case 012: // ND2.
+	case 012:		// ND2.
 		sprintf(&buffer[strlen(buffer)], "%s ", nd2_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
-	case 013: // ND3.
+	case 013:		// ND3.
 		sprintf(&buffer[strlen(buffer)], "%s ", nd3_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
 		break;
-	case 014: // BRANCH.
+	case 014:		// BRANCH.
 		sprintf(&buffer[strlen(buffer)], "%s ", branch_names[dest]);
 		to = ((int) inst & 03777) << 1;
 		to |= (inst & 0x8000) ? 1 : 0;
@@ -867,7 +903,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			sprintf(&buffer[strlen(buffer)], "-%o; %o%c ", -to, nlc / 2, (nlc & 1) ? 'o' : 'e');
 		}
 		break;
-	case 015: // MISC.
+	case 015:		// MISC.
 		sprintf(&buffer[strlen(buffer)], "(MISC) ");
 		adr = inst & 0777;
 		if (adr < 1024 && misc_inst_vector[adr]) {
@@ -885,7 +921,9 @@ static void
 showstr(char *buffer, unsigned int a, int cr)
 {
 	int j;
-	unsigned int i, t, n;
+	unsigned int i;
+	unsigned int t;
+	unsigned int n;
 	char s[256];
 
 	t = get(a) & 0xff;
@@ -907,7 +945,8 @@ showstr(char *buffer, unsigned int a, int cr)
 static void
 show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 {
-	unsigned int n, v;
+	unsigned int n;
+	unsigned int v;
 	int tag;
 
 	n = get(fefptr + 2);

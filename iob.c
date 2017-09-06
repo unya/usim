@@ -27,9 +27,13 @@
 unsigned int iob_key_scan;
 unsigned int iob_kbd_csr;
 
-int mouse_x, mouse_y;
-int mouse_head, mouse_middle, mouse_tail;
-int mouse_rawx, mouse_rawy;
+int mouse_x;
+int mouse_y;
+int mouse_head;
+int mouse_middle;
+int mouse_tail;
+int mouse_rawx;
+int mouse_rawy;
 int mouse_poll_delay;
 
 // Location in A memory of microcode mouse state.
@@ -51,7 +55,8 @@ get_us_clock()
 	unsigned long v;
 	static struct timeval tv;
 	struct timeval tv2;
-	unsigned long ds, du;
+	unsigned long ds;
+	unsigned long du;
 
 	if (tv.tv_sec == 0) {
 		gettimeofday(&tv, 0);
@@ -114,11 +119,11 @@ iob_unibus_read(int offset, int *pv)
 			(mouse_head << 14) |
 			(mouse_y & 07777);
 		traceio("unibus: mouse y %011o\n", *pv);
-		
+
 		mouse_tail = 0;
 		mouse_middle = 0;
 		mouse_head = 0;
-		
+
 		iob_kbd_csr &= ~(1 << 4); // Clear CSR<4>.
 		break;
 	case 0106:
@@ -235,7 +240,10 @@ iob_mouse_event(int x, int y, int dx, int dy, int buttons)
 
 	// Move mouse closer to where microcode thinks it is.
 	if (mouse_sync_flag) {
-		int mcx, mcy, dx, dy;
+		int mcx;
+		int mcy;
+		int dx;
+		int dy;
 
 		mcx = read_a_mem(mouse_sync_amem_x);
 		mcy = read_a_mem(mouse_sync_amem_y);

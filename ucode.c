@@ -427,12 +427,12 @@ read_mem(int vaddr, unsigned int *pv)
 	// Disk & TV controller on XBUS.
 	if (pn == 036777) {
 		if (offset >= 0370) { // Disk.
-			 disk_xbus_read(offset, pv);
-			 return 0;
+			disk_xbus_read(offset, pv);
+			return 0;
 		}
 		if (offset == 0360) { // TV.
-			 tv_xbus_read(offset, pv);
-			 return 0;
+			tv_xbus_read(offset, pv);
+			return 0;
 		}
 		printf("xbus read %o %o\n", offset, vaddr);
 		*pv = 0;
@@ -573,12 +573,12 @@ write_mem(int vaddr, unsigned int v)
 
 	if (pn == 036777) {
 		if (offset >= 0370) {
-			 disk_xbus_write(offset, v);
-			 return 0;
+			disk_xbus_write(offset, v);
+			return 0;
 		}
 		if (offset == 0360) {
-			 tv_xbus_write(offset, v);
-			 return 0;
+			tv_xbus_write(offset, v);
+			return 0;
 		}
 	}
 
@@ -705,7 +705,7 @@ advance_lc(int *ppc)
 {
 	int old_lc;
 
-	old_lc = lc & 0377777777;	// LC is 26 bits.
+	old_lc = lc & 0377777777; // LC is 26 bits.
 
 	if (lc_byte_mode_flag) {
 		lc++;		// Byte mode.
@@ -739,8 +739,7 @@ advance_lc(int *ppc)
 		// need to distill it to intent but it seems correct).
 		lc0b =
 			(lc_byte_mode_flag ? 1 : 0) & // Byte mode.
-
-			((lc & 1) ? 1 : 0); // LC0.
+			((lc & 1) ? 1 : 0);	      // LC0.
 		lc1 = (lc & 2) ? 1 : 0;
 		last_byte_in_word = (~lc0b & ~lc1) & 1;
 		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n", lc0b, lc1, last_byte_in_word);
@@ -950,7 +949,9 @@ struct {
 	unsigned int m[8];
 } pc_history[MAX_PC_HISTORY];
 
-int pc_history_ptr, pc_history_max, pc_history_stores;
+int pc_history_ptr;
+int pc_history_max;
+int pc_history_stores;
 
 void
 record_pc_history(unsigned int pc, unsigned int vma, unsigned int md)
@@ -1182,7 +1183,8 @@ dump_state(void)
 		printf("stack backtrace:\n");
 		for (int i = spc_stack_ptr; i >= 0; i--) {
 			char *sym;
-			int offset, pc;
+			int offset;
+			int pc;
 			pc = spc_stack[i] & 037777;
 			sym = sym_find_last(!prom_enabled_flag, pc, &offset);
 			printf("%2o %011o %s+%d\n", i, spc_stack[i], sym, offset);
@@ -1207,7 +1209,7 @@ dump_state(void)
 		int e;
 
 		s = -1;
-		
+
 		for (int i = 0; i < 16 * 1024; i++) {
 			if (phy_pages[i] != 0 && s == -1)
 				s = i;
@@ -1449,7 +1451,7 @@ show_label_closest_padded(unsigned int upc)
 }
 
 // For 32-bit integers, (A + B) & (1 << 32) will always be
-// zero. Without resorting to 64-bit arithmetic, you can find the
+// zero.  Without resorting to 64-bit arithmetic, you can find the
 // carry by B > ~A.  How does it work? ~A (the complement of A) is the
 // largest possible number you can add to A without a carry: A + ~A =
 // (1 << 32) - 1.  If B is any larger, then a carry will be generated
@@ -1480,11 +1482,11 @@ run(void)
 	u_pc = 0;
 	prom_enabled_flag = 1;
 	run_ucode_flag = 1;
-	
+
 	trace_pt = 0;
 	trace_pt_count = 0;
 	trace_label_pt = 0;
-	
+
 	last_sym = 0;
 
 	p1 = 0;
@@ -1539,15 +1541,15 @@ run(void)
 		char enable_ish;
 		char i_long;
 		char popj;
-		
+
 		m_src_value = 0;
-		
+
 		if (cycles == 0) {
 			p0 = p1 = 0;
 			p1_pc = 0;
 			no_exec_next = 0;
 		}
-		
+
 	next:
 		iob_poll(cycles);
 
@@ -1741,7 +1743,7 @@ run(void)
 
 			if (trace) {
 				printf("a=%o (%o), m=%o (%o)\n", a_src, a_src_value, m_src, m_src_value);
-				printf("aluop %o, c %o,  dest %o, out_bus %d\n", aluop, carry_in, dest, out_bus);
+				printf("aluop %o, c %o, dest %o, out_bus %d\n", aluop, carry_in, dest, out_bus);
 			}
 
 			alu_carry = 0;
@@ -2055,7 +2057,10 @@ run(void)
 			if (((u >> 10) & 3) == 3) {
 				if (lc_byte_mode_flag) {
 					// Byte mode.
-					char ir4, ir3, lc1, lc0;
+					char ir4;
+					char ir3;
+					char lc1;
+					char lc0;
 
 					ir4 = (u >> 4) & 1;
 					ir3 = (u >> 3) & 1;
@@ -2066,7 +2071,8 @@ run(void)
 					tracef("byte-mode, pos %o\n", pos);
 				} else {
 					// 16 bit mode.
-					char ir4, lc1;
+					char ir4;
+					char lc1;
 
 					ir4 = (u >> 4) & 1;
 					lc1 = (lc >> 1) & 1;
@@ -2104,7 +2110,9 @@ run(void)
 
 			// Tweak DISPATCH-ADDR with L2 map bits.
 			if (map) {
-				int l2_map, bit18, bit19;
+				int l2_map;
+				int bit18;
+				int bit19;
 
 				l2_map = map_vtop(md, (int *) 0, (int *) 0);
 				bit19 = ((l2_map >> 19) & 1) ? 1 : 0;
@@ -2170,7 +2178,10 @@ run(void)
 			if (((u >> 10) & 3) == 3) {
 				if (lc_byte_mode_flag) {
 					// Byte mode.
-					char ir4, ir3, lc1, lc0;
+					char ir4;
+					char ir3;
+					char lc1;
+					char lc0;
 
 					ir4 = (u >> 4) & 1;
 					ir3 = (u >> 3) & 1;
@@ -2182,7 +2193,8 @@ run(void)
 					tracef("byte-mode, pos %o\n", pos);
 				} else {
 					// 16-bit mode.
-					char ir4, lc1;
+					char ir4;
+					char lc1;
 
 					ir4 = (u >> 4) & 1;
 					lc1 = (lc >> 1) & 1;

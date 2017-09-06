@@ -37,7 +37,9 @@ void *
 ensure_access(baccess *pb, int offset, int size)
 {
 	unsigned char *ptr;
-	int blknum, boff, left;
+	int blknum;
+	int boff;
+	int left;
 
 	blknum = offset / 1008;
 	boff = offset % 1008;
@@ -64,7 +66,9 @@ void *
 advance_access(baccess *pb, int size)
 {
 	unsigned char *ptr;
-	int blknum, boff, left;
+	int blknum;
+	int boff;
+	int left;
 
 	pb->offset += size;
 
@@ -97,7 +101,8 @@ advance_access(baccess *pb, int size)
 int
 remaining_access(baccess *pb)
 {
-	int boff, left;
+	int boff;
+	int left;
 
 	boff = pb->offset % 1008;
 	left = 1008 - boff;
@@ -122,8 +127,8 @@ typedef struct tapeinfo_s {
 
 typedef struct fh_element_s {
 	char name[4];
-	short location; // In words.
-	short length; // In words.
+	short location;		// In words.
+	short length;		// In words.
 } fh_element;
 
 struct partition_label_s {
@@ -249,8 +254,14 @@ tohex(char b)
 void
 dumpmem(char *ptr, int len)
 {
-	char line[80], chars[80], *p, b, *c, *end;
-	int j, offset;
+	char line[80];
+	char chars[80];
+	char *p;
+	char b;
+	char *c;
+	char *end;
+	int j;
+	int offset;
 
 	end = ptr + len;
 	offset = 0;
@@ -283,7 +294,8 @@ dumpmem(char *ptr, int len)
 int
 read_block(int fd, int block_no, unsigned char *buf)
 {
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 	int size;
 
 	offset = block_no * (256 * 4);
@@ -305,7 +317,8 @@ read_block(int fd, int block_no, unsigned char *buf)
 int
 write_block(int fd, int block_no, unsigned char *buf)
 {
-	off_t offset, ret;
+	off_t offset;
+	off_t ret;
 	int size;
 
 	offset = block_no * (256 * 4);
@@ -327,7 +340,8 @@ write_block(int fd, int block_no, unsigned char *buf)
 int
 read_record(baccess *pb, int record_no)
 {
-	int i, block_no;
+	int i;
+	int block_no;
 	unsigned char *pbuf;
 
 	block_no = record_no * 4;
@@ -351,9 +365,14 @@ int
 show_file(int fd, struct directory_entry_s *de, int record_no)
 {
 	baccess b;
-	int i, woffset, wlast, bl, tot;
+	int i;
+	int woffset;
+	int wlast;
+	int bl;
+	int tot;
 	struct file_header_s *fh;
-	int n, blocks[64];
+	int n;
+	int blocks[64];
 	char *p;
 
 	init_access(&b, fd);
@@ -402,7 +421,8 @@ show_file(int fd, struct directory_entry_s *de, int record_no)
 
 	n = 0;
 	while (1) {
-		int left, use;
+		int left;
+		int use;
 
 		left = remaining_access(&b);
 		use = bl < left ? bl : left;
@@ -436,9 +456,13 @@ show_de(int fd, int record_no)
 {
 	baccess b;
 	struct directory_entry_s *de;
-	int i, woffset, wlast, numentries;
+	int i;
+	int woffset;
+	int wlast;
+	int numentries;
 	struct file_header_s *fh;
-	int n, blocks[64];
+	int n;
+	int blocks[64];
 
 	init_access(&b, fd);
 	read_record(&b, record_no);
@@ -519,7 +543,8 @@ show_de(int fd, int record_no)
 int
 lmfs_open(char *img_filename, int offset)
 {
-	int fd, ret;
+	int fd;
+	int ret;
 	unsigned char buffer[256 * 4];
 	struct partition_label_s *pl;
 	baccess b;
@@ -551,7 +576,8 @@ lmfs_open(char *img_filename, int offset)
 	{
 		struct file_header_s *fh;
 		int i;
-		int woffset, wlast;
+		int woffset;
+		int wlast;
 
 		fh = (struct file_header_s *) ensure_access(&b, 0, sizeof(struct file_header_s));
 		printf("number_of_elements %d\n", fh->number_of_elements);
