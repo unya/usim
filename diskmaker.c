@@ -563,22 +563,37 @@ default_template(void)
 	heads = 19;
 	blocks_per_track = 17;
 
+#define DEFAULT_MCR_LABEL "UCADR 841"
 #define DEFAULT_MCR_FILE "../sys/ubin/ucadr.mcr.841"
+
+#define LOD_LABEL "78.48 LMFS 21.34"
 #define DEFAULT_LOD_FILE "../bands/system-78-42.LOD"
 
 	part_count = 0;
 
-	add_partition("MCR1", 021, 0224, 0, DEFAULT_MCR_FILE, DEFAULT_MCR_FILE);
+	add_partition("MCR1", 021, 0224, 0, DEFAULT_MCR_LABEL, DEFAULT_MCR_FILE);
 	add_partition("MCR2", 0245, 0224, 0, "", NULL);
-	add_partition("PAGE", 0524, 0100000, 0, "", NULL);
-	add_partition("LOD1", 0100524, 061400, 0, DEFAULT_LOD_FILE, DEFAULT_LOD_FILE);
-	add_partition("LOD2", 0162124, 061400, 0, "", NULL);
-	add_partition("FILE", 0243524, 070000, 0, "", NULL);
+	add_partition("MCR3", 0471, 0224, 0, "", NULL);
+	add_partition("MCR4", 0715, 0224, 0, "", NULL);
+	add_partition("MCR5", 01141, 0224, 0, "", NULL);
+	add_partition("MCR6", 01365, 0224, 0, "", NULL);
+	add_partition("MCR7", 01611, 0224, 0, "", NULL);
+	add_partition("MCR8", 02035, 0224, 0, "", NULL);
+	add_partition("PAGE", 02414, 0177336, 0, "", NULL);
+	add_partition("LOD1", 0201752, 057241, 0, DEFAULT_LOD_LABEL, DEFAULT_LOD_FILE);
+	add_partition("LOD2", 0261213, 057241, 0, "", NULL);
+	add_partition("LOD3", 0340454, 057241, 0, "", NULL);
+	add_partition("LOD4", 0417715, 057241, 0, "", NULL);
+	add_partition("LOD5", 0477156, 057241, 0, "", NULL);
+	add_partition("LOD6", 0556417, 057241, 0, "", NULL);
+	add_partition("LOD7", 0635660, 057241, 0, "", NULL);
+	add_partition("LOD8", 0715121, 057241, 0, "", NULL);
+	add_partition("FILE", 0774362, 05533, 0, "", NULL);
 
 	mcr_name = "MCR1";
 	lod_name = "LOD1";
-	brand = NULL;
-	text = "CADR diskmaker image";
+	brand = "Trident T-300";
+	text = "";
 	comment = DEFAULT_MCR_FILE;
 }
 
