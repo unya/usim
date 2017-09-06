@@ -5,7 +5,7 @@ CFLAGS = -g3 -O3 -std=gnu99
 
 USIM_LDFLAGS = -lpthread -lX11
 
-all: TAGS usim readmcr diskmaker lod lmfs cc disk.img
+all: TAGS usim readmcr diskmaker lod lmfs cc
 
 usim: usim.o decode.o ucode.o x11.o kbd.o disk.o iob.o chaos.o uart.o syms.o config.o Files.o glob.o
 	$(CC) $(CFLAGS) -o $@ $^ $(USIM_LDFLAGS)
@@ -26,7 +26,7 @@ cc: cc.o decode.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 disk.img: diskmaker
-	./diskmaker -c -f disk.img -t disk.cfg
+	./diskmaker -c
 
 clean:
 	rm -f *.o
