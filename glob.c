@@ -16,23 +16,21 @@
 #define QUOTE 0200
 #define TRIM 0177
 #define eq(a,b) (strcmp(a, b)==0)
-#define isdir(d)	((d.st_mode & S_IFMT) == S_IFDIR)
+#define isdir(d) ((d.st_mode & S_IFMT) == S_IFDIR)
 
-static char	**gargv;			/* Pointer to the (stack) arglist */
-static int	gargc;				/* Number args in gargv */
-static int	gargmax;
-static short	gflag;
-static int	tglob(register char c);
+static char **gargv;		// Pointer to the (stack) arglist.
+static int gargc;		// Number args in gargv.
+static int gargmax;
+static short gflag;
+static int tglob(char c);
 char **glob();
 int globerr;
 char *home;
 struct passwd *getpwnam();
 extern int errno;
 static char *strend();
-/*char *malloc(), *strcpy(), *strcat(), *sprintf();*/
-
 static void ginit();
-static void collect(register char *as);
+static void collect(char *as);
 static void acollect();
 static void sort();
 static void expand();
@@ -45,32 +43,35 @@ static void addpath(char);
 static void rscan(char **t, int (*f)(char));
 static char *strspl(char *cp, char *dp);
 
-int letter(register char c);
-int digit(register char c);
-int any(register int c, register char *s);
+int letter(char c);
+int digit(char c);
+int any(int c, char *s);
 
 int gethdir(char *home);
 
-int blklen(register char **av);
-char **blkcpy(char **oav, register char **bv);
-char **copyblk(register char **v);
+int blklen(char **av);
+char **blkcpy(char **oav, char **bv);
+char **copyblk(char **v);
 void blkfree(char **av0);
+
 void fatal(char *fmt, ...);
 
-static int	globcnt;
+static int globcnt;
 
-char	*globchars =	"`{[*?";
+char *globchars = "`{[*?";
 
-static char	*gpath, *gpathp, *lastgpathp;
-static int	globbed;
-static char	*entp;
-static char	**sortbas;
+static char *gpath;
+static char *gpathp;
+static char *lastgpathp;
+static int globbed;
+static char *entp;
+static char **sortbas;
 
-#define STARTVEC	100
-#define INCVEC		100
+#define STARTVEC 100
+#define INCVEC 100
 
 char **
-glob(register char *v)
+glob(char *v)
 {
 	char agpath[BUFSIZ];
 	char *vv[2];
@@ -79,17 +80,19 @@ glob(register char *v)
 	vv[1] = 0;
 	gflag = 0;
 	rscan(vv, tglob);
-	if (gflag == 0)
-	{
-			return copyblk(vv);
+	if (gflag == 0) {
+		return copyblk(vv);
 	}
 
 	globerr = 0;
-	gpath = agpath; gpathp = gpath; *gpathp = 0;
+	gpath = agpath;
+	gpathp = gpath;
+	*gpathp = 0;
 	lastgpathp = &gpath[sizeof agpath - 2];
-	ginit(); globcnt = 0;
+	ginit();
+	globcnt = 0;
 	collect(vv[0]);
-	if (globcnt == 0 && (gflag&1)) {
+	if (globcnt == 0 && (gflag & 1)) {
 		blkfree(gargv), gargv = 0;
 		lastgpathp = 0;
 		gpathp = 0;
@@ -102,7 +105,8 @@ glob(register char *v)
 	return gargv;
 }
 
-void gfree(char **glob)
+void
+gfree(char **glob)
 {
 	blkfree(glob);
 }
@@ -112,17 +116,19 @@ ginit()
 {
 	char **agargv;
 
-	agargv = (char **)malloc((STARTVEC + 1) * sizeof(char *));
+	agargv = (char **) malloc((STARTVEC + 1) * sizeof(char *));
 	if (agargv) {
 		gargmax = STARTVEC;
-		agargv[0] = 0; gargv = agargv; sortbas = agargv; gargc = 0;
-	}
-	else
+		agargv[0] = 0;
+		gargv = agargv;
+		sortbas = agargv;
+		gargc = 0;
+	} else
 		fatal(NOMEM);
 }
 
 static void
-collect(register char *as)
+collect(char *as)
 {
 	if (eq(as, "{") || eq(as, "{}")) {
 		Gcat(as, "");
@@ -132,11 +138,13 @@ collect(register char *as)
 }
 
 static void
-acollect(register char *as)
+acollect(char *as)
 {
-	register int ogargc = gargc;
+	int ogargc = gargc;
 
-	gpathp = gpath; *gpathp = 0; globbed = 0;
+	gpathp = gpath;
+	*gpathp = 0;
+	globbed = 0;
 	expand(as);
 	if (gargc != ogargc)
 		sort();
@@ -145,11 +153,13 @@ acollect(register char *as)
 static void
 sort()
 {
-	register char **p1, **p2, *c;
+	char **p1;
+	char **p2;
+	char *c;
 	char **Gvp = &gargv[gargc];
 
 	p1 = sortbas;
-	while (p1 < Gvp-1) {
+	while (p1 < Gvp - 1) {
 		p2 = p1;
 		while (++p2 < Gvp)
 			if (strcmp(*p1, *p2) > 0)
@@ -162,8 +172,9 @@ sort()
 static void
 expand(char *as)
 {
-	register char *cs;
-	register char *sgpathp, *oldcs;
+	char *cs;
+	char *sgpathp;
+	char *oldcs;
 	struct stat stb;
 
 	sgpathp = gpathp;
@@ -176,9 +187,7 @@ expand(char *as)
 			if (gpathp != gpath + 1) {
 				*gpathp = 0;
 				if (gethdir(gpath + 1)) {
-					(void)sprintf(errstring = errbuf,
-						      "Unknown user name: %s after '~'",
-						      gpath+1);
+					sprintf(errstring = errbuf, "Unknown user name: %s after '~'", gpath + 1);
 					globerr = IPS;
 				}
 				strcpy(gpath, gpath + 1);
@@ -206,11 +215,11 @@ expand(char *as)
 		cs++, gpathp++;
 	*gpathp = 0;
 	if (*oldcs == '{') {
-		(void)execbrc(cs, ((char *)0));
+		execbrc(cs, ((char *) 0));
 		return;
 	}
 	matchdir(cs);
-endit:
+ endit:
 	gpathp = sgpathp;
 	*gpathp = 0;
 }
@@ -219,15 +228,15 @@ static void
 matchdir(char *pattern)
 {
 	struct stat stb;
-	register int dirf;
-	register struct direct *dp;
+	int dirf;
+	struct direct *dp;
 	DIR *dirp;
 
 	dirp = opendir(gpath);
 	if (dirp != NULL)
 		dirf = dirfd(dirp);
 	else {
-		switch(errno) {
+		switch (errno) {
 		case ENOENT:
 			globerr = DNF;
 			break;
@@ -241,7 +250,7 @@ matchdir(char *pattern)
 			break;
 		default:
 			globerr = MSC;
-			errstring = (char *)strerror(errno);
+			errstring = (char *) strerror(errno);
 		}
 		return;
 	}
@@ -253,10 +262,7 @@ matchdir(char *pattern)
 		return;
 	}
 	while ((dp = readdir(dirp)) != NULL)
-		if (dp->d_ino == 0 ||
-		    (dp->d_name[0] == '.' &&
-		     (dp->d_name[1] == '\0' ||
-		      (dp->d_name[1] == '.' && dp->d_name[2] == '\0'))))
+		if (dp->d_ino == 0 || (dp->d_name[0] == '.' && (dp->d_name[1] == '\0' || (dp->d_name[1] == '.' && dp->d_name[2] == '\0'))))
 			continue;
 		else {
 			if (match(dp->d_name, pattern)) {
@@ -266,33 +272,34 @@ matchdir(char *pattern)
 			if (globerr != 0)
 				goto out;
 		}
-out:
-	(void)closedir(dirp);
+ out:
+	closedir(dirp);
 }
 
 static int
 execbrc(char *p, char *s)
 {
 	char restbuf[BUFSIZ + 2];
-	register char *pe, *pm, *pl;
+	char *pe;
+	char *pm;
+	char *pl;
 	int brclev = 0;
-	char *lm, savec, *sgpathp;
+	char *lm;
+	char savec;
+	char *sgpathp;
 
 	for (lm = restbuf; *p != '{'; *lm++ = *p++)
 		continue;
 	for (pe = ++p; *pe; pe++)
 		switch (*pe) {
-
 		case '{':
 			brclev++;
 			continue;
-
 		case '}':
 			if (brclev == 0)
 				goto pend;
 			brclev--;
 			continue;
-
 		case '[':
 			for (pe++; *pe && *pe != ']'; pe++)
 				continue;
@@ -303,27 +310,24 @@ execbrc(char *p, char *s)
 			}
 			continue;
 		}
-pend:
+ pend:
 	if (brclev || !*pe) {
 		globerr = IWC;
 		errstring = "Missing } in wild card syntax";
 		return (0);
 	}
 	for (pl = pm = p; pm <= pe; pm++)
-		switch (*pm & (QUOTE|TRIM)) {
-
+		switch (*pm & (QUOTE | TRIM)) {
 		case '{':
 			brclev++;
 			continue;
-
 		case '}':
 			if (brclev) {
 				brclev--;
 				continue;
 			}
 			goto doit;
-
-		case ','|QUOTE:
+		case ',' | QUOTE:
 		case ',':
 			if (brclev)
 				continue;
@@ -345,14 +349,13 @@ pend:
 			if (brclev)
 				return (0);
 			continue;
-
 		case '[':
 			for (pm++; *pm && *pm != ']'; pm++)
 				continue;
 			if (!*pm) {
 				globerr = IWC;
 				errstring = MISSBRACK;
-				return(0);
+				return (0);
 			}
 			continue;
 		}
@@ -364,14 +367,15 @@ pend:
 static int
 match(char *s, char *p)
 {
-	register int c;
-	register char *sentp;
+	int c;
+	char *sentp;
 	int sglobbed = globbed;
 
-	/* We don't want this "feature"
-	   if (*s == '.' && *p != '.')
-	   return (0);
-	*/
+#if 0				// We don't want this "feature".
+	if (*s == '.' && *p != '.')
+		return (0);
+#endif
+
 	sentp = entp;
 	entp = s;
 	c = amatch(s, p);
@@ -381,22 +385,22 @@ match(char *s, char *p)
 }
 
 static int
-amatch(register char *s, register char *p)
+amatch(char *s, char *p)
 {
-	register int scc;
-	int ok, lc;
+	int scc;
+	int ok;
+	int lc;
 	char *sgpathp;
 	struct stat stb;
-	int c, cc;
+	int c;
+	int cc;
 
 	globbed = 1;
 	for (;;) {
 		scc = *s++ & TRIM;
 		switch (c = *p++) {
-
 		case '{':
 			return (execbrc(p - 1, s - 1));
-
 		case '[':
 			ok = 0;
 			lc = 077777;
@@ -409,9 +413,8 @@ amatch(register char *s, register char *p)
 				if (cc == '-') {
 					if (lc <= scc && scc <= *p++)
 						ok++;
-				} else
-					if (scc == (lc = cc))
-						ok++;
+				} else if (scc == (lc = cc))
+					ok++;
 			}
 			if (cc == 0) {
 				globerr = IWC;
@@ -419,7 +422,6 @@ amatch(register char *s, register char *p)
 				return (0);
 			}
 			continue;
-
 		case '*':
 			if (!*p)
 				return (1);
@@ -431,22 +433,19 @@ amatch(register char *s, register char *p)
 			do {
 				if (amatch(s, p))
 					return (1);
-			} while (*s++);
+			}
+			while (*s++);
 			return (0);
-
 		case 0:
 			return (scc == 0);
-
 		default:
 			if (c != scc)
 				return (0);
 			continue;
-
 		case '?':
 			if (scc == 0)
 				return (0);
 			continue;
-
 		case '/':
 			if (scc)
 				return (0);
@@ -471,15 +470,15 @@ amatch(register char *s, register char *p)
 }
 
 static void
-Gcat(register char *s1, register char *s2)
+Gcat(char *s1, char *s2)
 {
 	if (gargc == gargmax) {
 		char **newvec;
 
-		if ((newvec = (char **)malloc((size_t)(gargc + INCVEC + 1) * sizeof(char *))) == (char **)0)
+		if ((newvec = (char **) malloc((size_t) (gargc + INCVEC + 1) * sizeof(char *))) == (char **) 0)
 			fatal(NOMEM);
 		sortbas = newvec + (sortbas - gargv);
-		(void)blkcpy(newvec, gargv);
+		blkcpy(newvec, gargv);
 		free(gargv);
 		gargv = newvec;
 		gargmax += INCVEC;
@@ -494,7 +493,6 @@ Gcat(register char *s1, register char *s2)
 static void
 addpath(char c)
 {
-
 	if (gpathp >= lastgpathp) {
 		globerr = MSC;
 		errstring = "Pathname too long";
@@ -505,9 +503,10 @@ addpath(char c)
 }
 
 static void
-rscan(register char **t, int (*f)(char))
+rscan(char **t, int (*f)(char))
 {
-	register char *p, c;
+	char *p;
+	char c;
 
 	while ((p = *t++)) {
 		if (f == tglob) {
@@ -522,42 +521,38 @@ rscan(register char **t, int (*f)(char))
 }
 
 static int
-tglob(register char c)
+tglob(char c)
 {
-
 	if (any(c, globchars))
 		gflag |= c == '{' ? 2 : 1;
 	return (c);
 }
 
 int
-letter(register char c)
+letter(char c)
 {
-
 	return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_');
 }
 
 int
-digit(register char c)
+digit(char c)
 {
-
 	return (c >= '0' && c <= '9');
 }
 
 int
-any(register int c, register char *s)
+any(int c, char *s)
 {
-
 	while (*s)
 		if (*s++ == c)
-			return(1);
-	return(0);
+			return (1);
+	return (0);
 }
 
 int
-blklen(register char **av)
+blklen(char **av)
 {
-	register int i = 0;
+	int i = 0;
 
 	while (*av++)
 		i++;
@@ -565,12 +560,10 @@ blklen(register char **av)
 }
 
 char **
-blkcpy(char **oav, register char **bv)
+blkcpy(char **oav, char **bv)
 {
-	register char **av = oav;
-
-	if (av)
-	{
+	char **av = oav;
+	if (av) {
 		while ((*av++ = *bv++))
 			continue;
 	}
@@ -580,49 +573,42 @@ blkcpy(char **oav, register char **bv)
 void
 blkfree(char **av0)
 {
-	register char **av = av0;
+	char **av = av0;
 
 	while (*av)
 		free(*av++);
-	free((char *)av0);
+	free((char *) av0);
 }
 
 static char *
 strspl(char *cp, char *dp)
 {
-	register char *ep = malloc((unsigned)(strlen(cp) + strlen(dp) + 1));
+	char *ep = malloc((unsigned) (strlen(cp) + strlen(dp) + 1));
 
 	if (ep) {
 		strcpy(ep, cp);
 		strcat(ep, dp);
-	}
-	else
+	} else
 		fatal(NOMEM);
 	return (ep);
 }
 
 char **
-copyblk(register char **v)
+copyblk(char **v)
 {
 	if (v == 0)
 		return 0;
 
-	register char **nv = (char **)malloc((size_t)(((size_t)blklen(v) + 1) *
-						      sizeof(char **)));
-	if (nv == (char **)0)
+	char **nv = (char **) malloc((size_t) (((size_t) blklen(v) + 1) * sizeof(char **)));
+	if (nv == (char **) 0)
 		return 0;
 
-	register char **av = v;
-
-	if (av)
-	{
+	char **av = v;
+	if (av) {
 		char **bv = nv;
-
-		while (*av)
-		{
+		while (*av) {
 			*bv = malloc(strlen(*av) + 1);
-			if (*bv == 0)
-			{
+			if (*bv == 0) {
 				free(nv);
 				return 0;
 			}
@@ -632,30 +618,26 @@ copyblk(register char **v)
 		}
 		*bv = 0;
 	}
-
 	return nv;
 }
 
-static
-char *
+static char *
 strend(cp)
-	register char *cp;
+	char *cp;
 {
-
 	while (*cp)
 		cp++;
 	return (cp);
 }
-/*
- * Extract a home directory from the password file
- * The argument points to a buffer where the name of the
- * user whose home directory is sought is currently.
- * We write the home directory of the user back there.
- */
+
+// Extract a home directory from the password file. The argument
+// points to a buffer where the name of the user whose home directory
+// is sought is currently. We write the home directory of the user
+// back there.
 int
 gethdir(char *homepath)
 {
-	register struct passwd *pp = getpwnam(homepath);
+	struct passwd *pp = getpwnam(homepath);
 
 	if (pp == 0)
 		return (1);
