@@ -50,7 +50,7 @@ static int old_run_state;
 static XComposeStatus status;
 
 static void
-x11_process_key(XEvent * e, int updown)
+x11_process_key(XEvent *e, int updown)
 {
 	KeySym keysym;
 	unsigned char buffer[5];
