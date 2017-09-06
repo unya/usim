@@ -8,11 +8,17 @@
 #include <stdint.h>
 #include <signal.h>
 
+
+extern unsigned char kb_old_table[64][3];
+extern unsigned short kb_to_scancode[256][4];
+
 extern int run_ucode_flag;
 extern void iob_key_event(int code, int extra);
 extern void iob_mouse_event(int x, int y, int dx, int dy, int buttons);
+
 static unsigned int video_width = 768;
 static unsigned int video_height = 897;
+
 unsigned int tv_bitmap[(768 * 1024)];
 
 typedef struct DisplayState {
@@ -49,29 +55,104 @@ static int old_run_state;
 
 static XComposeStatus status;
 
+// Takes E, converts it into a LM keycode and sends it to the
+// IOB KBD.
 static void
-x11_process_key(XEvent *e, int updown)
+process_key(XEvent *e, int keydown)
 {
 	KeySym keysym;
 	unsigned char buffer[5];
 	int extra;
+	int lmcode;
 
 	extra = 0;
-
 	if (e->xkey.state & X_META)
 		extra |= 3 << 12;
+
 	if (e->xkey.state & X_ALT)
 		extra |= 3 << 12;
+
 	if (e->xkey.state & X_SHIFT)
 		extra |= 3 << 6;
+
 	if (e->xkey.state & X_CAPS)
 		extra ^= 3 << 6;
+
 	if (e->xkey.state & X_CTRL)
 		extra |= 3 << 10;
 
-	if (updown) {
-		XLookupString(&e->xkey, (char *) buffer, 5, &keysym, &status);
-		iob_key_event(keysym, extra);
+	if (keydown) {
+		XLookupString(&e->xkey, (char *) buffer, 5, &keysym,
+			      &status);
+
+		if (keysym == XK_Shift_L ||
+		    keysym == XK_Shift_R ||
+		    keysym == XK_Control_L ||
+		    keysym == XK_Control_R ||
+		    keysym == XK_Alt_L ||
+		    keysym == XK_Alt_R)
+			return;
+
+		switch (keysym) {
+		case XK_F1:		// Terminal.
+			lmcode = 1;
+			break;
+		case XK_F2:		// System.
+			lmcode = 1 | (3 << 8);
+			break;
+		case XK_F3:		// Network.
+			lmcode = 0 | (3 << 8);
+			break;
+		case XK_F4:		// Abort.
+			lmcode = 16 | (3 << 8);
+			break;
+		case XK_F5:		// Clear.
+			lmcode = 17;
+			break;
+		case XK_F6:		// Help.
+			lmcode = 44 | (3 << 8);
+			break;
+		case XK_F11:		// End.
+			lmcode = 50 | (3 << 8);
+			break;
+		case XK_F7:		// Call.
+			lmcode = 16;
+			break;
+		case XK_F12:		// Break.
+		case XK_Break:
+			lmcode = 0;
+			break;
+		case XK_BackSpace:	// Rubout.
+			lmcode = 046;
+			break;
+		case XK_Return:		// Return.
+			lmcode = 50;
+			break;
+		case XK_Tab:
+			lmcode = 18;
+			break;
+		case XK_Escape:
+			lmcode = 1;
+			break;
+		default:
+			if (keysym > 255) {
+				printf("unknown keycode: %d\n", keysym);
+				return;
+			}
+			lmcode = kb_to_scancode[keysym][(extra & (3 << 6)) ? 1 : 0];
+			break;
+		}
+
+		// Keep Control and Meta bits, Shift is in the scancode table.
+		lmcode |= extra & ~(3 << 6);
+		// ... but if Control or Meta, add in Shift.
+		if (extra & (17 << 10))
+			lmcode |= extra;
+
+		lmcode |= 0xffff0000;
+
+		iob_key_event(lmcode, keydown);
+
 	}
 }
 
@@ -90,10 +171,10 @@ display_poll(void)
 			XFlush(display);
 			break;
 		case KeyPress:
-			x11_process_key(&e, 1);
+			process_key(&e, 1);
 			break;
 		case KeyRelease:
-			x11_process_key(&e, 0);
+			process_key(&e, 0);
 			break;
 		case MotionNotify:
 		case ButtonPress:

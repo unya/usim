@@ -89,3 +89,5 @@ unsigned char kb_old_table[64][3] = {
 	'/', '?', '?',
 	LM_K_SP, LM_K_SP, LM_K_SP,
 };
+
+unsigned short kb_to_scancode[256][4];
