@@ -448,6 +448,11 @@ create_disk(char *template)
 	if (parse_template(template))
 		return -1;
 
+	if (access(img_filename, F_OK) != -1) {
+		fprintf (stderr, "refusing to overwrite existing disk pack: %s\n", img_filename);
+		exit (1);
+	}
+	
 	printf("creating %s\n", img_filename);
 
 	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
@@ -566,7 +571,7 @@ default_template(void)
 #define DEFAULT_MCR_LABEL "UCADR 841"
 #define DEFAULT_MCR_FILE "../sys/ubin/ucadr.mcr.841"
 
-#define LOD_LABEL "78.48 LMFS 21.34"
+#define DEFAULT_LOD_LABEL "78.48 LMFS 21.34"
 #define DEFAULT_LOD_FILE "../bands/system-78-42.LOD"
 
 	part_count = 0;
