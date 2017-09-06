@@ -100,12 +100,12 @@ iob_unibus_read(int offset, int *pv)
 	case 0100:
 		*pv = iob_key_scan & 0177777;
 		traceio("unibus: kbd low %011o\n", *pv);
-		iob_kbd_csr &= ~(1 << 5);
+		iob_kbd_csr &= ~(1 << 5); // Clear CSR<5>.
 		break;
 	case 0102:
 		*pv = (iob_key_scan >> 16) & 0177777;
 		traceio("unibus: kbd high %011o\n", *pv);
-		iob_kbd_csr &= ~(1 << 5);
+		iob_kbd_csr &= ~(1 << 5); // Clear CSR<5>.
 		break;
 	case 0104:
 		*pv =
@@ -119,7 +119,7 @@ iob_unibus_read(int offset, int *pv)
 		mouse_middle = 0;
 		mouse_head = 0;
 		
-		iob_kbd_csr &= ~(1 << 4);
+		iob_kbd_csr &= ~(1 << 4); // Clear CSR<4>.
 		break;
 	case 0106:
 		*pv =
