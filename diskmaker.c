@@ -572,7 +572,7 @@ default_template(void)
 #define DEFAULT_MCR_FILE "../sys/ubin/ucadr.mcr.841"
 
 #define DEFAULT_LOD_LABEL "78.48 LMFS 21.34"
-#define DEFAULT_LOD_FILE "../bands/system-78-42.LOD"
+#define DEFAULT_LOD_FILE "../bands/system-78-48.LOD"
 
 	part_count = 0;
 
