@@ -1,8 +1,5 @@
 // diskmaker --- manage disk packs (Trident T-300 & T-80) for CADR
 
-// ---!!! Default behaviour should be -p with disk.img being default
-// ---!!!   image file.
-
 #include "usim.h"
 
 #include <stdio.h>
@@ -985,7 +982,7 @@ main(int argc, char *argv[])
 	int c;
 
 	if (argc <= 1)
-		usage();
+		show++;
 
 	while ((c = getopt(argc, argv, "b:B:cdlt:f:pm:x:")) != -1) {
 		switch (c) {
