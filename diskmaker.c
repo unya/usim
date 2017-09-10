@@ -569,7 +569,7 @@ default_template(void)
 	blocks_per_track = 17;
 
 #define DEFAULT_MCR_LABEL "UCADR 841"
-#define DEFAULT_MCR_FILE "../sys/ubin/ucadr.mcr.841"
+#define DEFAULT_MCR_FILE "../bands/ucadr.mcr.841"
 
 #define DEFAULT_LOD_LABEL "78.48 LMFS 21.34"
 #define DEFAULT_LOD_FILE "../bands/system-78-48.LOD"
