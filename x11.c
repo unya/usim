@@ -13,7 +13,7 @@ extern unsigned short kb_to_scancode[256][4];
 
 extern int run_ucode_flag;
 extern void iob_key_event(int code, int extra);
-extern void iob_mouse_event(int x, int y, int dx, int dy, int buttons);
+extern void iob_mouse_event(int x, int y, int buttons);
 
 static unsigned int video_width = 768;
 static unsigned int video_height = 897;
@@ -178,7 +178,7 @@ display_poll(void)
 		case MotionNotify:
 		case ButtonPress:
 		case ButtonRelease:
-			iob_mouse_event(e.xbutton.x, e.xbutton.y, 0, 0, e.xbutton.button);
+			iob_mouse_event(e.xbutton.x, e.xbutton.y, e.xbutton.button);
 			break;
 		default:
 			break;

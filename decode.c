@@ -55,10 +55,6 @@ read_prom_files(void)
 	unsigned int start;
 	unsigned int size;
 
-	if (alt_prom_flag) {
-		sprintf(name, "../sys/ubin/promh.mcr");
-	}
-
 	fd = open(name, O_RDONLY | O_BINARY);
 	if (fd < 0) {
 		perror(name);
@@ -468,7 +464,7 @@ disassemble_ucode_loc(ucw_t u)
 		break;
 	}
 
- done:
+done:
 	printf("\n");
 }
 

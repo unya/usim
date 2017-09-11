@@ -233,30 +233,24 @@ iob_unibus_write(int offset, int v)
 }
 
 void
-iob_mouse_event(int x, int y, int dx, int dy, int buttons)
+iob_mouse_event(int x, int y, int buttons)
 {
 	iob_kbd_csr |= 1 << 4;
 	assert_unibus_interrupt(0264);
 
 	// Move mouse closer to where microcode thinks it is.
-	if (mouse_sync_flag) {
-		int mcx;
-		int mcy;
-		int dx;
-		int dy;
+	int mcx;
+	int mcy;
+	int dx;
+	int dy;
 
-		mcx = read_a_mem(mouse_sync_amem_x);
-		mcy = read_a_mem(mouse_sync_amem_y);
+	mcx = read_a_mem(mouse_sync_amem_x);
+	mcy = read_a_mem(mouse_sync_amem_y);
 
-		dx = x - mcx;
-		dy = y - mcy;
-		mouse_x += dx;
-		mouse_y += dy;
-	} else {
-		// Convert X11 coordinates into mouse location.
-		mouse_x = (x * 4) / 3;
-		mouse_y = (y * 5) / 3;
-	}
+	dx = x - mcx;
+	dy = y - mcy;
+	mouse_x += dx;
+	mouse_y += dy;
 
 	if (buttons & 4)
 		mouse_head = 1;
@@ -277,9 +271,6 @@ tv_xbus_read(int offset, unsigned int *pv)
 void
 tv_xbus_write(int offset, unsigned int v)
 {
-	if ((tv_csr & 4) != (v & 4)) {
-	}
-
 	tv_csr = v;
 	tv_csr &= ~(1 << 4);
 	deassert_xbus_interrupt();
@@ -299,7 +290,7 @@ sigalrm_handler(int arg)
 }
 
 void
-iob_poll(unsigned long cycles)
+iob_poll()
 {
 }
 
@@ -328,9 +319,7 @@ iob_init(void)
 {
 	kbd_init();
 
-	if (mouse_sync_flag) {
-		mouse_sync_init();
-	}
+	mouse_sync_init();
 
 	{
 		struct itimerval itimer;

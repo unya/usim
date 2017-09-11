@@ -333,11 +333,8 @@ chaos_set_csr(int v)
 		CHAOS_CSR_LOST_COUNT |
 		CHAOS_CSR_CRC_ERROR |
 		CHAOS_CSR_RECEIVE_DONE | CHAOS_CSR_RECEIVER_CLEAR;
-	if (trace_net_flag) {
-		tracenet("chaos: set csr bits 0%o (", v);
-		print_csr_bits(v);
-		tracenet("), old 0%o ", chaos_csr);
-	}
+
+	tracenet("chaos: set csr bits 0%o, old 0%o\n", v, chaos_csr);
 
 	chaos_csr = (chaos_csr & mask) | (v & ~mask);
 	if (chaos_csr & CHAOS_CSR_RESET) {
@@ -385,11 +382,7 @@ chaos_set_csr(int v)
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
 	}
 
-	if (trace_net_flag) {
-		tracenet(" New csr 0%o", chaos_csr);
-		print_csr_bits(chaos_csr);
-		tracenet("\n");
-	}
+	tracenet(" New csr 0%o\n", chaos_csr);
 
 	return 0;
 }

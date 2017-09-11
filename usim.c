@@ -13,10 +13,6 @@
 #include "config.h"
 #include "Files.h"
 
-int show_video_flag;
-int mouse_sync_flag;
-int alt_prom_flag;
-int dump_state_flag;
 int save_state_flag;
 
 extern int display_init(void);
@@ -29,69 +25,6 @@ extern int chaos_init(void);
 extern void iob_warm_boot_key(void);
 extern void run(void);
 extern int dcanon(char *cp, int blankok);
-struct timeval tv1;
-
-// Simple wall clock timing to get a notion of the basic cycle time.
-void
-timing_start()
-{
-	gettimeofday(&tv1, NULL);
-}
-
-void
-timing_stop()
-{
-	struct timeval tv2;
-	struct timeval td;
-	double t;
-	double cps;
-
-	gettimeofday(&tv2, NULL);
-
-	if (tv2.tv_usec < tv1.tv_usec) {
-		tv2.tv_sec--;
-		td.tv_usec = (tv2.tv_usec + 1000 * 1000) - tv1.tv_usec;
-	} else
-		td.tv_usec = tv2.tv_usec - tv1.tv_usec;
-	td.tv_sec = tv2.tv_sec - tv1.tv_sec;
-
-	t = (double) td.tv_sec + ((double) td.tv_usec / (1000.0 * 1000.0));
-	cps = cycles / t;
-
-	printf("\ncycle timing:\n");
-	printf("%lu cycles in %g seconds, %10.8g cycles/second\n", cycles, t, cps);
-	printf("%.0f ns/cycle\n", (t / cycles) * 1000.0 * 1000.0 * 1000.0);
-}
-
-void
-sigint_handler(int arg)
-{
-	run_ucode_flag = 0;
-}
-
-void
-sighup_handler(int arg)
-{
-	char *b = "MPY";
-	extern int trace_late_set;
-
-	breakpoint_set_mcr(b);
-	printf("set breakpoint in %s\n", b);
-	trace_late_set = 1;
-}
-
-void
-signal_init(void)
-{
-	signal(SIGINT, sigint_handler);
-}
-
-void
-signal_shutdown(void)
-{
-	signal(SIGINT, SIG_DFL);
-	fflush(stdout);
-}
 
 void
 usage(void)
@@ -99,40 +32,15 @@ usage(void)
 	fprintf(stderr, "usage: usim [OPTION]...\n");
 	fprintf(stderr, "CADR simulator\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "  -a             use alternate prom file\n");
-	fprintf(stderr, "  -b NAME        set breakpoint in microcode\n");
-	fprintf(stderr, "  -B N           start tracing after # microcode cycles\n");
-	fprintf(stderr, "  -c N           set max # of microcode cycles to run\n");
-	fprintf(stderr, "  -C N           set max # of traced microcode cycles to run\n");
-	fprintf(stderr, "  -d             dump state\n");
 	fprintf(stderr, "  -i FILE        set disk image\n");
-	fprintf(stderr, "  -l NAME        start tracing at symbol\n");
-	fprintf(stderr, "  -n             run with no video window\n");
-	fprintf(stderr, "  -m             mouse sync\n");
-	fprintf(stderr, "  -p NAME        set breakpoint in prom\n");
-	fprintf(stderr, "  -q N           break after hitting breakpoint n times\n");
 	fprintf(stderr, "  -r             map /tree to ../sys\n");
 	fprintf(stderr, "  -S             save state\n");
-	fprintf(stderr, "  -t             turn on microcode tracing\n");
-	fprintf(stderr, "  -T FLAGS...    turn on tracing\n");
-	fprintf(stderr, "       a - enable tracing after # cycles (see -B flag)\n");
-	fprintf(stderr, "       d - disk\n");
-	fprintf(stderr, "       i - interrupts\n");
-	fprintf(stderr, "       o - i/o\n");
-	fprintf(stderr, "       p - prom\n");
-	fprintf(stderr, "       c - microcode\n");
-	fprintf(stderr, "       m - microcode labels\n");
-	fprintf(stderr, "       n - network\n");
-	fprintf(stderr, "       l - lod labels\n");
-	fprintf(stderr, "       v - virtual memory\n");
 	fprintf(stderr, "  -s             halt after prom runs\n");
 	fprintf(stderr, "  -w             warm boot\n");
 	exit(1);
 }
 
 extern char *optarg;
-extern int trace;
-extern int trace_mcr_labels_flag;
 
 int
 main(int argc, char *argv[])
@@ -141,46 +49,10 @@ main(int argc, char *argv[])
 
 	printf("CADR emulator v0.9\n");
 
-	show_video_flag = 1;
-	mouse_sync_flag = 1;
-
 	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:rtT:sSw")) != -1) {
 		switch (c) {
-		case 'a':
-			alt_prom_flag = 1;
-			break;
-		case 'b':
-			breakpoint_set_mcr(optarg);
-			break;
-		case 'B':
-			begin_trace_cycle = atol(optarg);
-			break;
-		case 'c':
-			max_cycles = atol(optarg);
-			break;
-		case 'C':
-			max_trace_cycles = atol(optarg);
-			break;
-		case 'd':
-			dump_state_flag = 1;
-			break;
 		case 'i':
 			config_set_disk_filename(optarg);
-			break;
-		case 'l':
-			tracelabel_set_mcr(optarg);
-			break;
-		case 'n':
-			show_video_flag = 0;
-			break;
-		case 'm':
-			mouse_sync_flag = 0;
-			break;
-		case 'p':
-			breakpoint_set_prom(optarg);
-			break;
-		case 'q':
-			breakpoint_set_count(atoi(optarg));
 			break;
 		case 'r':
 		{
@@ -195,43 +67,6 @@ main(int argc, char *argv[])
 		case 'S':
 			save_state_flag = 1;
 			break;
-		case 't':
-			trace = 1;
-			break;
-		case 'T':
-			switch (optarg[0]) {
-			case 'a':
-				trace_after_flag = 1;
-				break;
-			case 'd':
-				trace_disk_flag = 1;
-				break;
-			case 'i':
-				trace_int_flag = 1;
-				break;
-			case 'o':
-				trace_io_flag = 1;
-				break;
-			case 'p':
-				trace_prom_flag = 1;
-				break;
-			case 'c':
-				trace_mcr_flag = 1;
-				break;
-			case 'm':
-				trace_mcr_labels_flag = 1;
-				break;
-			case 'n':
-				trace_net_flag = 1;
-				break;
-			case 'l':
-				trace_lod_labels_flag = 1;
-				break;
-			case 'v':
-				trace_vm_flag = 1;
-				break;
-			}
-			break;
 		case 's':
 			stop_after_prom_flag = 1;
 			break;
@@ -243,10 +78,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (show_video_flag) {
-		display_init();
-		display_poll();
-	}
+	display_init();
+	display_poll();
 
 	disk_init(config_get_disk_filename());
 
@@ -256,20 +89,14 @@ main(int argc, char *argv[])
 	iob_init();
 	chaos_init();
 
-	signal_init();
-
 	if (warm_boot_flag) {
 		iob_warm_boot_key();
 	}
 
 	run();
 
-	signal_shutdown();
-
-	if (show_video_flag) {
-		while (run_ucode_flag) {
-			display_poll();
-		}
+	while (run_ucode_flag) {
+		display_poll();
 	}
 
 	exit(0);

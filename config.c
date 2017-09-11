@@ -11,8 +11,6 @@ static char *disk_filename;
 const char *
 config_get_promsym_filename(void)
 {
-	if (alt_prom_flag)
-		return "../sys/ubin/promh.sym";
 	return "../bands/promh.sym.9";
 }
 

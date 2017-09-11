@@ -22,9 +22,6 @@
 extern void deassert_xbus_interrupt(void);
 extern void assert_xbus_interrupt(void);
 
-#define DELAY_DISK_INTERRUPT
-#define ALLOW_DISK_WRITE
-
 int disk_fd;
 uint8_t *disk_mm;
 
@@ -177,7 +174,7 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 }
 
 int
-disk_write_block(unsigned int vma, int unit, int cyl, int head, int block)
+disk_write_block(unsigned int vma, int cyl, int head, int block)
 {
 	int block_no;
 	int i;
@@ -205,7 +202,6 @@ disk_throw_interrupt(void)
 	assert_xbus_interrupt();
 }
 
-#ifdef DELAY_DISK_INTERRUPT
 static int disk_interrupt_delay;
 
 void
@@ -224,12 +220,6 @@ disk_poll()
 		}
 	}
 }
-#else
-void
-disk_poll()
-{
-}
-#endif
 
 void
 disk_show_cur_addr(void)
@@ -327,10 +317,6 @@ disk_start_read_compare(void)
 void
 disk_start_write(void)
 {
-#ifndef ALLOW_DISK_WRITE
-	disk_decode_addr();
-	disk_show_cur_addr();
-#else
 	unsigned int ccw;
 	unsigned int vma;
 	int i;
@@ -355,7 +341,7 @@ disk_start_write(void)
 
 		disk_show_cur_addr();
 
-		disk_write_block(vma, cur_unit, cur_cyl, cur_head, cur_block);
+		disk_write_block(vma, cur_cyl, cur_head, cur_block);
 
 		if ((ccw & 1) == 0) {
 			tracedio("disk: last ccw\n");
@@ -369,13 +355,8 @@ disk_start_write(void)
 	disk_undecode_addr();
 
 	if (disk_cmd & 04000) {
-#ifdef DELAY_DISK_INTERRUPT
 		disk_future_interrupt();
-#else
-		disk_throw_interrupt();
-#endif
 	}
-#endif
 }
 
 int
@@ -477,12 +458,6 @@ disk_xbus_read(int offset, unsigned int *pv)
 		break;
 	default:
 		tracedio("disk: unknown reg read %o\n", offset);
-		if (offset != 0) {
-			extern int trace_mcr_labels_flag;
-			extern int get_u_pc();
-			trace_mcr_labels_flag = 1;
-			printf("u_pc %011o\n", get_u_pc());
-		}
 		break;
 	}
 }

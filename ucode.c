@@ -45,10 +45,6 @@ static int l1_map[2048];
 static int l2_map[1024];
 
 unsigned long cycles;
-unsigned long trace_cycles;
-unsigned long max_cycles;
-unsigned long max_trace_cycles;
-unsigned long begin_trace_cycle;
 
 int u_pc;
 static int page_fault_flag;
@@ -65,7 +61,6 @@ int stop_after_prom_flag;
 int run_ucode_flag;
 int warm_boot_flag;
 extern int save_state_flag;
-extern int dump_state_flag;
 
 unsigned int md;
 unsigned int vma;
@@ -89,26 +84,8 @@ static int oa_reg_hi_set;
 static int interrupt_control;
 static unsigned int dispatch_constant;
 
-int trace;
-int trace_mcr_labels_flag;
-int trace_lod_labels_flag;
-int trace_prom_flag;
-int trace_mcr_flag;
-int trace_io_flag;
-int trace_vm_flag;
-int trace_disk_flag;
-int trace_net_flag;
-int trace_int_flag;
-int trace_late_set;
-int trace_after_flag;
+static int phys_ram_pages = 8192;	// 2 MW.
 
-static int macro_pc_incrs;
-
-static int phys_ram_pages;
-
-void show_label_closest(unsigned int upc);
-void show_label_closest_padded(unsigned int upc);
-char *find_function_name(int the_lc);
 int restore_state(void);
 
 extern void video_read(int offset, unsigned int *pv);
@@ -122,12 +99,6 @@ extern void tv_xbus_write(int offset, unsigned int v);
 extern void uart_xbus_read(int, unsigned int *);
 extern void uart_xbus_write(int, unsigned int);
 
-extern void disassemble_ucode_loc(int loc, ucw_t u);
-extern int sym_find(int mcr, char *name, int *pval);
-void reset_pc_histogram(void);
-
-extern void timing_start();
-extern void timing_stop();
 extern void iob_poll();
 extern void disk_poll();
 extern void display_poll();
@@ -160,7 +131,7 @@ assert_unibus_interrupt(int vector)
 }
 
 void
-deassert_unibus_interrupt(int vector)
+deassert_unibus_interrupt(void)
 {
 	if (interrupt_status_reg & 0100000) {
 		traceint("deassert: unibus interrupt\n");
@@ -713,8 +684,6 @@ advance_lc(int *ppc)
 		lc += 2;	// 16-bit mode.
 	}
 
-	macro_pc_incrs++;
-
 	// NEED-FETCH?
 	if (lc & (1 << 31)) {
 		lc &= ~(1 << 31);
@@ -749,28 +718,9 @@ advance_lc(int *ppc)
 	}
 }
 
-void
-show_pdl_local(void)
-{
-	int min;
-	int max;
-
-	min = pdl_ptr > 4 ? pdl_ptr - 4 : 0;
-	max = pdl_ptr < 1024 - 4 ? pdl_ptr + 4 : 1024;
-
-	printf("pdl-ptr %o, pdl-index %o\n", pdl_ptr, pdl_index);
-
-	if (pdl_index > 0 && pdl_index < pdl_ptr)
-		min = pdl_index;
-
-	for (int i = min; i < max; i += 4) {
-		printf("PDL[%04o] %011o %011o %011o %011o\n", i, pdl_memory[i], pdl_memory[i + 1], pdl_memory[i + 2], pdl_memory[i + 3]);
-	}
-}
-
 // Write value to decoded destination.
 void
-write_dest(ucw_t u, int dest, unsigned int out_bus)
+write_dest(int dest, unsigned int out_bus)
 {
 	if (dest & 04000) {
 		write_a_mem(dest & 03777, out_bus);
@@ -792,17 +742,6 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 
 		// Set NEED-FETCH.
 		lc |= (1 << 31);
-
-		if (trace_lod_labels_flag) {
-			char *s;
-
-			show_label_closest(u_pc);
-			printf(": lc <- %o (%o)", lc, lc >> 2);
-			s = find_function_name(lc);
-			if (s)
-				printf(" '%s'", s);
-			printf("\n");
-		}
 		break;
 	case 2:			// Interrrupt Control <29-26>.
 		tracef("writing IC <- %o\n", out_bus);
@@ -936,307 +875,6 @@ write_dest(ucw_t u, int dest, unsigned int out_bus)
 	write_m_mem(dest & 037, out_bus);
 }
 
-#define MAX_PC_HISTORY 64
-
-struct {
-	unsigned int rpc;
-	unsigned int rvma;
-	unsigned int rmd;
-	int rpf;
-	int rpdl_ptr;
-	unsigned int rpdl;
-	unsigned int rq;
-	unsigned int m[8];
-} pc_history[MAX_PC_HISTORY];
-
-int pc_history_ptr;
-int pc_history_max;
-int pc_history_stores;
-
-void
-record_pc_history(unsigned int pc, unsigned int vma, unsigned int md)
-{
-	int index;
-
-	pc_history_stores++;
-	if (pc_history_max < MAX_PC_HISTORY) {
-		index = pc_history_max;
-		pc_history_max++;
-	} else {
-		index = pc_history_ptr;
-		pc_history_ptr++;
-		if (pc_history_ptr == MAX_PC_HISTORY)
-			pc_history_ptr = 0;
-	}
-	pc_history[index].rpc = pc;
-	pc_history[index].rvma = vma;
-	pc_history[index].rmd = md;
-	pc_history[index].rpf = page_fault_flag;
-	pc_history[index].rpdl_ptr = pdl_ptr;
-	pc_history[index].rpdl = pdl_memory[pdl_ptr];
-
-	pc_history[index].rq = q;
-	pc_history[index].m[0] = read_m_mem(015);
-	pc_history[index].m[1] = read_m_mem(016);
-	pc_history[index].m[2] = read_m_mem(022);
-	pc_history[index].m[3] = read_m_mem(023);
-}
-
-void
-show_pc_history(void)
-{
-	unsigned int pc;
-
-	printf("pc history:\n");
-	for (int i = 0; i < MAX_PC_HISTORY; i++) {
-		pc = pc_history[pc_history_ptr].rpc;
-		if (pc == 0)
-			break;
-		printf("%2d %011o ", i, pc);
-		show_label_closest_padded(pc);
-		printf("\tvma %011o md %011o pf%d pdl %o %011o",
-		       pc_history[pc_history_ptr].rvma,
-		       pc_history[pc_history_ptr].rmd,
-		       pc_history[pc_history_ptr].rpf,
-		       pc_history[pc_history_ptr].rpdl_ptr,
-		       pc_history[pc_history_ptr].rpdl);
-		printf(" Q %08x M %08x %08x %08x %08x\n",
-		       pc_history[pc_history_ptr].rq,
-		       pc_history[pc_history_ptr].m[0],
-		       pc_history[pc_history_ptr].m[1],
-		       pc_history[pc_history_ptr].m[2],
-		       pc_history[pc_history_ptr].m[3]);
-		printf("\n");
-
-		{
-			ucw_t u = ucode[pc];
-
-			disassemble_ucode_loc(pc, u);
-		}
-		pc_history_ptr++;
-		if (pc_history_ptr == MAX_PC_HISTORY)
-			pc_history_ptr = 0;
-	}
-	printf("\n");
-}
-
-struct pc_histogram_s {
-	unsigned int pc;
-	unsigned long long count;
-} pc_histogram[16 * 1024];
-
-void
-record_pc_histogram(unsigned int pc)
-{
-	pc_histogram[pc].count++;
-}
-
-void
-reset_pc_histogram(void)
-{
-	unsigned int pc;
-
-	for (pc = 0; pc < 16 * 1024; pc++)
-		pc_histogram[pc].count = 0;
-}
-
-int
-pc_histogram_cmp(const void *n1, const void *n2)
-{
-	struct pc_histogram_s *e1;
-	struct pc_histogram_s *e2;
-
-	e1 = (struct pc_histogram_s *) n1;
-	e2 = (struct pc_histogram_s *) n2;
-
-	return (int) (e2->count - e1->count);
-}
-
-void
-show_pc_histogram(void)
-{
-	unsigned int pc;
-	unsigned int perc;
-	unsigned long long count;
-	unsigned long long total;
-
-	total = 0;
-
-	printf("microcode pc histogram:\n");
-	for (int i = 0; i < 16 * 1024; i++) {
-		pc_histogram[i].pc = i;
-		total += pc_histogram[i].count;
-	}
-
-	printf("total %lld %016llx\n", total, total);
-	qsort(pc_histogram, 16 * 1024, sizeof(struct pc_histogram_s), pc_histogram_cmp);
-	for (int i = 0; i < 16 * 1024; i++) {
-		pc = pc_histogram[i].pc;
-		count = pc_histogram[i].count;
-		if (count) {
-			char *sym;
-			int offset;
-
-			perc = (unsigned int) ((count * 100ULL) / total);
-			if (count < 100)
-				continue;
-			sym = sym_find_last(!prom_enabled_flag, pc, &offset);
-			if (offset == 0)
-				printf("%05o %s: %lld %d%%\n", pc, sym, count, perc);
-			else
-				printf("%05o %s+%d: %lld %d%%\n", pc, sym, offset, count, perc);
-		}
-	}
-}
-
-void
-dump_l1_map()
-{
-	for (int i = 0; i < 2048; i += 4) {
-		int skipped;
-
-		skipped = 0;
-
-		printf("l1[%02o] %011o %011o %011o %011o\n", i, l1_map[i], l1_map[i + 1], l1_map[i + 2], l1_map[i + 3]);
-		while (l1_map[i + 0] == l1_map[i + 0 + 4] &&
-		       l1_map[i + 1] == l1_map[i + 1 + 4] &&
-		       l1_map[i + 2] == l1_map[i + 2 + 4] &&
-		       l1_map[i + 3] == l1_map[i + 3 + 4] &&
-		       i < 2048) {
-			if (skipped++ == 0)
-				printf("...\n");
-			i += 4;
-		}
-	}
-	printf("\n");
-}
-
-void
-dump_l2_map()
-{
-	for (int i = 0; i < 1024; i += 4) {
-		int skipped;
-
-		skipped = 0;
-
-		printf("l2[%02o] %011o %011o %011o %011o\n", i, l2_map[i], l2_map[i + 1], l2_map[i + 2], l2_map[i + 3]);
-		while (l2_map[i + 0] == l2_map[i + 0 + 4] &&
-		       l2_map[i + 1] == l2_map[i + 1 + 4] &&
-		       l2_map[i + 2] == l2_map[i + 2 + 4] &&
-		       l2_map[i + 3] == l2_map[i + 3 + 4] &&
-		       i < 1024) {
-			if (skipped++ == 0)
-				printf("...\n");
-			i += 4;
-		}
-	}
-	printf("\n");
-}
-
-void
-dump_pdl_memory(void)
-{
-	printf("pdl-ptr %o, pdl-index %o\n", pdl_ptr, pdl_index);
-	for (int i = 0; i < 1024; i += 4) {
-		int skipped;
-
-		skipped = 0;
-
-		printf("PDL[%04o] %011o %011o %011o %011o\n", i, pdl_memory[i], pdl_memory[i + 1], pdl_memory[i + 2], pdl_memory[i + 3]);
-		while (pdl_memory[i + 0] == pdl_memory[i + 0 + 4] &&
-		       pdl_memory[i + 1] == pdl_memory[i + 1 + 4] &&
-		       pdl_memory[i + 2] == pdl_memory[i + 2 + 4] &&
-		       pdl_memory[i + 3] == pdl_memory[i + 3 + 4] &&
-		       i < 1024) {
-			if (skipped++ == 0)
-				printf("...\n");
-			i += 4;
-		}
-	}
-	printf("\n");
-}
-
-void
-dump_state(void)
-{
-	printf("\n-------------------------------------------------\n");
-	printf("CADR machine state:\n\n");
-	printf("u-code pc %o, lc %o (%o)\n", u_pc, lc, lc >> 2);
-	printf("vma %o, md %o, q %o, opc %o, disp-const %o\n", vma, md, q, opc, dispatch_constant);
-	printf("oa-lo %011o, oa-hi %011o, ", oa_reg_lo, oa_reg_hi);
-	printf("pdl-ptr %o, pdl-index %o, spc-ptr %o\n", pdl_ptr, pdl_index, spc_stack_ptr);
-	printf("\n");
-	printf("lc increments %d (macro instructions executed)\n", macro_pc_incrs);
-	printf("\n");
-
-	for (int i = 0; i < 32; i += 4) {
-		printf(" spc[%02o] %c%011o %c%011o %c%011o %c%011o\n",
-		       i,
-		       (i + 0 == spc_stack_ptr) ? '*' : ' ', spc_stack[i + 0],
-		       (i + 1 == spc_stack_ptr) ? '*' : ' ', spc_stack[i + 1],
-		       (i + 2 == spc_stack_ptr) ? '*' : ' ', spc_stack[i + 2],
-		       (i + 3 == spc_stack_ptr) ? '*' : ' ', spc_stack[i + 3]);
-	}
-	printf("\n");
-
-	if (spc_stack_ptr > 0) {
-		printf("stack backtrace:\n");
-		for (int i = spc_stack_ptr; i >= 0; i--) {
-			char *sym;
-			int offset;
-			int pc;
-			pc = spc_stack[i] & 037777;
-			sym = sym_find_last(!prom_enabled_flag, pc, &offset);
-			printf("%2o %011o %s+%d\n", i, spc_stack[i], sym, offset);
-		}
-		printf("\n");
-	}
-
-	for (int i = 0; i < 32; i += 4) {
-		printf("m[%02o] %011o %011o %011o %011o\n", i, read_m_mem(i), read_m_mem(i + 1), read_m_mem(i + 2), read_m_mem(i + 3));
-	}
-	printf("\n");
-
-	dump_pdl_memory();
-
-	for (int i = 0; i < 01000; i += 4) {
-		printf("A[%04o] %011o %011o %011o %011o\n", i, read_a_mem(i), read_a_mem(i + 1), read_a_mem(i + 2), read_a_mem(i + 3));
-	}
-	printf("\n");
-
-	{
-		int s;
-		int e;
-
-		s = -1;
-
-		for (int i = 0; i < 16 * 1024; i++) {
-			if (phy_pages[i] != 0 && s == -1)
-				s = i;
-			if ((phy_pages[i] == 0 || i == 16 * 1024 - 1) && s != -1) {
-				e = i - 1;
-				printf("%o-%o\n", s, e);
-				s = -1;
-			}
-		}
-	}
-	printf("\n");
-
-	printf("A-memory by symbol:\n");
-	{
-		for (int i = 0; i < 1024; i++) {
-			char *sym;
-
-			sym = sym_find_by_type_val(1, 4, i);
-			if (sym) {
-				printf("%o %-40s %o\n", i, sym, read_a_mem(i));
-			}
-		}
-	}
-	printf("\n");
-
-	printf("trace: %s\n", trace ? "on" : "off");
-}
 
 #define PAGES_TO_SAVE 8192
 int restored;
@@ -1317,139 +955,6 @@ save_state(void)
 	return 0;
 }
 
-char *breakpoint_name_prom;
-char *breakpoint_name_mcr;
-int breakpoint_count;
-char *tracelabel_name_mcr;
-
-int
-breakpoint_set_prom(char *arg)
-{
-	breakpoint_name_prom = arg;
-	return 0;
-}
-
-int
-breakpoint_set_mcr(char *arg)
-{
-	breakpoint_name_mcr = arg;
-	return 0;
-}
-
-int
-breakpoint_set_count(int count)
-{
-	printf("breakpoint: max count %d\n", count);
-	breakpoint_count = count;
-	return 0;
-}
-
-int
-tracelabel_set_mcr(char *arg)
-{
-	tracelabel_name_mcr = arg;
-	return 0;
-}
-
-int
-set_breakpoints(int *ptrace_pt_prom, int *ptrace_pt, int *ptrace_pt_count, int *ptrace_label_pt)
-{
-	max_cycles = 0;
-
-	if (breakpoint_name_prom) {
-		if (sym_find(0, breakpoint_name_prom, ptrace_pt_prom)) {
-			if (isdigit(breakpoint_name_prom[0])) {
-				sscanf(breakpoint_name_prom, "%o", ptrace_pt_prom);
-			} else {
-				fprintf(stderr, "can't find prom breakpoint '%s'\n", breakpoint_name_prom);
-				return -1;
-			}
-		}
-		printf("breakpoint [prom]: %s %o\n", breakpoint_name_prom, *ptrace_pt_prom);
-		*ptrace_pt_count = 1;
-	}
-
-	if (breakpoint_name_mcr) {
-		if (sym_find(1, breakpoint_name_mcr, ptrace_pt)) {
-			if (isdigit(breakpoint_name_mcr[0])) {
-				sscanf(breakpoint_name_mcr, "%o", ptrace_pt);
-			} else {
-				fprintf(stderr, "can't find mcr breakpoint '%s'\n", breakpoint_name_mcr);
-				return -1;
-			}
-		}
-		printf("breakpoint [mcr]: %s %o\n", breakpoint_name_mcr, *ptrace_pt);
-		*ptrace_pt_count = 1;
-	}
-
-	if (breakpoint_count) {
-		*ptrace_pt_count = breakpoint_count;
-	}
-
-	if (tracelabel_name_mcr) {
-		if (sym_find(1, tracelabel_name_mcr, ptrace_label_pt)) {
-			fprintf(stderr, "can't find mcr trace label '%s'\n", tracelabel_name_mcr);
-			return -1;
-		}
-		printf("trace label point [mcr]: %s %o\n", tracelabel_name_mcr, *ptrace_label_pt);
-	}
-
-	return 0;
-}
-
-int
-set_late_breakpoint(int *ptrace_pt, int *ptrace_pt_count)
-{
-	if (breakpoint_name_mcr) {
-		if (sym_find(1, breakpoint_name_mcr, ptrace_pt)) {
-			if (isdigit(breakpoint_name_mcr[0])) {
-				sscanf(breakpoint_name_mcr, "%o", ptrace_pt);
-			} else {
-				fprintf(stderr, "can't find mcr breakpoint '%s'\n", breakpoint_name_mcr);
-				return -1;
-			}
-		}
-		printf("breakpoint [mcr]: %s %o\n", breakpoint_name_mcr, *ptrace_pt);
-		*ptrace_pt_count = 1;
-	}
-
-	if (breakpoint_count) {
-		*ptrace_pt_count = breakpoint_count;
-	}
-
-	return 0;
-}
-
-void
-show_label_closest(unsigned int upc)
-{
-	int offset;
-	char *sym;
-
-	sym = sym_find_last(!prom_enabled_flag, upc, &offset);
-	if (sym) {
-		if (offset == 0)
-			printf("%s", sym);
-		else
-			printf("%s+%o", sym, offset);
-	}
-}
-
-void
-show_label_closest_padded(unsigned int upc)
-{
-	int offset;
-	char *sym;
-
-	sym = sym_find_last(!prom_enabled_flag, upc, &offset);
-	if (sym) {
-		if (offset == 0)
-			printf("%-16s ", sym);
-		else
-			printf("%-16s+%o", sym, offset);
-	}
-}
-
 // For 32-bit integers, (A + B) & (1 << 32) will always be
 // zero.  Without resorting to 64-bit arithmetic, you can find the
 // carry by B > ~A.  How does it work? ~A (the complement of A) is the
@@ -1466,40 +971,21 @@ show_label_closest_padded(unsigned int upc)
 int
 run(void)
 {
-	int trace_pt_prom;
-	int trace_pt;
-	int trace_pt_count;
-	int trace_label_pt;
-	char *sym;
-	char *last_sym;
 	ucw_t p1;
 	int p0_pc;
 	int p1_pc;
 	char no_exec_next;
 
-	phys_ram_pages = 8192;	// 2 MW.
-
 	u_pc = 0;
 	prom_enabled_flag = 1;
 	run_ucode_flag = 1;
-
-	trace_pt = 0;
-	trace_pt_count = 0;
-	trace_label_pt = 0;
-
-	last_sym = 0;
 
 	p1 = 0;
 	p0_pc = 0;
 	p1_pc = 0;
 	no_exec_next = 0;
 
-	set_breakpoints(&trace_pt_prom, &trace_pt, &trace_pt_count, &trace_label_pt);
-
-	printf("run:\n");
-
 	write_phy_mem(0, 0);
-	timing_start();
 
 	while (run_ucode_flag) {
 		char op_code;
@@ -1539,7 +1025,6 @@ run(void)
 #define p0 u
 		char n_plus1;
 		char enable_ish;
-		char i_long;
 		char popj;
 
 		m_src_value = 0;
@@ -1608,50 +1093,7 @@ run(void)
 			// Handle overflow.
 			cycles = 1;
 
-		if (max_cycles && cycles > max_cycles) {
-			int offset;
-			printf("cycle count exceeded, pc %o\n", u_pc);
-			if ((sym = sym_find_last(!prom_enabled_flag, u_pc, &offset))) {
-				if (offset == 0)
-					printf("%s:\n", sym);
-				else
-					printf("%s+%o:\n", sym, offset);
-			}
-			break;
-		}
-
-		if (trace_after_flag && (cycles > begin_trace_cycle))
-			trace = 1;
-
-		i_long = (u >> 45) & 1;
 		popj = (u >> 42) & 1;
-
-		if (trace) {
-			printf("------\n");
-			if ((sym = sym_find_by_val(!prom_enabled_flag, p0_pc))) {
-				printf("%s:\n", sym);
-			}
-			printf("%03o %016llo%s", p0_pc, u, i_long ? " (i-long)" : "");
-			if (lc != 0) {
-				printf(" (lc=%011o %011o)", lc, lc >> 2);
-			}
-			printf("\n");
-			disassemble_ucode_loc(p0_pc, u);
-		}
-
-		// Trace label names in microcode.
-		if (trace_mcr_labels_flag && !trace) {
-			if (!prom_enabled_flag) {
-				int offset;
-				if ((sym = sym_find_last(1, p0_pc, &offset))) {
-					if (offset == 0 && sym != last_sym) {
-						printf("%s: (lc=%011o %011o)\n", sym, lc, lc >> 2);
-						last_sym = sym;
-					}
-				}
-			}
-		}
-
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 
@@ -1693,10 +1135,6 @@ run(void)
 			case 011:
 				l2_data = map_vtop(md, (int *) &l1_data, (int *) 0);
 				m_src_value = (write_fault_bit << 31) | (access_fault_bit << 30) | ((l1_data & 037) << 24) | (l2_data & 077777777);
-				if (trace) {
-					printf("l1_data %o, l2_data %o\n", l1_data, l2_data);
-					printf("read map[md=%o] -> %o\n", md, m_src_value);
-				}
 				break;
 			case 012:
 				m_src_value = md;
@@ -1740,11 +1178,6 @@ run(void)
 			carry_in = (u >> 2) & 1;
 
 			aluop = (u >> 3) & 077;
-
-			if (trace) {
-				printf("a=%o (%o), m=%o (%o)\n", a_src, a_src_value, m_src, m_src_value);
-				printf("aluop %o, c %o, dest %o, out_bus %d\n", aluop, carry_in, dest, out_bus);
-			}
 
 			alu_carry = 0;
 
@@ -1952,7 +1385,7 @@ run(void)
 				out_bus = (alu_out << 1) | ((old_q & 0x80000000) ? 1 : 0);
 				break;
 			}
-			write_dest(u, dest, out_bus);
+			write_dest(dest, out_bus);
 			tracef("alu_out 0x%08x, alu_carry %d, q 0x%08x\n", alu_out, alu_carry, q);
 			break;
 		case 1:		// JUMP
@@ -2249,7 +1682,7 @@ run(void)
 				break;
 			}
 
-			write_dest(u, dest, out_bus);
+			write_dest(dest, out_bus);
 			break;
 		}
 
@@ -2263,20 +1696,8 @@ run(void)
 		}
 	}
 
-	{
-		int offset;
-		sym = sym_find_last(!prom_enabled_flag, u_pc, &offset);
-		printf("%s+%o:\n", sym, offset);
-	}
-
-	timing_stop();
-
 	if (save_state_flag) {
 		save_state();
-	}
-
-	if (dump_state_flag) {
-		dump_state();
 	}
 
 	return 0;
