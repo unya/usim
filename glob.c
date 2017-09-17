@@ -18,30 +18,28 @@
 #define eq(a,b) (strcmp(a, b)==0)
 #define isdir(d) ((d.st_mode & S_IFMT) == S_IFDIR)
 
-static char **gargv;		// Pointer to the (stack) arglist.
-static int gargc;		// Number args in gargv.
-static int gargmax;
-static short gflag;
-static int tglob(char c);
-char **glob();
+char **gargv;			// Pointer to the (stack) arglist.
+int gargc;			// Number args in gargv.
+int gargmax;
+short gflag;
+int tglob(char c);
 int globerr;
 char *home;
-struct passwd *getpwnam();
 extern int errno;
-static char *strend();
-static void ginit();
-static void collect(char *as);
-static void acollect();
-static void sort();
-static void expand();
-static void matchdir();
-static int execbrc();
-static int match();
-static int amatch();
-static void Gcat(char *s1, char *s2);
-static void addpath(char);
-static void rscan(char **t, int (*f)(char));
-static char *strspl(char *cp, char *dp);
+char *strend(char *cp);
+void ginit(void);
+void collect(char *as);
+void acollect(char *as);
+void sort(void);
+void expand(char *as);
+void matchdir(char *pattern);
+int execbrc(char *p, char *s);
+int match(char *s, char *p);
+int amatch(char *s, char *p);
+void Gcat(char *s1, char *s2);
+void addpath(char);
+void rscan(char **t, int (*f) (char));
+char *strspl(char *cp, char *dp);
 
 int letter(char c);
 int digit(char c);
@@ -56,16 +54,16 @@ void blkfree(char **av0);
 
 void fatal(char *fmt, ...);
 
-static int globcnt;
+int globcnt;
 
 char *globchars = "`{[*?";
 
-static char *gpath;
-static char *gpathp;
-static char *lastgpathp;
-static int globbed;
-static char *entp;
-static char **sortbas;
+char *gpath;
+char *gpathp;
+char *lastgpathp;
+int globbed;
+char *entp;
+char **sortbas;
 
 #define STARTVEC 100
 #define INCVEC 100
@@ -111,8 +109,8 @@ gfree(char **glob)
 	blkfree(glob);
 }
 
-static void
-ginit()
+void
+ginit(void)
 {
 	char **agargv;
 
@@ -127,7 +125,7 @@ ginit()
 		fatal(NOMEM);
 }
 
-static void
+void
 collect(char *as)
 {
 	if (eq(as, "{") || eq(as, "{}")) {
@@ -137,7 +135,7 @@ collect(char *as)
 		acollect(as);
 }
 
-static void
+void
 acollect(char *as)
 {
 	int ogargc = gargc;
@@ -150,8 +148,8 @@ acollect(char *as)
 		sort();
 }
 
-static void
-sort()
+void
+sort(void)
 {
 	char **p1;
 	char **p2;
@@ -169,7 +167,7 @@ sort()
 	sortbas = Gvp;
 }
 
-static void
+void
 expand(char *as)
 {
 	char *cs;
@@ -219,12 +217,12 @@ expand(char *as)
 		return;
 	}
 	matchdir(cs);
- endit:
+endit:
 	gpathp = sgpathp;
 	*gpathp = 0;
 }
 
-static void
+void
 matchdir(char *pattern)
 {
 	struct stat stb;
@@ -272,11 +270,11 @@ matchdir(char *pattern)
 			if (globerr != 0)
 				goto out;
 		}
- out:
+out:
 	closedir(dirp);
 }
 
-static int
+int
 execbrc(char *p, char *s)
 {
 	char restbuf[BUFSIZ + 2];
@@ -310,7 +308,7 @@ execbrc(char *p, char *s)
 			}
 			continue;
 		}
- pend:
+pend:
 	if (brclev || !*pe) {
 		globerr = IWC;
 		errstring = "Missing } in wild card syntax";
@@ -364,7 +362,7 @@ execbrc(char *p, char *s)
 	return (0);
 }
 
-static int
+int
 match(char *s, char *p)
 {
 	int c;
@@ -384,7 +382,7 @@ match(char *s, char *p)
 	return (c);
 }
 
-static int
+int
 amatch(char *s, char *p)
 {
 	int scc;
@@ -469,7 +467,7 @@ amatch(char *s, char *p)
 	}
 }
 
-static void
+void
 Gcat(char *s1, char *s2)
 {
 	if (gargc == gargmax) {
@@ -490,7 +488,7 @@ Gcat(char *s1, char *s2)
 	}
 }
 
-static void
+void
 addpath(char c)
 {
 	if (gpathp >= lastgpathp) {
@@ -502,8 +500,8 @@ addpath(char c)
 	}
 }
 
-static void
-rscan(char **t, int (*f)(char))
+void
+rscan(char **t, int (*f) (char))
 {
 	char *p;
 	char c;
@@ -516,11 +514,11 @@ rscan(char **t, int (*f)(char))
 				continue;
 		}
 		while ((c = *p++))
-			(*f)(c);
+			(*f) (c);
 	}
 }
 
-static int
+int
 tglob(char c)
 {
 	if (any(c, globchars))
@@ -580,7 +578,7 @@ blkfree(char **av0)
 	free((char *) av0);
 }
 
-static char *
+char *
 strspl(char *cp, char *dp)
 {
 	char *ep = malloc((unsigned) (strlen(cp) + strlen(dp) + 1));
@@ -621,9 +619,8 @@ copyblk(char **v)
 	return nv;
 }
 
-static char *
-strend(cp)
-	char *cp;
+char *
+strend(char *cp)
 {
 	while (*cp)
 		cp++;

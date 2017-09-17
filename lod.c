@@ -79,7 +79,8 @@ struct {
 	{"A-V-LINEAR-BIND-PDL-AREA", 0, 0},
 	{"A-V-INIT-LIST-AREA", 0, 0},
 	{"A-V-FIRST-UNFIXED-AREA", 0, 0},
-	{(char *) 0, 0, 0}};
+	{(char *) 0, 0, 0}
+};
 
 struct {
 	char *name;
@@ -370,7 +371,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	printf("%011o%c %06o %s ", loc, even ? 'e' : 'o', inst, op_names[op]);
 
 	switch (op) {
-	case 0:			// CALL
+	case 0:		// CALL
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
@@ -396,10 +397,10 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			}
 		}
 		break;
-	case 2:			// MOVE.
-	case 3:			// CAR
-	case 4:			// CDR.
-	case 5:			// CADR.
+	case 2:		// MOVE.
+	case 3:		// CAR
+	case 4:		// CDR.
+	case 5:		// CADR.
 		printf("reg %s, ", reg_names[reg]);
 		printf("dest %s, ", dest_names[dest]);
 		printf("delta %o ", delta);
@@ -445,7 +446,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	}
 	printf("\n");
 }
-
 
 int
 find_and_dump_fef(unsigned int pc)

@@ -1,3 +1,6 @@
+#ifndef USIM_FILES_H
+#define USIM_FILES_H
+
 // Protocol errors.
 struct file_error {
 	char *e_code;		// Standard three letter code.
@@ -145,6 +148,10 @@ struct file_error errors[48]
 extern char errtype;		// Error type if not E_COMMAND.
 extern char *errstring;		// Error message if non-standard.
 #define ERRSIZE 100
-extern char errbuf[ERRSIZE + 1]; // Buffer for building error messages.
-extern int globerr;		 // Error return from glob().
-void settreeroot(const char *root);
+extern char errbuf[ERRSIZE + 1];	// Buffer for building error messages.
+extern int globerr;		// Error return from glob().
+
+extern void settreeroot(const char *root);
+extern int dcanon(char *cp, int blankok);
+
+#endif

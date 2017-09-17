@@ -8,109 +8,68 @@
 //
 // (and then, they ate all the clams :-)
 
-#include "usim.h"
-
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <unistd.h>
 
+#include "usim.h"
 #include "ucode.h"
+#include "mem.h"
+#include "iob.h"
+#include "tv.h"
+#include "uart.h"
+#include "chaos.h"
+#include "disk.h"
 
-extern ucw_t prom_ucode[512];
+ucw_t prom_ucode[512];
 
 ucw_t ucode[16 * 1024];
 unsigned int a_memory[1024];
-static unsigned int m_memory[32];
-static unsigned int dispatch_memory[2048];
+unsigned int m_memory[32];
+unsigned int dispatch_memory[2048];
 
-static unsigned int pdl_memory[1024];
+unsigned int pdl_memory[1024];
 int pdl_ptr;
 int pdl_index;
 
 int lc;
 
-static int spc_stack[32];
+int spc_stack[32];
 int spc_stack_ptr;
-
-struct page_s {
-	unsigned int w[256];
-};
-
-static struct page_s *phy_pages[16 * 1024];
-static int l1_map[2048];
-static int l2_map[1024];
 
 unsigned long cycles;
 
 int u_pc;
-static int page_fault_flag;
-static int interrupt_pending_flag;
-static int interrupt_status_reg;
 
-static int sequence_break_flag;
-static int interrupt_enable_flag;
-static int lc_byte_mode_flag;
-static int bus_reset_flag;
+int page_fault_flag;
+int interrupt_pending_flag;
+int interrupt_status_reg;
 
-int prom_enabled_flag;
-int stop_after_prom_flag;
-int run_ucode_flag;
-int warm_boot_flag;
-extern int save_state_flag;
+int sequence_break_flag;
+int interrupt_enable_flag;
+int lc_byte_mode_flag;
+int bus_reset_flag;
 
 unsigned int md;
 unsigned int vma;
 unsigned int q;
 unsigned int opc;
 
-static unsigned int new_md;
-static int new_md_delay;
+unsigned int new_md;
+int new_md_delay;
 
-static int write_fault_bit;
-static int access_fault_bit;
+int write_fault_bit;
+int access_fault_bit;
 
-static int alu_carry;
-static unsigned int alu_out;
+int alu_carry;
+unsigned int alu_out;
 
-static unsigned int oa_reg_lo;
-static unsigned int oa_reg_hi;
-static int oa_reg_lo_set;
-static int oa_reg_hi_set;
+unsigned int oa_reg_lo;
+unsigned int oa_reg_hi;
+int oa_reg_lo_set;
+int oa_reg_hi_set;
 
-static int interrupt_control;
-static unsigned int dispatch_constant;
+int interrupt_control;
+unsigned int dispatch_constant;
 
-static int phys_ram_pages = 8192;	// 2 MW.
-
-int restore_state(void);
-
-extern void video_read(int offset, unsigned int *pv);
-extern void video_write(int offset, unsigned int bits);
-extern void iob_unibus_read(int offset, int *pv);
-extern void iob_unibus_write(int offset, int v);
-extern void disk_xbus_read(int offset, unsigned int *pv);
-extern void disk_xbus_write(int offset, unsigned int v);
-extern void tv_xbus_read(int offset, unsigned int *pv);
-extern void tv_xbus_write(int offset, unsigned int v);
-extern void uart_xbus_read(int, unsigned int *);
-extern void uart_xbus_write(int, unsigned int);
-
-extern void iob_poll();
-extern void disk_poll();
-extern void display_poll();
-extern void chaos_poll();
-
-// ---!!! Should expose this some other way.
-int
-get_u_pc(void)
-{
-	return u_pc;
-}
-
 void
 set_interrupt_status_reg(int new)
 {
@@ -155,174 +114,6 @@ deassert_xbus_interrupt(void)
 	}
 }
 
-unsigned int last_virt = 0xffffff00;
-unsigned int last_l1;
-unsigned int last_l2;
-
-static inline void
-invalidate_vtop_cache(void)
-{
-	last_virt = 0xffffff00;
-}
-
-// Map virtual address to physical address, possibly returning l1
-// mapping and possibly returning offset into page.
-static inline unsigned int
-map_vtop(unsigned int virt, int *pl1_map, int *poffset)
-{
-	int l1_index;
-	int l2_index;
-	int l1;
-	unsigned int l2;
-
-	virt &= 077777777;	// 24 bit address.
-
-	// Frame buffer.
-	if ((virt & 077700000) == 077000000) {
-		if (virt >= 077051757 && virt <= 077051763) {
-			traceio("disk run light\n");
-		}
-		if (poffset)
-			*poffset = virt & 0377;
-		return (1 << 22) | (1 << 23) | 036000;
-	}
-
-	// Color.
-	if ((virt & 077700000) == 077200000) {
-		if (poffset)
-			*poffset = virt & 0377;
-		return (1 << 22) | (1 << 23) | 036000;
-	}
-
-	// This should be moved below - I'm not sure it has to happen
-	// anymore.
-	if ((virt & 077777400) == 077377400) {
-		if (poffset)
-			*poffset = virt & 0377;
-		return (1 << 22) | (1 << 23) | 036777;
-	}
-
-	// 11 bit L1 index.
-	l1_index = (virt >> 13) & 03777;
-	l1 = l1_map[l1_index] & 037;
-	if (pl1_map)
-		*pl1_map = l1;
-
-	// 10 bit L2 index.
-	l2_index = (l1 << 5) | ((virt >> 8) & 037);
-	l2 = l2_map[l2_index];
-
-	if (poffset)
-		*poffset = virt & 0377;
-
-	last_virt = virt & 0xffffff00;
-	last_l1 = l1;
-	last_l2 = l2;
-
-	return l2;
-}
-
-char *page_block;
-int page_block_count;
-
-struct page_s *
-new_page(void)
-{
-	struct page_s *page;
-
-	if (page_block == 0) {
-		page_block = malloc(sizeof(struct page_s) * 1024);
-		page_block_count = 1024;
-	}
-
-	page = (struct page_s *) page_block;
-
-	page_block += sizeof(struct page_s);
-	page_block_count--;
-
-	if (page_block_count == 0)
-		page_block = 0;
-
-	return page;
-}
-
-// Add a new physical memory page, generally in response to L2 mapping
-// (but can also be due to physical access to RAM).
-int
-add_new_page_no(int pn)
-{
-	struct page_s *page;
-
-	page = phy_pages[pn];
-	if (page == 0) {
-		page = new_page();
-		if (page) {
-			phy_pages[pn] = page;
-			return 0;
-		}
-	}
-	return -1;
-}
-
-// Read physical memory, with no virtual-to-physical mapping (used by
-// disk controller).
-int
-read_phy_mem(int paddr, unsigned int *pv)
-{
-	int pn;
-	int offset;
-	struct page_s *page;
-
-	pn = paddr >> 8;
-	offset = paddr & 0377;
-
-	page = phy_pages[pn];
-	if (page == 0) {
-		// Page does not exist.
-		if (pn < phys_ram_pages) {
-			tracef("[read_phy_mem] adding phy ram page %o (address %o)\n", pn, paddr);
-			add_new_page_no(pn);
-			page = phy_pages[pn];
-		} else {
-			printf("[read_phy_mem] address %o does not exist\n", paddr);
-			return -1;
-		}
-	}
-
-	*pv = page->w[offset];
-
-	return 0;
-}
-
-int
-write_phy_mem(int paddr, unsigned int v)
-{
-	int pn;
-	int offset;
-	struct page_s *page;
-
-	pn = paddr >> 8;
-	offset = paddr & 0377;
-
-	page = phy_pages[pn];
-	if (page == 0) {
-		// Page does not exist - add it (probably result of
-		// disk write).
-		if (pn < phys_ram_pages) {
-			tracef("[write_phy_mem] adding phy ram page %o (address %o)\n", pn, paddr);
-			add_new_page_no(pn);
-			page = phy_pages[pn];
-		} else {
-			printf("[write_phy_mem] address %o does not exist\n", paddr);
-			return -1;
-		}
-	}
-
-	page->w[offset] = v;
-
-	return 0;
-}
-
 // ---!!! read_mem, write_mem: Document each address.
 
 // Read virtual memory, returns -1 on fault and 0 if OK.
@@ -352,7 +143,8 @@ read_mem(int vaddr, unsigned int *pv)
 		return -1;
 	}
 
-	if (pn < 020000 && (page = phy_pages[pn])) {
+	page = phy_pages[pn];
+	if (pn < 020000 && page) {
 		*pv = page->w[offset];
 		return 0;
 	}
@@ -370,7 +162,7 @@ read_mem(int vaddr, unsigned int *pv)
 			return 0;
 		}
 		offset = vaddr & 077777;
-		video_read(offset, pv);
+		tv_read(offset, pv);
 		return 0;
 	}
 
@@ -397,11 +189,11 @@ read_mem(int vaddr, unsigned int *pv)
 
 	// Disk & TV controller on XBUS.
 	if (pn == 036777) {
-		if (offset >= 0370) { // Disk.
+		if (offset >= 0370) {	// Disk.
 			disk_xbus_read(offset, pv);
 			return 0;
 		}
-		if (offset == 0360) { // TV.
+		if (offset == 0360) {	// TV.
 			tv_xbus_read(offset, pv);
 			return 0;
 		}
@@ -416,7 +208,8 @@ read_mem(int vaddr, unsigned int *pv)
 	}
 
 	// Page fault.
-	if ((page = phy_pages[pn]) == 0) {
+	page = phy_pages[pn];
+	if (page == 0) {
 		page_fault_flag = 1;
 		opc = pn;
 		tracef("read_mem(vaddr=%o) page fault\n", vaddr);
@@ -463,7 +256,8 @@ write_mem(int vaddr, unsigned int v)
 		return -1;
 	}
 
-	if (pn < 020000 && (page = phy_pages[pn])) {
+	page = phy_pages[pn];
+	if (pn < 020000 && page) {
 		page->w[offset] = v;
 		return 0;
 	}
@@ -474,7 +268,7 @@ write_mem(int vaddr, unsigned int v)
 			return 0;
 		}
 		offset = vaddr & 077777;
-		video_write(offset, v);
+		tv_write(offset, v);
 		return 0;
 	}
 
@@ -563,7 +357,8 @@ write_mem(int vaddr, unsigned int v)
 		printf("??: reg write vaddr %o, pn %o, offset %o, v %o; u_pc %o\n", vaddr, pn, offset, v, u_pc);
 	}
 
-	if ((page = phy_pages[pn]) == 0) {
+	page = phy_pages[pn];
+	if (page == 0) {
 		// Page fault.
 		page_fault_flag = 1;
 		opc = pn;
@@ -574,14 +369,7 @@ write_mem(int vaddr, unsigned int v)
 	return 0;
 }
 
-static inline void
-write_ucode(int addr, ucw_t w)
-{
-	tracef("u-code write; %Lo @ %o\n", w, addr);
-	ucode[addr] = w;
-}
-
-static inline void
+void
 write_a_mem(int loc, unsigned int v)
 {
 	a_memory[loc] = v;
@@ -593,7 +381,7 @@ read_a_mem(int loc)
 	return a_memory[loc];
 }
 
-static inline unsigned int
+unsigned int
 read_m_mem(int loc)
 {
 	if (loc > 32) {
@@ -603,7 +391,7 @@ read_m_mem(int loc)
 	return m_memory[loc];
 }
 
-static inline void
+void
 write_m_mem(int loc, unsigned int v)
 {
 	m_memory[loc] = v;
@@ -634,7 +422,7 @@ write_pdl_mem(int which, unsigned int v)
 	}
 }
 
-static inline unsigned int
+unsigned int
 rotate_left(unsigned int value, int bitstorotate)
 {
 	unsigned int tmp;
@@ -652,14 +440,14 @@ rotate_left(unsigned int value, int bitstorotate)
 	return (value << bitstorotate) | tmp;
 }
 
-static inline void
+void
 push_spc(int pc)
 {
 	spc_stack_ptr = (spc_stack_ptr + 1) & 037;
 	spc_stack[spc_stack_ptr] = pc;
 }
 
-static inline int
+int
 pop_spc(void)
 {
 	unsigned int v;
@@ -676,7 +464,7 @@ advance_lc(int *ppc)
 {
 	int old_lc;
 
-	old_lc = lc & 0377777777; // LC is 26 bits.
+	old_lc = lc & 0377777777;	// LC is 26 bits.
 
 	if (lc_byte_mode_flag) {
 		lc++;		// Byte mode.
@@ -706,9 +494,8 @@ advance_lc(int *ppc)
 
 		// This is ugly, but follows the hardware logic (I
 		// need to distill it to intent but it seems correct).
-		lc0b =
-			(lc_byte_mode_flag ? 1 : 0) & // Byte mode.
-			((lc & 1) ? 1 : 0);	      // LC0.
+		lc0b = (lc_byte_mode_flag ? 1 : 0) &	// Byte mode.
+			((lc & 1) ? 1 : 0);	// LC0.
 		lc1 = (lc & 2) ? 1 : 0;
 		last_byte_in_word = (~lc0b & ~lc1) & 1;
 		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n", lc0b, lc1, last_byte_in_word);
@@ -728,7 +515,7 @@ write_dest(int dest, unsigned int out_bus)
 	}
 
 	switch (dest >> 5) {
-	case 1:			// LC (location counter) 26 bits.
+	case 1:		// LC (location counter) 26 bits.
 		tracef("writing LC <- %o\n", out_bus);
 		lc = (lc & ~0377777777) | (out_bus & 0377777777);
 
@@ -743,7 +530,7 @@ write_dest(int dest, unsigned int out_bus)
 		// Set NEED-FETCH.
 		lc |= (1 << 31);
 		break;
-	case 2:			// Interrrupt Control <29-26>.
+	case 2:		// Interrrupt Control <29-26>.
 		tracef("writing IC <- %o\n", out_bus);
 		interrupt_control = out_bus;
 
@@ -768,7 +555,7 @@ write_dest(int dest, unsigned int out_bus)
 			traceint("ic: lc byte mode\n");
 		}
 
-		lc = (lc & ~(017 << 26)) | // Preserve flags.
+		lc = (lc & ~(017 << 26)) |	// Preserve flags.
 			(interrupt_control & (017 << 26));
 		break;
 	case 010:		// PDL (addressed by pointer)
@@ -808,13 +595,13 @@ write_dest(int dest, unsigned int out_bus)
 	case 020:		// VMA register (memory address).
 		vma = out_bus;
 		break;
-	case 021:	      // VMA register, start main memory read.
+	case 021:		// VMA register, start main memory read.
 		vma = out_bus;
 		if (read_mem(vma, &new_md)) {
 		}
 		new_md_delay = 2;
 		break;
-	case 022:	     // VMA register, start main memory write.
+	case 022:		// VMA register, start main memory write.
 		vma = out_bus;
 		write_mem(vma, md);
 		break;
@@ -875,86 +662,6 @@ write_dest(int dest, unsigned int out_bus)
 	write_m_mem(dest & 037, out_bus);
 }
 
-
-#define PAGES_TO_SAVE 8192
-int restored;
-
-int
-restore_state(void)
-{
-	int fd;
-	ssize_t ret;
-	unsigned char version[2];
-
-	if (restored)
-		return 0;
-	restored = 1;
-
-	fd = open("usim.state", O_RDONLY);
-	if (fd < 0)
-		return -1;
-
-	ret = read(fd, version, 2);
-	if (ret < 0 || version[0] != 0 || version[1] != 1) {
-		close(fd);
-		return -1;
-	}
-
-	for (int i = 0; i < PAGES_TO_SAVE; i++) {
-		add_new_page_no(i);
-		ret = read(fd, (char *) phy_pages[i], sizeof(struct page_s));
-		if (ret < 0) {
-			close(fd);
-			return -1;
-		}
-
-#ifdef __BIG_ENDIAN__
-		_swaplongbytes((unsigned int *) phy_pages[i], 256);
-#endif
-	}
-	close(fd);
-	printf("memory state restored\n");
-
-	return 0;
-}
-
-int
-save_state(void)
-{
-	int fd;
-	ssize_t ret;
-	unsigned char version[2];
-
-	fd = open("usim.state", O_RDWR | O_CREAT, 0666);
-	if (fd < 0)
-		return -1;
-
-	version[0] = 0;
-	version[1] = 1;
-
-	ret = write(fd, version, 2);
-	if (ret < 0) {
-		close(fd);
-		return -1;
-	}
-
-	for (int i = 0; i < PAGES_TO_SAVE; i++) {
-#ifdef __BIG_ENDIAN__
-		_swaplongbytes((unsigned int *) phy_pages[i], 256);
-#endif
-
-		ret = write(fd, (char *) phy_pages[i], sizeof(struct page_s));
-		if (ret < 0) {
-			close(fd);
-			return -1;
-		}
-	}
-	close(fd);
-	printf("memory state saved\n");
-
-	return 0;
-}
-
 // For 32-bit integers, (A + B) & (1 << 32) will always be
 // zero.  Without resorting to 64-bit arithmetic, you can find the
 // carry by B > ~A.  How does it work? ~A (the complement of A) is the
@@ -977,8 +684,6 @@ run(void)
 	char no_exec_next;
 
 	u_pc = 0;
-	prom_enabled_flag = 1;
-	run_ucode_flag = 1;
 
 	p1 = 0;
 	p0_pc = 0;
@@ -1041,7 +746,7 @@ run(void)
 		disk_poll();
 
 		if ((cycles & 0x0ffff) == 0) {
-			display_poll();
+			tv_poll();
 			chaos_poll();
 		}
 
@@ -1097,7 +802,7 @@ run(void)
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
 
-		a_src_value = read_a_mem(a_src); // Get A source value.
+		a_src_value = read_a_mem(a_src);	// Get A source value.
 
 		// Calculate M source value.
 		if (m_src & 040) {
@@ -1166,7 +871,7 @@ run(void)
 
 		// Decode isntruction.
 		switch (op_code = (u >> 43) & 03) {
-		case 0:		// ALU
+		case 0:	// ALU
 
 			// NOP short cut.
 			if ((u & NOP_MASK) == 0) {
@@ -1212,7 +917,7 @@ run(void)
 				alu_out = (unsigned int) lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
-			case 026: // [M-A-1] [SUB]
+			case 026:	// [M-A-1] [SUB]
 				sub32(m_src_value, a_src_value, carry_in, alu_out, alu_carry);
 				break;
 			case 027:
@@ -1225,7 +930,7 @@ run(void)
 				alu_out = (unsigned int) lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
-			case 031: // [ADD] [M+A+1]
+			case 031:	// [ADD] [M+A+1]
 				add32(m_src_value, a_src_value, carry_in, alu_out, alu_carry);
 				break;
 			case 032:
@@ -1238,7 +943,7 @@ run(void)
 				alu_out = (unsigned int) lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
-			case 034: // [M+1]
+			case 034:	// [M+1]
 				alu_out = m_src_value + (carry_in ? 1 : 0);
 				alu_carry = 0;
 				if (m_src_value == 0xffffffff && carry_in)
@@ -1254,62 +959,62 @@ run(void)
 				alu_out = (unsigned int) lv;
 				alu_carry = (lv >> 32) ? 1 : 0;
 				break;
-			case 037: // [M+M] [M+M+1]
+			case 037:	// [M+M] [M+M+1]
 				add32(m_src_value, m_src_value, carry_in, alu_out, alu_carry);
 				break;
 
 				// Boolean.
-			case 000: // [SETZ]
+			case 000:	// [SETZ]
 				alu_out = 0;
 				break;
-			case 001: // [AND]
+			case 001:	// [AND]
 				alu_out = m_src_value & a_src_value;
 				break;
-			case 002: // [ANDCA]
+			case 002:	// [ANDCA]
 				alu_out = m_src_value & ~a_src_value;
 				break;
-			case 003: // [SETM]
+			case 003:	// [SETM]
 				alu_out = m_src_value;
 				break;
-			case 004: // [ANDCM]
+			case 004:	// [ANDCM]
 				alu_out = ~m_src_value & a_src_value;
 				break;
-			case 005: // [SETA]
+			case 005:	// [SETA]
 				alu_out = a_src_value;
 				break;
-			case 006: // [XOR]
+			case 006:	// [XOR]
 				alu_out = m_src_value ^ a_src_value;
 				break;
-			case 007: // [IOR]
+			case 007:	// [IOR]
 				alu_out = m_src_value | a_src_value;
 				break;
-			case 010: // [ANDCB]
+			case 010:	// [ANDCB]
 				alu_out = ~a_src_value & ~m_src_value;
 				break;
-			case 011: // [EQV]
+			case 011:	// [EQV]
 				alu_out = a_src_value == m_src_value;
 				break;
-			case 012: // [SETCA]
+			case 012:	// [SETCA]
 				alu_out = ~a_src_value;
 				break;
-			case 013: // [ORCA]
+			case 013:	// [ORCA]
 				alu_out = m_src_value | ~a_src_value;
 				break;
-			case 014: // [SETCM]
+			case 014:	// [SETCM]
 				alu_out = ~m_src_value;
 				break;
-			case 015: // [ORCM]
+			case 015:	// [ORCM]
 				alu_out = ~m_src_value | a_src_value;
 				break;
-			case 016: // [ORCB]
+			case 016:	// [ORCB]
 				alu_out = ~m_src_value | ~a_src_value;
 				break;
-			case 017: // [SETO]
+			case 017:	// [SETO]
 				alu_out = ~0;
 				break;
 
 				// Conditioanl ALU operation.
-			case 040: // Multiply step
+			case 040:	// Multiply step
 				do_add = q & 1;
 				if (do_add) {
 					add32(a_src_value, m_src_value, carry_in, alu_out, alu_carry);
@@ -1318,7 +1023,7 @@ run(void)
 					alu_carry = alu_out & 0x80000000 ? 1 : 0;
 				}
 				break;
-			case 041: // Divide step
+			case 041:	// Divide step
 				do_sub = q & 1;
 				tracef("do_sub %d\n", do_sub);
 				if (do_sub) {
@@ -1327,7 +1032,7 @@ run(void)
 					add32(m_src_value, a_src_value, carry_in, alu_out, alu_carry);
 				}
 				break;
-			case 045: // Remainder correction
+			case 045:	// Remainder correction
 				do_sub = q & 1;
 				tracef("do_sub %d\n", do_sub);
 				if (do_sub) {
@@ -1336,7 +1041,7 @@ run(void)
 					add32(alu_out, a_src_value, carry_in, alu_out, alu_carry);
 				}
 				break;
-			case 051: // Initial divide step
+			case 051:	// Initial divide step
 				tracef("divide-first-step\n");
 				tracef("divide: %o / %o \n", q, a_src_value);
 				sub32(m_src_value, a_src_value, !carry_in, alu_out, alu_carry);
@@ -1388,7 +1093,7 @@ run(void)
 			write_dest(dest, out_bus);
 			tracef("alu_out 0x%08x, alu_carry %d, q 0x%08x\n", alu_out, alu_carry, q);
 			break;
-		case 1:		// JUMP
+		case 1:	// JUMP
 			new_pc = (u >> 12) & 037777;
 			tracef("a=%o (%o), m=%o (%o)\n", a_src, a_src_value, m_src, m_src_value);
 			r_bit = (u >> 9) & 1;
@@ -1456,11 +1161,11 @@ run(void)
 				else
 					push_spc(u_pc - 1);
 			}
-
 			// P & R & jump-inst -> write ucode.
 			if (p_bit && r_bit && op_code == 1) {
 				w = ((ucw_t) (a_src_value & 0177777) << 32) | (unsigned int) m_src_value;
-				write_ucode(new_pc, w);
+				tracef("u-code write; %Lo @ %o\n", w, new_pc);
+				ucode[new_pc] = w;
 			}
 			if (r_bit && take_jump) {
 				new_pc = pop_spc();
@@ -1477,7 +1182,7 @@ run(void)
 				popj = 0;
 			}
 			break;
-		case 2:		// DISPATCH.
+		case 2:	// DISPATCH.
 			disp_const = (u >> 32) & 01777;
 			n_plus1 = (u >> 25) & 1;
 			enable_ish = (u >> 24) & 1;
@@ -1516,7 +1221,6 @@ run(void)
 					tracef("16b-mode, pos %o\n", pos);
 				}
 			}
-
 			// Misc. function 2.
 			if (((u >> 10) & 3) == 2) {
 				tracef("dispatch_memory[%o] <- %o\n", disp_addr, a_src_value);
@@ -1570,7 +1274,7 @@ run(void)
 			disp_addr = dispatch_memory[disp_addr];
 			dispatch_constant = disp_const;
 
-			new_pc = disp_addr & 037777; // 14 bits.
+			new_pc = disp_addr & 037777;	// 14 bits.
 
 			n_bit = (disp_addr >> 14) & 1;
 			p_bit = (disp_addr >> 15) & 1;
@@ -1590,7 +1294,6 @@ run(void)
 			if (enable_ish) {
 				advance_lc((int *) 0);
 			}
-
 			// Fall through on dispatch.
 			if (p_bit && r_bit) {
 				if (n_bit)
@@ -1600,7 +1303,7 @@ run(void)
 			goto process_jump;
 		dispatch_done:
 			break;
-		case 3:		// BYTE.
+		case 3:	// BYTE.
 			dest = (u >> 14) & 07777;
 			mr_sr_bits = (u >> 12) & 3;
 			tracef("a=%o (%o), m=%o (%o), dest=%o\n", a_src, a_src_value, m_src, m_src_value, dest);
@@ -1663,17 +1366,17 @@ run(void)
 			case 0:
 				printf("mr_sr_bits == 0!\n");
 				break;
-			case 1: // LDB.
+			case 1:	// LDB.
 				tracef("ldb; m %o\n", m_src_value);
 				m_src_value = rotate_left(m_src_value, pos);
 				out_bus = (m_src_value & mask) | (a_src_value & ~mask);
 				tracef("ldb; m-rot %o, mask %o, result %o\n", m_src_value, mask, out_bus);
 				break;
-			case 2: // Selective deposit.
+			case 2:	// Selective deposit.
 				out_bus = (m_src_value & mask) | (a_src_value & ~mask);
 				tracef("sel-dep; a %o, m %o, mask %o -> %o\n", a_src_value, m_src_value, mask, out_bus);
 				break;
-			case 3: // DPB.
+			case 3:	// DPB.
 				tracef("dpb; m %o, pos %o\n", m_src_value, pos);
 				// Mask is already rotated.
 				m_src_value = rotate_left(m_src_value, pos);

@@ -13,44 +13,24 @@
 
 // ---!!! Order this into proper sections: IOB, Mouse, TV, ...
 
-#include "usim.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <signal.h>
 #include <sys/time.h>
 
+#include "usim.h"
 #include "ucode.h"
+#include "kbd.h"
+#include "mouse.h"
 #include "chaos.h"
 
-unsigned int iob_key_scan;
-unsigned int iob_kbd_csr;
-
-int mouse_x;
-int mouse_y;
-int mouse_head;
-int mouse_middle;
-int mouse_tail;
-int mouse_rawx;
-int mouse_rawy;
-int mouse_poll_delay;
-
-// Location in A memory of microcode mouse state.
-static int mouse_sync_amem_x;
-static int mouse_sync_amem_y;
-
-extern int mouse_sync_flag;
-
-extern int get_u_pc();
-extern unsigned int read_a_mem(int loc);
-extern int sym_find(int mcr, char *name, int *pval);
+unsigned int iob_csr;
 
 void tv_post_60hz_interrupt(void);
-void chaos_xmit_pkt(void);
 
 unsigned long
-get_us_clock()
+get_us_clock(void)
 {
 	unsigned long v;
 	static struct timeval tv;
@@ -103,42 +83,35 @@ iob_unibus_read(int offset, int *pv)
 
 	switch (offset) {
 	case 0100:
-		*pv = iob_key_scan & 0177777;
+		*pv = kbd_key_scan & 0177777;
 		traceio("unibus: kbd low %011o\n", *pv);
-		iob_kbd_csr &= ~(1 << 5); // Clear CSR<5>.
+		iob_csr &= ~(1 << 5);	// Clear CSR<5>.
 		break;
 	case 0102:
-		*pv = (iob_key_scan >> 16) & 0177777;
+		*pv = (kbd_key_scan >> 16) & 0177777;
 		traceio("unibus: kbd high %011o\n", *pv);
-		iob_kbd_csr &= ~(1 << 5); // Clear CSR<5>.
+		iob_csr &= ~(1 << 5);	// Clear CSR<5>.
 		break;
 	case 0104:
-		*pv =
-			(mouse_tail << 12) |
-			(mouse_middle << 13) |
-			(mouse_head << 14) |
-			(mouse_y & 07777);
+		*pv = (mouse_tail << 12) | (mouse_middle << 13) | (mouse_head << 14) | (mouse_y & 07777);
 		traceio("unibus: mouse y %011o\n", *pv);
 
 		mouse_tail = 0;
 		mouse_middle = 0;
 		mouse_head = 0;
 
-		iob_kbd_csr &= ~(1 << 4); // Clear CSR<4>.
+		iob_csr &= ~(1 << 4);	// Clear CSR<4>.
 		break;
 	case 0106:
-		*pv =
-			(mouse_rawx << 12) |
-			(mouse_rawy << 14) |
-			(mouse_x & 07777);
+		*pv = (mouse_rawx << 12) | (mouse_rawy << 14) | (mouse_x & 07777);
 		traceio("unibus: mouse x %011o\n", *pv);
 		break;
 	case 0110:
 		traceio("unibus: beep\n");
-		fprintf(stderr, "\a"); // Beep!
+		fprintf(stderr, "\a");	// Beep!
 		break;
 	case 0112:
-		*pv = iob_kbd_csr;
+		*pv = iob_csr;
 		traceio("unibus: kbd csr %011o\n", *pv);
 		break;
 	case 0120:
@@ -202,7 +175,7 @@ iob_unibus_write(int offset, int v)
 		break;
 	case 0112:
 		traceio("unibus: kbd csr\n");
-		iob_kbd_csr = (iob_kbd_csr & ~017) | (v & 017);
+		iob_csr = (iob_csr & ~017) | (v & 017);
 		break;
 	case 0120:
 		traceio("unibus: usec clock\n");
@@ -214,11 +187,7 @@ iob_unibus_write(int offset, int v)
 		printf("unibus: START 60hz clock\n");
 		break;
 	case 0140:
-		traceio("unibus: chaos write %011o, u_pc %011o ", v, get_u_pc());
-#ifdef CHAOS_DEBUG
-		show_label_closest(get_u_pc());
-		printf("\n");
-#endif
+		traceio("unibus: chaos write %011o\n", v);
 		chaos_set_csr(v);
 		break;
 	case 0142:
@@ -233,104 +202,13 @@ iob_unibus_write(int offset, int v)
 }
 
 void
-iob_mouse_event(int x, int y, int buttons)
+iob_poll(void)
 {
-	iob_kbd_csr |= 1 << 4;
-	assert_unibus_interrupt(0264);
-
-	// Move mouse closer to where microcode thinks it is.
-	int mcx;
-	int mcy;
-	int dx;
-	int dy;
-
-	mcx = read_a_mem(mouse_sync_amem_x);
-	mcy = read_a_mem(mouse_sync_amem_y);
-
-	dx = x - mcx;
-	dy = y - mcy;
-	mouse_x += dx;
-	mouse_y += dy;
-
-	if (buttons & 4)
-		mouse_head = 1;
-	if (buttons & 2)
-		mouse_middle = 1;
-	if (buttons & 1)
-		mouse_tail = 1;
-}
-
-int tv_csr;
-
-void
-tv_xbus_read(int offset, unsigned int *pv)
-{
-	*pv = tv_csr;
-}
-
-void
-tv_xbus_write(int offset, unsigned int v)
-{
-	tv_csr = v;
-	tv_csr &= ~(1 << 4);
-	deassert_xbus_interrupt();
-}
-
-void
-tv_post_60hz_interrupt(void)
-{
-	tv_csr |= 1 << 4;
-	assert_xbus_interrupt();
-}
-
-void
-sigalrm_handler(int arg)
-{
-	tv_post_60hz_interrupt();
-}
-
-void
-iob_poll()
-{
-}
-
-void
-mouse_sync_init(void)
-{
-	int val;
-
-	// Defaults if we cannot find them in the symbol table.
-	mouse_sync_amem_x = 334; // A-MOUSE-CURSOR-X
-	mouse_sync_amem_y = 335; // A-MOUSE-CURSOR-Y
-
-	if (sym_find(1, "A-MOUSE-CURSOR-X", &val)) {
-		printf("can't find A-MOUSE-CURSOR-X in microcode symbols\n");
-	} else
-		mouse_sync_amem_x = val;
-
-	if (sym_find(1, "A-MOUSE-CURSOR-Y", &val)) {
-		printf("can't find A-MOUSE-CURSOR-Y in microcode symbols\n");
-	} else
-		mouse_sync_amem_y = val;
 }
 
 void
 iob_init(void)
 {
 	kbd_init();
-
 	mouse_sync_init();
-
-	{
-		struct itimerval itimer;
-		int usecs;
-		signal(SIGVTALRM, sigalrm_handler);
-		usecs = 16000;
-
-		itimer.it_interval.tv_sec = 0;
-		itimer.it_interval.tv_usec = usecs;
-		itimer.it_value.tv_sec = 0;
-		itimer.it_value.tv_usec = usecs;
-		setitimer(ITIMER_VIRTUAL, &itimer, 0);
-	}
 }

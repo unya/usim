@@ -401,5 +401,5 @@ char *call_names[] = {
 	"CAAR"
 };
 
-static int misc_inst_vector[1024];
-static int misc_inst_vector_setup;
+int misc_inst_vector[1024];
+int misc_inst_vector_setup;

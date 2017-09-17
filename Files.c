@@ -80,7 +80,7 @@ struct chpacket {
 int log_verbose = 0;
 int log_stderr_tofile = 0;
 
-static void
+void
 chaosfile_log(int level, char *fmt, ...)
 {
 	va_list ap;
@@ -102,13 +102,13 @@ chaosfile_log(int level, char *fmt, ...)
 // Chaosnet file protocol server. Written by JEK, Symbolics
 //
 // TODO:
-//	Performance hacking.
-//	More strict syntax checking in string()
-//	System notifications?
-//	Quoting, syntax checking
-//	Subroutines for error processing?
-//	Check for default match in prefix() to clean up complete().
-//	Cacheing user-id's for faster directory list etc.
+//      Performance hacking.
+//      More strict syntax checking in string()
+//      System notifications?
+//      Quoting, syntax checking
+//      Subroutines for error processing?
+//      Check for default match in prefix() to clean up complete().
+//      Cacheing user-id's for faster directory list etc.
 
 #define BIT(n) (1<<(n))
 #define NOLOGIN "/etc/nologin"
@@ -122,17 +122,17 @@ chaosfile_log(int level, char *fmt, ...)
 // OPEN-PROBES, completion, etc., while others relate to the action
 // of a transfer process (e.g. SET-BYTE-POINTER).
 struct xfer {
-	struct xfer *x_next;	     // Next in global list
-	struct xfer *x_runq;	     // Next in runnable list
-	char x_state;		     // TASK state
-	struct file_handle *x_fh;    // File handle of process
-	struct transaction *x_close; // Saved close transaction
-	long x_bytesize;	     // Bytesize for binary xfers
-	long x_options;		     // OPEN options flags
-	int x_flags;		     // Randome state bits
-	time_t x_atime;		     // Access time to restore
-	time_t x_mtime;		     // Mod time to restore
-	int x_fd;     // File descriptor of file being read or written
+	struct xfer *x_next;	// Next in global list
+	struct xfer *x_runq;	// Next in runnable list
+	char x_state;		// TASK state
+	struct file_handle *x_fh;	// File handle of process
+	struct transaction *x_close;	// Saved close transaction
+	long x_bytesize;	// Bytesize for binary xfers
+	long x_options;		// OPEN options flags
+	int x_flags;		// Randome state bits
+	time_t x_atime;		// Access time to restore
+	time_t x_mtime;		// Mod time to restore
+	int x_fd;		// File descriptor of file being read or written
 	char *x_dirname;	// dirname of filename
 	char *x_realname;	// filename
 	char *x_tempname;	// While writing
@@ -149,30 +149,30 @@ struct xfer {
 	pthread_mutex_t x_hangsem;
 	pthread_cond_t x_hangcond;
 	pthread_mutex_t x_xfersem;
-	struct transaction *x_work; // Queued transactions
+	struct transaction *x_work;	// Queued transactions
 } *xfers;
 
 #define XNULL ((struct xfer *)0)
 
 // Values for x_state.
-#define X_PROCESS 0	      // Work is in process - everything is ok
-#define X_DONE 1	      // Successful completion has occurred
+#define X_PROCESS 0		// Work is in process - everything is ok
+#define X_DONE 1		// Successful completion has occurred
 // Waiting to close normally
 
 // States for the input side only.
-#define X_BROKEN 2	     // Data connection disappeared on READ
-#define X_ABORT 3	     // Fatal error in reading. Awaiting CLOSE
-#define X_REOF 4	     // Read an EOF and sent all the data
-#define X_SEOF 5	     // Sent an EOF, awaiting FILEPOS or CLOSE
-#define X_IDLE 6	     // Waiting to start
-#define X_DERROR 7	     // Directory list error
+#define X_BROKEN 2		// Data connection disappeared on READ
+#define X_ABORT 3		// Fatal error in reading. Awaiting CLOSE
+#define X_REOF 4		// Read an EOF and sent all the data
+#define X_SEOF 5		// Sent an EOF, awaiting FILEPOS or CLOSE
+#define X_IDLE 6		// Waiting to start
+#define X_DERROR 7		// Directory list error
 
 // States for the output side only.
-#define X_RSYNC 8      // Received SYNCMARK, waiting for CLOSE
-#define X_WSYNC 9      // Transfer punted or EOF, waiting for SYNCMARK
-#define X_ERROR 10     // Hung after recoverable error
+#define X_RSYNC 8		// Received SYNCMARK, waiting for CLOSE
+#define X_WSYNC 9		// Transfer punted or EOF, waiting for SYNCMARK
+#define X_ERROR 10		// Hung after recoverable error
 // Waiting to continue or close abnormally
-#define X_RETRY 11 // After a continue, waiting to retry the recoverable operation.
+#define X_RETRY 11		// After a continue, waiting to retry the recoverable operation.
 
 // Values for x_flags
 #define X_EOF BIT(1)		// EOF has been read from network
@@ -186,12 +186,12 @@ struct xfer {
 // Created by the command parser (getcmd) and extant while the command is
 // in progress until it is done and responded to.
 struct transaction {
-	struct transaction *t_next;    // For queuing work on xfers
-	char *t_tid;		       // Id. for this transaction
-	struct file_handle *t_fh;      // File handle to use
-	struct command *t_command;     // Command to perform
-	struct cmdargs *t_args;	       // Args for this command
-	struct chaos_packet *t_packet; // packet that started transaction
+	struct transaction *t_next;	// For queuing work on xfers
+	char *t_tid;		// Id. for this transaction
+	struct file_handle *t_fh;	// File handle to use
+	struct command *t_command;	// Command to perform
+	struct cmdargs *t_args;	// Args for this command
+	struct chaos_packet *t_packet;	// packet that started transaction
 	struct chaos_connection *t_connection;
 };
 #define TNULL ((struct transaction *) 0)
@@ -200,20 +200,20 @@ struct transaction {
 // Used by the parser for argument syntax and holds the actual function
 // which performs the work.
 struct command {
-	char *c_name;		 // Command name
-	void (*c_func) ();	 // Function to call
-	int c_flags;		 // Various bits. See below
-	unsigned char *c_syntax; // Syntax description
+	char *c_name;		// Command name
+	void (*c_func) ();	// Function to call
+	int c_flags;		// Various bits. See below
+	unsigned char *c_syntax;	// Syntax description
 };
 #define CNULL ((struct command *)0)
 
 // Bit values for c_flags
-#define C_FHMUST BIT(0)	     // File handle must be present
-#define C_FHCANT BIT(1)	     // File handle can't be present
-#define C_FHINPUT BIT(2)     // File handle must be for input
-#define C_FHOUTPUT BIT(3)    // File handle must be for output
-#define C_XFER BIT(4)	     // Command should be queued on a transfer
-#define C_NOLOG BIT(5)	     // Command permitted when not logged in
+#define C_FHMUST BIT(0)		// File handle must be present
+#define C_FHCANT BIT(1)		// File handle can't be present
+#define C_FHINPUT BIT(2)	// File handle must be for input
+#define C_FHOUTPUT BIT(3)	// File handle must be for output
+#define C_XFER BIT(4)		// Command should be queued on a transfer
+#define C_NOLOG BIT(5)		// Command permitted when not logged in
 struct plist {
 	struct plist *p_next;
 	char *p_name;
@@ -224,12 +224,12 @@ struct plist {
 // Structure for each "file handle", essentially one side of a
 // bidirectional chaos "data connection".
 struct file_handle {
-	struct file_handle *f_next;  // Next on global list
-	char *f_name;		     // Identifier from user end
-	int f_type;		     // See below
-	int f_fd;		     // UNIX file descriptor
-	struct xfer *f_xfer;	     // Active xfer on this fh
-	struct file_handle *f_other; // Other fh of in/out pair
+	struct file_handle *f_next;	// Next on global list
+	char *f_name;		// Identifier from user end
+	int f_type;		// See below
+	int f_fd;		// UNIX file descriptor
+	struct xfer *f_xfer;	// Active xfer on this fh
+	struct file_handle *f_other;	// Other fh of in/out pair
 	struct chaos_connection *f_connection;
 } *file_handles;
 #define FNULL ((struct file_handle *)0)
@@ -240,37 +240,37 @@ struct file_handle {
 
 // Command options.
 struct option {
-	char *o_name;	   // Name of option
-	char o_type;	   // Type of value
-	long o_value;	   // Value of option
-	long o_cant;	   // Bit values of mutually exclusive options
+	char *o_name;		// Name of option
+	char o_type;		// Type of value
+	long o_value;		// Value of option
+	long o_cant;		// Bit values of mutually exclusive options
 };
 
 // Values for o_type
-#define O_BIT 0		       // Value is bit to turn on in a_options
-#define O_NUMBER 1	       // Value is (SP, NUM) following name
-#define O_EXISTS 2	       // Existence checking keywords
+#define O_BIT 0			// Value is bit to turn on in a_options
+#define O_NUMBER 1		// Value is (SP, NUM) following name
+#define O_EXISTS 2		// Existence checking keywords
 
 // Values for o_value for O_BIT
 #undef O_DIRECTORY
-#define O_READ BIT(0)	    // An open is for READing a file
-#define O_WRITE BIT(1)	    // An open is for WRITEing a file
-#define O_PROBE BIT(2)	    // An open is for PROBEing for existence
-#define O_CHARACTER BIT(3)  // Data will be character (lispm)
-#define O_BINARY BIT(4)	    // Binary data
-#define O_RAW BIT(5)	    // RAW character transfer - no translation
-#define O_SUPER BIT(6)	    // Super-image mode
-#define O_TEMPORARY BIT(7)  // An open file should be temporary
-#define O_DELETED BIT(8)    // Include DELETED files in DIRECTORY list
-#define O_OLD BIT(9)	  // Complete for an existing file in COMPLETE
-#define O_NEWOK BIT(10)	  // Complete for a possible new file
-#define O_DEFAULT BIT(11) // Choose character unless QFASL
-#define O_DIRECTORY BIT(12)  // Used internally - not a keyword option
-#define O_FAST BIT(13)	     // Fast directory list - no properties
-#define O_PRESERVE BIT(14) // Preserve reference dates - not implemented
-#define O_SORTED BIT(15)  // Return directory list sorted - we do this
-#define O_PROBEDIR BIT(16) // Probe is for the directory, not the file
-#define O_PROPERTIES BIT(17) // To distinguish PROPERTIES from DIRECTORY internally
+#define O_READ BIT(0)		// An open is for READing a file
+#define O_WRITE BIT(1)		// An open is for WRITEing a file
+#define O_PROBE BIT(2)		// An open is for PROBEing for existence
+#define O_CHARACTER BIT(3)	// Data will be character (lispm)
+#define O_BINARY BIT(4)		// Binary data
+#define O_RAW BIT(5)		// RAW character transfer - no translation
+#define O_SUPER BIT(6)		// Super-image mode
+#define O_TEMPORARY BIT(7)	// An open file should be temporary
+#define O_DELETED BIT(8)	// Include DELETED files in DIRECTORY list
+#define O_OLD BIT(9)		// Complete for an existing file in COMPLETE
+#define O_NEWOK BIT(10)		// Complete for a possible new file
+#define O_DEFAULT BIT(11)	// Choose character unless QFASL
+#define O_DIRECTORY BIT(12)	// Used internally - not a keyword option
+#define O_FAST BIT(13)		// Fast directory list - no properties
+#define O_PRESERVE BIT(14)	// Preserve reference dates - not implemented
+#define O_SORTED BIT(15)	// Return directory list sorted - we do this
+#define O_PROBEDIR BIT(16)	// Probe is for the directory, not the file
+#define O_PROPERTIES BIT(17)	// To distinguish PROPERTIES from DIRECTORY internally
 
 // Values for o_value for O_NUMBER
 #define O_BYTESIZE 0
@@ -283,26 +283,26 @@ struct option {
 #define O_MAXEXS 2
 
 // Values for O_EXISTS keywords
-#define O_XNONE 0	// Unspecified
-#define O_XNEWVERSION 1 // Increment version before writing new file
-#define O_XRENAME 2	// Rename before writing new file
-#define O_XRENDEL 3	// Rename, then delete before writing new file
-#define O_XOVERWRITE 4	// Smash the existing file
-#define O_XAPPEND 5	// Append to existing file
-#define O_XSUPERSEDE 6 // Don't clobber existing file until non-abort close
-#define O_XCREATE 7    // Create file is it doesn't exists
-#define O_XERROR 8     // Signal error
-#define O_XTRUNCATE 9  // Truncate as well as overwrite on open
+#define O_XNONE 0		// Unspecified
+#define O_XNEWVERSION 1		// Increment version before writing new file
+#define O_XRENAME 2		// Rename before writing new file
+#define O_XRENDEL 3		// Rename, then delete before writing new file
+#define O_XOVERWRITE 4		// Smash the existing file
+#define O_XAPPEND 5		// Append to existing file
+#define O_XSUPERSEDE 6		// Don't clobber existing file until non-abort close
+#define O_XCREATE 7		// Create file is it doesn't exists
+#define O_XERROR 8		// Signal error
+#define O_XTRUNCATE 9		// Truncate as well as overwrite on open
 
 // Structure of arguments to commands.
-#define MAXSTRINGS 3	   // Maximum # of string arguments in any cmd
-	struct cmdargs {
-		long a_options;		     // Option bits
-		char *a_strings[MAXSTRINGS]; // Random strings
-		char a_exists[O_MAXEXS];
-		long a_numbers[O_MAXNUMS]; // Random numbers
-		struct plist *a_plist;	   // Property list
-	};
+#define MAXSTRINGS 3		// Maximum # of string arguments in any cmd
+struct cmdargs {
+	long a_options;		// Option bits
+	char *a_strings[MAXSTRINGS];	// Random strings
+	char a_exists[O_MAXEXS];
+	long a_numbers[O_MAXNUMS];	// Random numbers
+	struct plist *a_plist;	// Property list
+};
 #define ANULL ((struct cmdargs *)0)
 
 // String names for above options
@@ -330,24 +330,24 @@ struct xoption {
 #define NOBLK ((char **)0)
 
 // Return values from dowork indicating the disposition of the transfer task.
-#define X_FLUSH 0	   // Flush the transfer, its all over
-#define X_CONTINUE 1	   // Everything's ok, just keep going
-#define X_HANG 2	   // Wait for more commands before continuing
-#define X_SYNCMARK 3	   // Flush after sending a syncmark
+#define X_FLUSH 0		// Flush the transfer, its all over
+#define X_CONTINUE 1		// Everything's ok, just keep going
+#define X_HANG 2		// Wait for more commands before continuing
+#define X_SYNCMARK 3		// Flush after sending a syncmark
 
 // Constants of the protocol
 #undef TRUE
 #undef FALSE
-#define TIDLEN 5		  // Significant length of tid's
-#define FHLEN 5			  // Significant length of fh's
-#define SYNOP 0201		  // Opcode for synchronous marks
-#define ASYNOP 0202		  // Opcode for asynchronous marks
-#define FALSE "NIL"		  // False value in binary options
-#define TRUE "T"		  // True value in binary options
-#define QBIN1 ((unsigned)0143150) // First word of "QFASL" in SIXBIT
-#define QBIN2 071660		  // Second word of "QFASL"
-#define LBIN1 ((unsigned)0170023) // First word of BIN file
-#define LBIN2LIMIT 100	   // Maximum value of second word of BIN file
+#define TIDLEN 5		// Significant length of tid's
+#define FHLEN 5			// Significant length of fh's
+#define SYNOP 0201		// Opcode for synchronous marks
+#define ASYNOP 0202		// Opcode for asynchronous marks
+#define FALSE "NIL"		// False value in binary options
+#define TRUE "T"		// True value in binary options
+#define QBIN1 ((unsigned)0143150)	// First word of "QFASL" in SIXBIT
+#define QBIN2 071660		// Second word of "QFASL"
+#define LBIN1 ((unsigned)0170023)	// First word of BIN file
+#define LBIN2LIMIT 100		// Maximum value of second word of BIN file
 
 // Definition of options
 struct option options[] = {
@@ -378,17 +378,17 @@ struct option options[] = {
 };
 
 // Syntax definition - values for syntax strings
-#define SP 1		   // Must be CHSP character
-#define NL 2		   // Must be CHNL character
-#define STRING 3	   // All characters until following character
-#define OPTIONS 4	   // Zero or more (SP, WORD), WORD in options
-#define NUMBER 5	   // [-]digits, base ten
-#define OPEND 6		   // Optional end of command
-#define PNAME 7		   // Property name
-#define PVALUE 8	   // Property value
-#define REPEAT 9	   // Repeat from last OPEND
-#define END 10		   // End of command, must be at end of args
-#define FHSKIP 11 // Skip next if FH present - kludge for change properties
+#define SP 1			// Must be CHSP character
+#define NL 2			// Must be CHNL character
+#define STRING 3		// All characters until following character
+#define OPTIONS 4		// Zero or more (SP, WORD), WORD in options
+#define NUMBER 5		// [-]digits, base ten
+#define OPEND 6			// Optional end of command
+#define PNAME 7			// Property name
+#define PVALUE 8		// Property value
+#define REPEAT 9		// Repeat from last OPEND
+#define END 10			// End of command, must be at end of args
+#define FHSKIP 11		// Skip next if FH present - kludge for change properties
 
 unsigned char dcsyn[] = { STRING, SP, STRING, END };
 unsigned char nosyn[] = { END };
@@ -421,7 +421,7 @@ void crdir(struct transaction *t);
 void expunge(struct transaction *t);
 void chngprop(struct transaction *t);
 
-int setbytesize();
+int setbytesize(void);
 
 struct command commands[] = {
 	// c_name c_funct c_flags c_syntax
@@ -468,13 +468,13 @@ char *getprot(struct stat *s, char *cp);
 char *getsprops(struct stat *s, char *cp);
 char *tnum(char *cp, char delim, int *ip);
 
-char *getcdate();
+char *getcdate(struct stat *s, char *cp);
 int putprot(struct stat *s, char *file, char *newprot);
 int putname(struct stat *s, char *file, char *newname);
 int putmdate(struct stat *s, char *file, char *newtime, struct xfer *x);
 int putrdate(struct stat *s, char *file, char *newtime, struct xfer *x);
 
-static char *xgetbsize(struct stat *s, char *cp);
+char *xgetbsize(struct stat *s, char *cp);
 
 #define P_GET 1
 #define P_DELAY 2
@@ -504,13 +504,13 @@ struct property {
 };
 
 // Globals
-char errtype;		    // Error type if not E_COMMAND
-char *errstring;	    // Error message if non-standard
-char errbuf[ERRSIZE + 1];   // Buffer for building error messages
-char *home;		    // Home directory, after logged in
-char *cwd;		    // Current working directory, if one
-int protocol = 1;	    // Which number argument after FILE in RFC
-int mypid;		    // Pid of controlling process
+char errtype;			// Error type if not E_COMMAND
+char *errstring;		// Error message if non-standard
+char errbuf[ERRSIZE + 1];	// Buffer for building error messages
+char *home;			// Home directory, after logged in
+char *cwd;			// Current working directory, if one
+int protocol = 1;		// Which number argument after FILE in RFC
+int mypid;			// Pid of controlling process
 struct timeb timeinfo;
 extern int errno;		// System call error code
 
@@ -518,13 +518,9 @@ extern int errno;		// System call error code
 char *savestr(char *s);
 char *fullname(struct passwd *p);
 char *downcase(char *string);
-char *crypt();
-struct passwd *getpwnam();
-struct passwd *getpwuid();
+char *crypt(void);
 char *tempfile(char *dname);
-struct tm *localtime();
 struct transaction *getwork(chaos_connection *conn);
-char **glob();
 struct xfer *makexfer(struct transaction *t, long options);
 void finish(int arg);
 void xcommand(struct transaction *t);
@@ -559,7 +555,7 @@ void from_lispm(struct xfer *x);
 void processdata(chaos_connection *conn);
 void processmini(chaos_connection *conn);
 
-static char *treeroot;
+char *treeroot;
 
 void
 settreeroot(const char *root)
@@ -573,7 +569,7 @@ settreeroot(const char *root)
 #endif
 }
 
-static void *
+void *
 _processdata(void *conn)
 {
 	struct transaction *t;
@@ -587,7 +583,7 @@ _processdata(void *conn)
 	return 0;
 }
 
-static pthread_t processdata_thread;
+pthread_t processdata_thread;
 
 void
 processdata(chaos_connection *conn)
@@ -881,7 +877,7 @@ parseargs(unsigned char *args, struct command *c, struct transaction *t)
 	}
 	t->t_args = a;
 	return 0;
- synerr:
+synerr:
 	afree(a);
 	return errcode;
 }
@@ -1081,7 +1077,7 @@ fatal(char *fmt, ...)
 
 // Respond to the given transaction, including the given results string.
 // If the result string is non-null a space is prepended
-static void
+void
 respond(struct transaction *t, char *results)
 {
 	char data[512];
@@ -1125,7 +1121,7 @@ error(struct transaction *t, char *fh, int code)
 
 // Send a synchronous mark on the given file handle.
 // It better be for output!
-static int
+int
 syncmark(struct file_handle *f)
 {
 	if (f->f_type != F_INPUT)
@@ -1253,7 +1249,7 @@ char *privileged_hosts[] = { "mit-tweety-pie", "mit-daffy-duck" };
 #define NUM_PRIVILEGED_HOSTS (sizeof(privileged_hosts)/sizeof(char *))
 #endif
 
-static int
+int
 pwok(struct passwd *p, char *pw)
 {
 	return 1;
@@ -1573,7 +1569,7 @@ fileopen(struct transaction *t)
 				errstring = PATHNOTDIR;
 				errcode = DNF;
 				break;
-			case EISDIR: // Impossible.
+			case EISDIR:	// Impossible.
 				errstring = "File to be written is a directory";
 				errcode = IOD;
 				break;
@@ -1689,7 +1685,7 @@ fileopen(struct transaction *t)
 	}
 	if (errcode == 0)
 		respond(t, response);
- openerr:
+openerr:
 	if (errcode)
 		error(t, f != FNULL ? f->f_name : "", errcode);
 	if (dirname)
@@ -1834,7 +1830,7 @@ propopen(struct xfer *x, struct transaction *t)
 	return;
 }
 
-static ssize_t
+ssize_t
 propread(struct xfer *x)
 {
 	struct property *p;
@@ -2002,7 +1998,7 @@ diropen(struct xfer *ax, struct transaction *t)
 		pthread_mutex_unlock(&x->x_hangsem);
 		return;
 	}
- derror:
+derror:
 	error(t, t->t_fh->f_name, errcode);
 	x->x_state = X_DERROR;
 	pthread_mutex_lock(&x->x_hangsem);
@@ -2013,7 +2009,7 @@ diropen(struct xfer *ax, struct transaction *t)
 // Assemble a directory entry record in the buffer for this transfer.
 // This is actually analogous to doing a disk read on the directory
 // file.
-static ssize_t
+ssize_t
 dirread(struct xfer *x)
 {
 	struct stat sbuf;
@@ -2208,7 +2204,7 @@ fileclose(struct xfer *x, struct transaction *t)
 
 // The actual work and response to a close is called expicitly
 // from the transfer task when it has finished.
-static void
+void
 xclose(struct xfer *ax)
 {
 	struct xfer *x = ax;
@@ -2690,7 +2686,8 @@ complete(struct transaction *t)
 	char *adir;
 	char *aname;
 	char *atype;
-	union {
+	union
+	{
 		struct direct de;
 		char dummy[sizeof(struct direct) + 1];
 	} d;
@@ -2896,7 +2893,7 @@ complete(struct transaction *t)
 		sprintf(response, "%s%c%s%c", nstate == SNONE || nstate == SMANY || tstate == SMANY ? "NIL" : "OLD", CHNL, errbuf, CHNL);
 		respond(t, response);
 	}
- freeall:
+freeall:
 	if (iname)
 		free(iname);
 	if (itype)
@@ -3184,7 +3181,7 @@ getspace(struct stat *s, char *cp)
 }
 
 // We don't account for indirect blocks...
-static char *
+char *
 xgetbsize(struct stat *s, char *cp)
 {
 	sprintf(cp, "%ld", (s->st_size + FSBSIZE - 1) / FSBSIZE);
@@ -3252,9 +3249,7 @@ getrdate(struct stat *s, char *cp)
 }
 
 char *
-getcdate(s, cp)
-	struct stat *s;
-	char *cp;
+getcdate(struct stat *s, char *cp)
 {
 	struct tm *tm;
 
@@ -3418,7 +3413,7 @@ putrdate(struct stat *s, char *file, char *newtime, struct xfer *x)
 	return 0;
 }
 
-static int dmsize[12] = {
+int dmsize[12] = {
 	31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };
 
@@ -3480,7 +3475,7 @@ tnum(char *cp, char delim, int *ip)
 	return 0;
 }
 
-static void
+void
 jamlower(char *s)
 {
 	size_t i;
@@ -3527,7 +3522,7 @@ parsepath(char *path, char **dir, char **real, int blankok)
 			if ((pw = getpwnam(path + 1)) == NULL) {
 				*cp = save;
 				sprintf(errstring = errbuf, "Unknown user name: %s after '~'.", path + 1);
-				return IPS; // Invalid pathname syntax
+				return IPS;	// Invalid pathname syntax
 			}
 			*cp = save;
 			wd = pw->pw_dir;
@@ -3601,15 +3596,15 @@ dcanon(char *cp, int blankok)
 
 	if (*cp != '/')
 		return 0;
-	for (p = cp; *p;) {	    // for each component
-		sp = p;		    // save slash address
-		while (*++p == '/') // flush extra slashes
+	for (p = cp; *p;) {	// for each component
+		sp = p;		// save slash address
+		while (*++p == '/')	// flush extra slashes
 			;
 		if (p != ++sp)
 			strcpy(sp, p);
-		p = sp;			  // save start of component
-		if (*sp == '\0') {	  // if component is null
-			if (--sp != cp) { // if path is not one char (i.e. /)
+		p = sp;		// save start of component
+		if (*sp == '\0') {	// if component is null
+			if (--sp != cp) {	// if path is not one char (i.e. /)
 				if (blankok)
 					break;
 				else
@@ -3619,7 +3614,7 @@ dcanon(char *cp, int blankok)
 		}
 		slash = 0;
 		if (*p)
-			while (*++p) // find next slash or end of path
+			while (*++p)	// find next slash or end of path
 				if (*p == '/') {
 					slash = 1;
 					*p = 0;
@@ -3648,7 +3643,7 @@ dcanon(char *cp, int blankok)
 }
 
 // File handle error routine.
-static int
+int
 fherror(struct file_handle *f, int code, int type, char *message)
 {
 	struct file_error *e = &errors[code];
@@ -3678,64 +3673,64 @@ fherror(struct file_handle *f, int code, int type, char *message)
 // on the direction of transfer.
 //
 // READ (disk to net) transfers:
-// 1. X_PROCESS		Initial state and data transfer state until:
-//			Normally - DATA packet sent: stay in X_PROCESS
-// 			- EOF read from disk, last data sent: go to X_REOF
-//			- Fatal error read from disk: go to X_ABORT
-//			- Error writing to net: go to X_BROKEN
-//			- CLOSE received: goto X_DONE
-// 2. X_REOF		After reading EOF from disk. Next:
-//			Normally - EOF packet sent: go to X_SEOF
-// 			- Error writing EOF to net: goto X_BROKEN
-//			- FILEPOS received: goto X_PROCESS
-//			- CLOSE received: goto X_DONE
-// 3. X_SEOF		After sending EOF to net.
-//			Normally - Wait for command - stay in X_SEOF
-//			- FILEPOS received: goto X_PROCESS
-//			- CLOSE received: goto X_DONE
-// 4. X_ABORT		After disk error.
-//			Normally - Wait for command - stay in X_ABORT
-//			- CLOSE received: goto X_DONE
-// 5. X_BROKEN		After net error.
-//			Normally - Wait for command - stay in X_BROKEN
-//			- CLOSE received: goto X_DONE
-// 6. X_DONE		Respond to close, send SYNC MARK.
-//			Normally - Flush connection.
+// 1. X_PROCESS         Initial state and data transfer state until:
+//                      Normally - DATA packet sent: stay in X_PROCESS
+//                      - EOF read from disk, last data sent: go to X_REOF
+//                      - Fatal error read from disk: go to X_ABORT
+//                      - Error writing to net: go to X_BROKEN
+//                      - CLOSE received: goto X_DONE
+// 2. X_REOF            After reading EOF from disk. Next:
+//                      Normally - EOF packet sent: go to X_SEOF
+//                      - Error writing EOF to net: goto X_BROKEN
+//                      - FILEPOS received: goto X_PROCESS
+//                      - CLOSE received: goto X_DONE
+// 3. X_SEOF            After sending EOF to net.
+//                      Normally - Wait for command - stay in X_SEOF
+//                      - FILEPOS received: goto X_PROCESS
+//                      - CLOSE received: goto X_DONE
+// 4. X_ABORT           After disk error.
+//                      Normally - Wait for command - stay in X_ABORT
+//                      - CLOSE received: goto X_DONE
+// 5. X_BROKEN          After net error.
+//                      Normally - Wait for command - stay in X_BROKEN
+//                      - CLOSE received: goto X_DONE
+// 6. X_DONE            Respond to close, send SYNC MARK.
+//                      Normally - Flush connection.
 //
 // WRITE (net to disk) transfers:
-// 1. X_PROCESS		Initial state and data ransfer stats until:
-//			Normally - DATA packets read: stay in X_PROCESS
-//			- EOF read from net, last disk write: goto X_WSYNC
-//			- Error reading from net:
-//			  Send ASYNCMARK on control conn, goto X_BROKEN or
-//			  or X_DONE is CLOSE already arrived.
-//			- Error (recoverable) writing to disk:
-//			  (Remember if already got EOF)
-//			  Send ASYNCMARK on ctl, goto X_ERROR
-//			- Error (fatal) writingto disk, goto X_WSYNC
-//			- Read SYNCMARK, goto X_RSYNC
-// 2. X_WSYNC		Waiting for SYNCMARK
-//			Normally - Wait for SYNCMARK - stay in X_WSYNC
-//			CLOSE arriving just marks conn.
-//			- SYNCMARK arrives:
-//			  If CLOSE arrived, goto X_DONE, else goto X_RSYNC
-//			- Error reading from net:
-//			  Send ASYNCMARK on ctl, goto X_BROKEN
-//			- DATA or EOF read from net:
-//			  If no error so far, send ASYNCMARK - fatal,
-//			  otherwise ignore, in any case stay in X_WSYNC.
-// 3. X_ERROR		Waiting for CONTINUE or CLOSE
-//			Normally wait for command
-//			- CONTINUE arrives - goto X_RETRY
-//			- CLOSE arrives, goto X_WSYNC
-// 4. X_RETRY		Retry disk write
-//			- Another error - send ASYNCMARK, goto X_ERROR
-//			- Successful, goto X_PROCESS
-// 5. X_RSYNC		Wait for CLOSE
-//			- Close arrives, goto X_DONE
-// 6. X_BROKEN		Wait for CLOSE
-//			- CLOSE arrives, goto X_DONE
-// 7. X_DONE		Respond to CLOSE, if not BROKEN, send SYNCMARK.
+// 1. X_PROCESS         Initial state and data ransfer stats until:
+//                      Normally - DATA packets read: stay in X_PROCESS
+//                      - EOF read from net, last disk write: goto X_WSYNC
+//                      - Error reading from net:
+//                        Send ASYNCMARK on control conn, goto X_BROKEN or
+//                        or X_DONE is CLOSE already arrived.
+//                      - Error (recoverable) writing to disk:
+//                        (Remember if already got EOF)
+//                        Send ASYNCMARK on ctl, goto X_ERROR
+//                      - Error (fatal) writingto disk, goto X_WSYNC
+//                      - Read SYNCMARK, goto X_RSYNC
+// 2. X_WSYNC           Waiting for SYNCMARK
+//                      Normally - Wait for SYNCMARK - stay in X_WSYNC
+//                      CLOSE arriving just marks conn.
+//                      - SYNCMARK arrives:
+//                        If CLOSE arrived, goto X_DONE, else goto X_RSYNC
+//                      - Error reading from net:
+//                        Send ASYNCMARK on ctl, goto X_BROKEN
+//                      - DATA or EOF read from net:
+//                        If no error so far, send ASYNCMARK - fatal,
+//                        otherwise ignore, in any case stay in X_WSYNC.
+// 3. X_ERROR           Waiting for CONTINUE or CLOSE
+//                      Normally wait for command
+//                      - CONTINUE arrives - goto X_RETRY
+//                      - CLOSE arrives, goto X_WSYNC
+// 4. X_RETRY           Retry disk write
+//                      - Another error - send ASYNCMARK, goto X_ERROR
+//                      - Successful, goto X_PROCESS
+// 5. X_RSYNC           Wait for CLOSE
+//                      - Close arrives, goto X_DONE
+// 6. X_BROKEN          Wait for CLOSE
+//                      - CLOSE arrives, goto X_DONE
+// 7. X_DONE            Respond to CLOSE, if not BROKEN, send SYNCMARK.
 int
 dowork(struct xfer *x)
 {
@@ -3854,7 +3849,7 @@ dowork(struct xfer *x)
 				x->x_pptr = to;
 			}
 			break;
-			case O_CHARACTER: // default ascii
+			case O_CHARACTER:	// default ascii
 			case O_CHARACTER | O_SUPER:
 				to_lispm(x);
 				break;
@@ -3892,7 +3887,7 @@ dowork(struct xfer *x)
 			return X_CONTINUE;
 		case X_RETRY:
 			if (xbwrite(x) < 0)
-				goto writerr; // Kludge alert
+				goto writerr;	// Kludge alert
 			x->x_state = x->x_flags & X_EOF ? X_WSYNC : X_PROCESS;
 			return X_CONTINUE;
 		case X_PROCESS:
@@ -4045,7 +4040,7 @@ from_lispm(struct xfer *x)
 	while (x->x_left && x->x_room) {
 		c = *x->x_pptr++ & 0377;
 		switch (c) {
-		case 010:    // Map these SAIL symbols out of the way.
+		case 010:	// Map these SAIL symbols out of the way.
 		case 011:
 		case 012:
 		case 013:
@@ -4057,10 +4052,10 @@ from_lispm(struct xfer *x)
 		case 0212:	// Map LINE to CR
 			c = 015;
 			break;
-		case 0215:    // Map lispm canonical newline to UNIX's
+		case 0215:	// Map lispm canonical newline to UNIX's
 			c = '\n';
 			break;
-		case 0210: // Map format effectors to their right place
+		case 0210:	// Map format effectors to their right place
 		case 0211:
 		case 0213:
 		case 0214:
@@ -4137,7 +4132,7 @@ xpread(struct xfer *x)
 	ssize_t n;
 	chaos_packet *packet;
 
- loop:
+loop:
 	packet = chaos_connection_dequeue(x->x_fh->f_connection);
 	if (packet == 0)
 		return -1;
@@ -4172,7 +4167,7 @@ xpread(struct xfer *x)
 	case DWDOP:
 		if (packet->length == 0) {
 			chaosfile_log(LOG_ERR, "FILE: zero size data packet\n");
-			goto loop; // Zero size data packet!?
+			goto loop;	// Zero size data packet!?
 		}
 		chaosfile_log(LOG_INFO, "xpread: DATA length=%d\n", packet->length);
 		n = packet->length;
@@ -4224,11 +4219,11 @@ _startxfer(void *ax)
 
 		switch (dowork(x)) {
 		case X_SYNCMARK:
-			syncmark(x->x_fh); // Ignore errors
+			syncmark(x->x_fh);	// Ignore errors
 			break;
 		case X_FLUSH:	// Totally done
 			break;
-		case X_CONTINUE: // In process
+		case X_CONTINUE:	// In process
 			continue;
 		case X_HANG:	// Need more instructions
 			chaosfile_log(LOG_INFO, "Hang pos: %ld\n", tell(x->x_fd));
@@ -4244,7 +4239,7 @@ _startxfer(void *ax)
 	return 0;
 }
 
-static pthread_t startxfer_thread;
+pthread_t startxfer_thread;
 
 int
 startxfer(struct xfer *ax)
@@ -4254,7 +4249,7 @@ startxfer(struct xfer *ax)
 }
 
 // Character set conversion routines.
-static void
+void
 buffer_to_lispm(unsigned char *data, ssize_t length)
 {
 	int c;
@@ -4379,7 +4374,7 @@ _processmini(void *conn)
 	return NULL;
 }
 
-static pthread_t processmini_thread;
+pthread_t processmini_thread;
 
 void
 processmini(chaos_connection *conn)

@@ -136,22 +136,22 @@ make_labl(int fd)
 
 	memset((char *) buffer, 0, sizeof(buffer));
 
-	buffer[0] = str4("LABL");	      // Label magic.
-	buffer[1] = 1;			      // Version.
-	buffer[2] = cyls;		      // Number of cylinders
-	buffer[3] = heads;		      // Number of heades.
-	buffer[4] = blocks_per_track;	      // Number of blocks.
-	buffer[5] = heads * blocks_per_track; // Heads * blocks.
-	buffer[6] = str4(mcr_name); // Name of microcode partition.
-	buffer[7] = str4(lod_name); // Name of LOD partition.
+	buffer[0] = str4("LABL");	// Label magic.
+	buffer[1] = 1;		// Version.
+	buffer[2] = cyls;	// Number of cylinders
+	buffer[3] = heads;	// Number of heades.
+	buffer[4] = blocks_per_track;	// Number of blocks.
+	buffer[5] = heads * blocks_per_track;	// Heads * blocks.
+	buffer[6] = str4(mcr_name);	// Name of microcode partition.
+	buffer[7] = str4(lod_name);	// Name of LOD partition.
 
 	{
 		int i;
 		int p = 0200;
 
 		printf("%d partitions\n", part_count);
-		buffer[p++] = part_count; // Number of partitions.
-		buffer[p++] = 7;	  // Words per partition.
+		buffer[p++] = part_count;	// Number of partitions.
+		buffer[p++] = 7;	// Words per partition.
 
 		for (i = 0; i < part_count; i++) {
 			unsigned long n;
@@ -446,10 +446,10 @@ create_disk(char *template)
 		return -1;
 
 	if (access(img_filename, F_OK) != -1) {
-		fprintf (stderr, "refusing to overwrite existing disk pack: %s\n", img_filename);
-		exit (1);
+		fprintf(stderr, "refusing to overwrite existing disk pack: %s\n", img_filename);
+		exit(1);
 	}
-	
+
 	printf("creating %s\n", img_filename);
 
 	fd = open(img_filename, O_RDWR | O_CREAT, 0666);
@@ -636,11 +636,11 @@ show_partition_info(char *filename)
 		return -1;
 	}
 
-	cyls = buffer[2];		      // Number of cylinders.
-	heads = buffer[3];		      // Number of heads.
-	blocks_per_track = buffer[4];	      // Number of blocks.
-	mcr_name = strdup(unstr4(buffer[6])); // Microcode partition.
-	lod_name = strdup(unstr4(buffer[7])); // LOD partition.
+	cyls = buffer[2];	// Number of cylinders.
+	heads = buffer[3];	// Number of heads.
+	blocks_per_track = buffer[4];	// Number of blocks.
+	mcr_name = strdup(unstr4(buffer[6]));	// Microcode partition.
+	lod_name = strdup(unstr4(buffer[7]));	// LOD partition.
 	count = buffer[0200];
 	size = buffer[0201];
 	p = 0202;
@@ -737,11 +737,11 @@ extract_partition(char *filename, char *extract_filename, char *part_name)
 		return -1;
 	}
 
-	cyls = buffer[2];		      // Number of cylinders.
-	heads = buffer[3];		      // Number of heads.
-	blocks_per_track = buffer[4];	      // Number of blocks.
-	mcr_name = strdup(unstr4(buffer[6])); // Microcode partition.
-	lod_name = strdup(unstr4(buffer[7])); // LOD partition.
+	cyls = buffer[2];	// Number of cylinders.
+	heads = buffer[3];	// Number of heads.
+	blocks_per_track = buffer[4];	// Number of blocks.
+	mcr_name = strdup(unstr4(buffer[6]));	// Microcode partition.
+	lod_name = strdup(unstr4(buffer[7]));	// LOD partition.
 	count = buffer[0200];
 	size = buffer[0201];
 	p = 0202;
@@ -842,11 +842,11 @@ read_labl(const char *filename)
 		return -1;
 	}
 
-	cyls = buffer[2];		      // Number of cylinders.
-	heads = buffer[3];		      // Number of heads.
-	blocks_per_track = buffer[4];	      // Number of blocks.
-	mcr_name = strdup(unstr4(buffer[6])); // Microcode partition.
-	lod_name = strdup(unstr4(buffer[7])); // LOD partition.
+	cyls = buffer[2];	// Number of cylinders.
+	heads = buffer[3];	// Number of heads.
+	blocks_per_track = buffer[4];	// Number of blocks.
+	mcr_name = strdup(unstr4(buffer[6]));	// Microcode partition.
+	lod_name = strdup(unstr4(buffer[7]));	// LOD partition.
 	count = buffer[0200];
 	size = buffer[0201];
 	p = 0202;

@@ -94,7 +94,7 @@ reg_get(int base, int reg)
 	int off;
 	uint16_t v;
 
- again:
+again:
 	buffer[0] = base | (reg & 0x1f);
 	if (debug)
 		printf("send %02x\n", buffer[0]);
@@ -356,7 +356,7 @@ cc_execute_r(uint64_t ir)
 	if (debug || verbose)
 		printf("ir %" PRIu64 " (0x%016" PRIx64 ")\n", ir, ir);
 
- again:
+again:
 	cc_write_diag_ir(ir);
 	cc_noop_debug_clock();
 	if (cc_read_ir() != ir) {
@@ -376,7 +376,7 @@ cc_execute_w(uint64_t ir)
 	if (debug || verbose)
 		printf("ir %" PRIu64 " (0x%016" PRIx64 ")\n", ir, ir);
 
- again:
+again:
 	cc_write_diag_ir(ir);
 	cc_noop_debug_clock();
 	if (cc_read_ir() != ir) {
@@ -798,19 +798,19 @@ cc_pipe2(void)
 }
 
 uint64_t setup_map_inst[] = {
-	04000000000110003, // (alu) SETZ a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[2]
-	00000000000150173, // (alu) SETO a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[3]
-	00600101602370010, // (byte) a=2 m=m[3] dpb pos=10, width=1 ->a_mem[47]
+	04000000000110003,	// (alu) SETZ a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[2]
+	00000000000150173,	// (alu) SETO a=0 m=0 m[0] C=0 alu-> Q-R -><none>,m[3]
+	00600101602370010,	// (byte) a=2 m=m[3] dpb pos=10, width=1 ->a_mem[47]
 
-	04600101446230166, // (byte) a=2 m=m[3] dpb pos=26, width=4 ->VMA,write-map ,m[4]
-	04600201400270400, // (byte) a=4 m=m[3] dpb pos=0, width=11 -><none>,m[5]
-	00002340060010050, // (alu) SETA a=47 m=0 m[0] C=0 alu-> ->MD ,m[0]
-	00600241446030152, // (byte) a=5 m=m[3] dpb pos=12, width=4 ->VMA,write-map ,m[0]
-	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
-	00600201400270041, // (byte) a=4 m=m[3] dpb pos=1, width=2 -><none>,m[5]
-	04600241446030444, // (byte) a=5 m=m[3] dpb pos=4, width=12 ->VMA,write-map ,m[0]
-	00002365060010310, // (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
-	04600201446030000, // (byte) a=4 m=m[3] dpb pos=0, width=1 ->VMA,write-map ,m[0]
+	04600101446230166,	// (byte) a=2 m=m[3] dpb pos=26, width=4 ->VMA,write-map ,m[4]
+	04600201400270400,	// (byte) a=4 m=m[3] dpb pos=0, width=11 -><none>,m[5]
+	00002340060010050,	// (alu) SETA a=47 m=0 m[0] C=0 alu-> ->MD ,m[0]
+	00600241446030152,	// (byte) a=5 m=m[3] dpb pos=12, width=4 ->VMA,write-map ,m[0]
+	00002365060010310,	// (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
+	00600201400270041,	// (byte) a=4 m=m[3] dpb pos=1, width=2 -><none>,m[5]
+	04600241446030444,	// (byte) a=5 m=m[3] dpb pos=4, width=12 ->VMA,write-map ,m[0]
+	00002365060010310,	// (alu) M+A [ADD] a=47 m=52 MD C=0 alu-> ->MD ,m[0]
+	04600201446030000,	// (byte) a=4 m=m[3] dpb pos=0, width=1 ->VMA,write-map ,m[0]
 	0
 };
 
@@ -844,15 +844,15 @@ cc_report_ide_regs(void)
 
 	for (int i = 0; i < 8; i++) {
 		cc_write_a_mem(1, i | 020);
-		cc_execute_r(0000040060010050); // alu seta a=1 ->md
-		cc_execute_r(0000140044010050); // alu seta a=3 alu-> ->vma+write
+		cc_execute_r(0000040060010050);	// alu seta a=1 ->md
+		cc_execute_r(0000140044010050);	// alu seta a=3 alu-> ->vma+write
 
-		cc_execute_w(0000100060010050); // alu seta a=2 ->md
-		cc_execute_w(0000200044010050); // alu seta a=4 alu-> ->vma+write
+		cc_execute_w(0000100060010050);	// alu seta a=2 ->md
+		cc_execute_w(0000200044010050);	// alu seta a=4 alu-> ->vma+write
 
-		cc_execute_w(0000240044010050); // alu seta a=5 alu-> ->vma+write
+		cc_execute_w(0000240044010050);	// alu seta a=5 alu-> ->vma+write
 
-		cc_execute_w(0000140042010050); // alu seta a=3 alu-> ->vma+read */
+		cc_execute_w(0000140042010050);	// alu seta a=3 alu-> ->vma+read */
 		v = cc_read_md();
 		printf("ide[%d] = 0x%08x 0x%02x\n", i, v, v & 0xff);
 	}
@@ -905,7 +905,7 @@ _test_scratch(uint16_t v)
 	return 0;
 }
 
-static int vv = 0;
+int vv = 0;
 
 int
 cc_test_scratch(void)
@@ -1131,7 +1131,7 @@ main(int argc, char *argv[])
 			break;
 		case 'm':
 			cc_write_a_mem(2, 0);
-			cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+			cc_execute_r(04000100042310050ULL);	// (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 			v = cc_read_md();
 			printf("@0 MD=%011o (0x%x)\n", v, v);
 			break;
@@ -1139,27 +1139,27 @@ main(int argc, char *argv[])
 			for (i = 0; i < 4; i++) {
 				cc_write_a_mem(2, i);
 				verbose = 1;
-				cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+				cc_execute_r(04000100042310050ULL);	// (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 				verbose = 0;
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
 			for (i = 0776; i < 01000; i++) {
 				cc_write_a_mem(2, i);
-				cc_execute_r(04000100042310050ULL); // (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
+				cc_execute_r(04000100042310050ULL);	// (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
 			break;
 		case 'a':
-			cc_execute_w(04600101442330007ULL); // (byte) a=2 m=m[3] dpb pos=7, width=1 ->VMA,start-read ,m[6]
+			cc_execute_w(04600101442330007ULL);	// (byte) a=2 m=m[3] dpb pos=7, width=1 ->VMA,start-read ,m[6]
 			printf("@200 MD=%011o\n", cc_read_md());
 
-			cc_execute_w(00002003042310310ULL); // (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6]
+			cc_execute_w(00002003042310310ULL);	// (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[6]
 			printf("@201 MD=%011o\n", cc_read_md());
 
-			cc_execute_r(00002003000310310ULL); // (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6]
-			cc_execute_w(00000003042010030ULL); // (alu) SETM a=0 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[0]
+			cc_execute_r(00002003000310310ULL);	// (alu) M+A [ADD] a=40 m=6 m[6] C=0 alu-> -><none>,m[6]
+			cc_execute_w(00000003042010030ULL);	// (alu) SETM a=0 m=6 m[6] C=0 alu-> ->VMA,start-read ,m[0]
 			printf("@202 MD=%011o\n", cc_read_md());
 
 			printf("VMA= %011o\n", cc_read_vma());

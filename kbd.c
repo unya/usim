@@ -7,97 +7,163 @@
 
 #include "usim.h"
 #include "ucode.h"
+#include "iob.h"
 #include "kbd.h"
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xos.h>
-#include <X11/keysym.h>
+// See SYS:LMWIN;COLD LISP for details.
+//
+// Keyboard translate table is a 3 X 64 array.
+// 3 entries for each of 100 keys.  First is vanilla, second shift, third top.
+unsigned char kb_old_table[64][3] = {
+	{LM_K_BREAK, LM_K_BREAK, LM_K_NETWORK},
+	{LM_K_ESC, LM_K_ESC, LM_K_SYSTEM},
+	{'1', '!', '!'},
+	{'2', '"', '"'},
+	{'3', '#', '#'},
+	{'4', '$', '$'},
+	{'5', '%', '%'},
+	{'6', '&', '&'},
+	{'7', '\'', '\''},
+	{'8', '(', '('},
+	{'9', ')', ')'},
+	{'0', '_', '_'},
+	{'-', '=', '='},
+	{'@', '`', '`'},
+	{'^', '~', '~'},
+	{LM_K_BS, LM_K_BS, LM_K_BS},
+	{LM_K_CALL, LM_K_CALL, LM_K_ABORT},
+	{LM_K_CLEAR, LM_K_CLEAR, LM_K_CLEAR},
+	{LM_K_TAB, LM_K_TAB, LM_K_TAB},
+	{'', '', ''},
+	{'q', 'Q', ''},
+	{'w', 'W', ''},
+	{'e', 'E', ''},
+	{'r', 'R', ''},
+	{'t', 'T', ''},
+	{'y', 'Y', ''},
+	{'u', 'U', ''},
+	{'i', 'I', ''},
+	{'o', 'O', ''},
+	{'p', 'P', ''},
+	{'[', '{', '{'},
+	{']', '}', '}'},
+	{'\\', '|', '|'},
+	{'/', '', ''},
+	{'', LM_K_CR, LM_K_NULL},
+	{LM_K_CR, LM_K_TAB, LM_K_TAB},
+	{LM_K_FORM, LM_K_FORM, LM_K_FORM},
+	{LM_K_VT, LM_K_VT, LM_K_VT},
+	{LM_K_RUBOUT, LM_K_RUBOUT, LM_K_RUBOUT},
+	{'a', 'A', ''},
+	{'s', 'S', ''},
+	{'d', 'D', ''},
+	{'f', 'F', ''},
+	{'g', 'G', ''},
+	{'h', 'H', LM_K_HELP},
+	{'j', 'J', ''},
+	{'k', 'K', ''},
+	{'l', 'L', ''},
+	{';', '+', '+'},
+	{':', '*', '*'},
+	{LM_K_CR, LM_K_CR, LM_K_END},
+	{LM_K_LINE, LM_K_LINE, LM_K_LINE},
+	{LM_K_BACK_NEXT, LM_K_BACK_NEXT, LM_K_BACK_NEXT},
+	{'z', 'Z', ''},
+	{'x', 'X', ''},
+	{'c', 'C', ''},
+	{'v', 'V', ''},
+	{'b', 'B', ''},
+	{'n', 'N', ''},
+	{'m', 'M', ''},
+	{',', '<', '<'},
+	{'.', '>', '>'},
+	{'/', '?', '?'},
+	{LM_K_SP, LM_K_SP, LM_K_SP},
+};
 
-extern unsigned int iob_key_scan;
-extern unsigned int iob_kbd_csr;
+unsigned int kbd_key_scan;
 
 unsigned short kb_to_scancode[256][4];
 
-#define IOB_KEY_QUEUE_LEN 10
+#define KEY_QUEUE_LEN 10
 
-static int iob_key_queue[IOB_KEY_QUEUE_LEN];
-static int iob_key_queue_optr = 0;
-static int iob_key_queue_iptr = 0;
-static int iob_key_queue_free = IOB_KEY_QUEUE_LEN;
+static int key_queue[KEY_QUEUE_LEN];
+static int key_queue_optr = 0;
+static int key_queue_iptr = 0;
+static int key_queue_free = KEY_QUEUE_LEN;
 
 void
-iob_queue_key_event(int ev)
+queue_key_event(int ev)
 {
 	int v;
 
 	v = (1 << 16) | ev;
 
-	if (iob_key_queue_free > 0) {
-		traceio("iob_queue_key_event() - queuing 0%o, q len before %d\n", v, IOB_KEY_QUEUE_LEN - iob_key_queue_free);
-		iob_key_queue_free--;
-		iob_key_queue[iob_key_queue_optr] = v;
-		iob_key_queue_optr = (iob_key_queue_optr + 1) % IOB_KEY_QUEUE_LEN;
+	if (key_queue_free > 0) {
+		traceio("queue_key_event() - queuing 0%o, q len before %d\n", v, KEY_QUEUE_LEN - key_queue_free);
+		key_queue_free--;
+		key_queue[key_queue_optr] = v;
+		key_queue_optr = (key_queue_optr + 1) % KEY_QUEUE_LEN;
 	} else {
 		fprintf(stderr, "IOB key queue full!\n");
-		if (!(iob_kbd_csr & (1 << 5)) && (iob_kbd_csr & (1 << 2))) {
-			iob_kbd_csr |= 1 << 5;
-			fprintf(stderr, "iob_queue_key_event generating interrupt\n");
+		if (!(iob_csr & (1 << 5)) && (iob_csr & (1 << 2))) {
+			iob_csr |= 1 << 5;
+			fprintf(stderr, "queue_key_event generating interrupt\n");
 			assert_unibus_interrupt(0260);
 		}
 	}
 }
 
 void
-iob_dequeue_key_event()
+dequeue_key_event(void)
 {
-	if (iob_kbd_csr & (1 << 5)) // Already something to be read.
+	if (iob_csr & (1 << 5))	// Already something to be read.
 		return;
 
-	if (iob_key_queue_free < IOB_KEY_QUEUE_LEN) {
-		int v = iob_key_queue[iob_key_queue_iptr];
-		traceio("iob_dequeue_key_event() - dequeuing 0%o, q len before %d\n", v, IOB_KEY_QUEUE_LEN - iob_key_queue_free);
-		iob_key_queue_iptr = (iob_key_queue_iptr + 1) % IOB_KEY_QUEUE_LEN;
-		iob_key_queue_free++;
-		iob_key_scan = (1 << 16) | v;
-		if (iob_kbd_csr & (1 << 2)) { // Keyboard interrupt enabled?
-			iob_kbd_csr |= 1 << 5;
-			fprintf(stderr, "iob_dequeue_key_event generating interrupt (q len after %d)\n", IOB_KEY_QUEUE_LEN - iob_key_queue_free);
+	if (key_queue_free < KEY_QUEUE_LEN) {
+		int v = key_queue[key_queue_iptr];
+		traceio("dequeue_key_event() - dequeuing 0%o, q len before %d\n", v, KEY_QUEUE_LEN - key_queue_free);
+		key_queue_iptr = (key_queue_iptr + 1) % KEY_QUEUE_LEN;
+		key_queue_free++;
+		kbd_key_scan = (1 << 16) | v;
+		if (iob_csr & (1 << 2)) {	// Keyboard interrupt enabled?
+			iob_csr |= 1 << 5;
+			fprintf(stderr, "dequeue_key_event generating interrupt (q len after %d)\n", KEY_QUEUE_LEN - key_queue_free);
 			assert_unibus_interrupt(0260);
 		}
 	}
 }
 
 void
-iob_key_event(int code, int keydown)
+kbd_key_event(int code, int keydown)
 {
 	int v;
 
-	traceio("iob_key_event(code=%x, keydown=%x)\n", code, keydown);
+	traceio("key_event(code=%x, keydown=%x)\n", code, keydown);
 
 	v = ((!keydown) << 8) | code;
 
-	if (iob_kbd_csr & (1 << 5))
-		iob_queue_key_event(v); // Already something there, queue this.
+	if (iob_csr & (1 << 5))
+		queue_key_event(v);	// Already something there, queue this.
 	else {
-		iob_key_scan = (1 << 16) | v;
-		traceio("iob_key_event() - 0%o\n", iob_key_scan);
-		if (iob_kbd_csr & (1 << 2)) {
-			iob_kbd_csr |= 1 << 5;
+		kbd_key_scan = (1 << 16) | v;
+		traceio("key_event() - 0%o\n", kbd_key_scan);
+		if (iob_csr & (1 << 2)) {
+			iob_csr |= 1 << 5;
 			assert_unibus_interrupt(0260);
 		}
 	}
 }
 
 void
-iob_warm_boot_key(void)
+kbd_warm_boot_key(void)
 {
 	// Send a Return to get the machine booted.
-	iob_key_event(50, 0);
+	kbd_key_event(50, 0);
 }
 
 void
-old_kbd_init(void)
+kbd_init(void)
 {
 	// ---!!! Handle multiple modifiers!
 	memset((char *) kb_to_scancode, 0, sizeof(kb_to_scancode));
@@ -193,10 +259,4 @@ old_kbd_init(void)
 		if (kb_to_scancode[i][1] == 0)
 			kb_to_scancode[i][1] = kb_to_scancode[i][0] | (3 << 6);
 	}
-}
-
-void
-kbd_init(void)
-{
-	old_kbd_init();
 }

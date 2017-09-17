@@ -1,31 +1,21 @@
+#ifndef USIM_UCODE_H
+#define USIM_UCODE_H
+
 #include <stdint.h>
 
 #define NOP_MASK 03777777777767777LL
 
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
 typedef uint64_t ucw_t;
 
-extern int trace;
+extern int run(void);
 
-#define tracef(...)
-#define traceio(...)
-#define tracedio(...)
-#define tracenet(...)
-#define traceint(...)
-#define tracevm(...)
+extern void write_a_mem(int loc, unsigned int v);
+extern unsigned int read_a_mem(int loc);
 
-extern int run_ucode_flag;
-extern int warm_boot_flag;
-extern int stop_after_prom_flag;
+extern void assert_unibus_interrupt(int vector);
+extern void deassert_unibus_interrupt(void);
 
-extern unsigned long cycles;
+extern void assert_xbus_interrupt(void);
+extern void deassert_xbus_interrupt(void);
 
-extern char *sym_find_by_val(int mcr, int v);
-extern char *sym_find_last(int mcr, int v, int *poffset);
-extern char *sym_find_by_type_val(int mcr, int t, int v);
-
-extern int read_phy_mem(int paddr, unsigned int *pv);
-extern int write_phy_mem(int paddr, unsigned int v);
+#endif

@@ -1,12 +1,10 @@
-#include "usim.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
 #include <strings.h>
 
-#include "config.h"
+#include "usim.h"
 
 struct sym_s {
 	struct sym_s *next;
@@ -194,10 +192,10 @@ _sym_sort(struct symtab_s *tab)
 void
 read_sym_files(void)
 {
-	_sym_read_file(&sym_prom, config_get_promsym_filename());
+	_sym_read_file(&sym_prom, promsym_filename);
 	_sym_sort(&sym_prom);
 
-	_sym_read_file(&sym_mcr, config_get_mcrsym_filename());
+	_sym_read_file(&sym_mcr, mcrsym_filename);
 	_sym_sort(&sym_mcr);
 }
 

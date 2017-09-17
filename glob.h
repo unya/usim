@@ -1,2 +1,2 @@
-char **glob(register char *v);
+char **glob(char *v);
 void gfree(char **glob);

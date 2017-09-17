@@ -1,30 +1,34 @@
-#include "usim.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <signal.h>
 #include <string.h>
+#include <stdbool.h>
 #include <limits.h>
 #include <unistd.h>
 #include <sys/time.h>
 
+#include "usim.h"
 #include "ucode.h"
-#include "config.h"
+#include "iob.h"
+#include "tv.h"
+#include "kbd.h"
+#include "chaos.h"
 #include "Files.h"
+#include "disk.h"
 
-int save_state_flag;
+#include "syms.h"
+#include "decode.h"
 
-extern int display_init(void);
-extern void display_poll(void);
-extern int disk_init(const char *filename);
-extern int read_prom_files(void);
-extern void read_sym_files(void);
-extern void iob_init(void);
-extern int chaos_init(void);
-extern void iob_warm_boot_key(void);
-extern void run(void);
-extern int dcanon(char *cp, int blankok);
+char *disk_filename = "disk.img";
+char *mcrsym_filename = "../bands/ucadr.sym.841";
+char *promsym_filename = "../bands/promh.sym.9";
+
+bool run_ucode_flag = true;
+bool save_state_flag = false;
+bool warm_boot_flag = false;
+bool stop_after_prom_flag = false;
+bool prom_enabled_flag = true;
 
 void
 usage(void)
@@ -52,7 +56,7 @@ main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:rtT:sSw")) != -1) {
 		switch (c) {
 		case 'i':
-			config_set_disk_filename(optarg);
+			disk_filename = strdup(optarg);
 			break;
 		case 'r':
 		{
@@ -78,10 +82,10 @@ main(int argc, char *argv[])
 		}
 	}
 
-	display_init();
-	display_poll();
+	tv_init();
+	tv_poll();
 
-	disk_init(config_get_disk_filename());
+	disk_init(disk_filename);
 
 	read_prom_files();
 	read_sym_files();
@@ -90,13 +94,11 @@ main(int argc, char *argv[])
 	chaos_init();
 
 	if (warm_boot_flag) {
-		iob_warm_boot_key();
+		kbd_warm_boot_key();
 	}
 
-	run();
-
-	while (run_ucode_flag) {
-		display_poll();
+	while (run()) {
+		tv_poll();
 	}
 
 	exit(0);

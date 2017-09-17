@@ -3,24 +3,17 @@
 // Each disk block contains one Lisp Machine page worth of data,
 // i.e. 256. words or 1024. bytes.
 
-#include "usim.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include "usim.h"
 #include "ucode.h"
-#include "config.h"
-
-extern void deassert_xbus_interrupt(void);
-extern void assert_xbus_interrupt(void);
+#include "mem.h"
 
 int disk_fd;
 uint8_t *disk_mm;
@@ -33,38 +26,6 @@ int disk_ecc;
 int disk_da;
 
 int disk_byteswap;
-
-void
-disk_set_byteswap(int on)
-{
-	disk_byteswap = on;
-}
-
-int
-disk_get_status(void)
-{
-	return disk_status;
-}
-
-void
-disk_set_da(int v)
-{
-	disk_da = v;
-}
-
-void
-disk_set_clp(int v)
-{
-	disk_clp = v;
-}
-
-void
-disk_set_cmd(int v)
-{
-	disk_cmd = v;
-	if ((disk_cmd & 06000) == 0)
-		deassert_xbus_interrupt();
-}
 
 int cyls;
 int heads;
@@ -154,18 +115,18 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 #define LABEL_LABL 011420440514ULL
 #define LABEL_BLANK 020020020020ULL
 	if (unit == 0 && cyl == 0 && head == 0 && block == 0) {
-		write_phy_mem(vma + 0, LABEL_LABL);   // Label magic.
-		write_phy_mem(vma + 1, 000000000001); // Version.
-		write_phy_mem(vma + 2, 000000001000); // Number of cylinders
-		write_phy_mem(vma + 3, 000000000004); // Number of heades.
-		write_phy_mem(vma + 4, 000000000100); // Number of blocks.
-		write_phy_mem(vma + 5, 000000000400); // Heads * blocks.
-		write_phy_mem(vma + 6, 000000001234); // Name of microcode partition.
-		write_phy_mem(vma + 0200, 1); // Number of partitions.
-		write_phy_mem(vma + 0201, 1); // Words per partition.
-		write_phy_mem(vma + 0202, 01234); // Start of partition info.
-		write_phy_mem(vma + 0203, 01000); // Microcode address.
-		write_phy_mem(vma + 0204, 010);	  // Number of blocks.
+		write_phy_mem(vma + 0, LABEL_LABL);	// Label magic.
+		write_phy_mem(vma + 1, 000000000001);	// Version.
+		write_phy_mem(vma + 2, 000000001000);	// Number of cylinders
+		write_phy_mem(vma + 3, 000000000004);	// Number of heades.
+		write_phy_mem(vma + 4, 000000000100);	// Number of blocks.
+		write_phy_mem(vma + 5, 000000000400);	// Heads * blocks.
+		write_phy_mem(vma + 6, 000000001234);	// Name of microcode partition.
+		write_phy_mem(vma + 0200, 1);	// Number of partitions.
+		write_phy_mem(vma + 0201, 1);	// Words per partition.
+		write_phy_mem(vma + 0202, 01234);	// Start of partition info.
+		write_phy_mem(vma + 0203, 01000);	// Microcode address.
+		write_phy_mem(vma + 0204, 010);	// Number of blocks.
 
 		return 0;
 	}
@@ -202,17 +163,17 @@ disk_throw_interrupt(void)
 	assert_xbus_interrupt();
 }
 
-static int disk_interrupt_delay;
+int disk_interrupt_delay;
 
 void
-disk_future_interrupt()
+disk_future_interrupt(void)
 {
 	disk_interrupt_delay = 100;
 	disk_interrupt_delay = 2500;
 }
 
 void
-disk_poll()
+disk_poll(void)
 {
 	if (disk_interrupt_delay) {
 		if (--disk_interrupt_delay == 0) {
@@ -401,15 +362,17 @@ disk_xbus_write(int offset, unsigned int v)
 		tracedio("disk: load status %o\n", v);
 		break;
 	case 0374:
-		disk_set_cmd(v);
+		disk_cmd = v;
+		if ((disk_cmd & 06000) == 0)
+			deassert_xbus_interrupt();
 		tracedio("disk: load cmd %o\n", v);
 		break;
 	case 0375:
 		tracedio("disk: load clp %o (phys page %o)\n", v, v << 8);
-		disk_set_clp(v);
+		disk_clp = v;
 		break;
 	case 0376:
-		disk_set_da(v);
+		disk_da = v;
 		tracef("disk: load da %o\n", v);
 		break;
 	case 0377:
@@ -429,7 +392,7 @@ disk_xbus_read(int offset, unsigned int *pv)
 	switch (offset) {
 	case 0370:
 		tracef("disk: read status\n");
-		*pv = disk_get_status();
+		*pv = disk_status;
 		break;
 	case 0371:
 		tracef("disk: read ma\n");
@@ -445,7 +408,7 @@ disk_xbus_read(int offset, unsigned int *pv)
 		break;
 	case 0374:
 		tracef("disk: status read\n");
-		*pv = disk_get_status();
+		*pv = disk_status;
 		break;
 	case 0375:
 		*pv = disk_clp;
@@ -471,7 +434,7 @@ disk_init(char *filename)
 	label[0] = 0;
 
 #ifdef __BIG_ENDIAN__
-	disk_set_byteswap(1);
+	disk_byteswap = on;
 #endif
 
 	printf("disk: opening %s\n", filename);
@@ -518,7 +481,7 @@ disk_init(char *filename)
 		s = strstr(fn, ".mcr.");
 		if (s)
 			memcpy(s, ".sym.", 5);
-		config_set_mcrsym_filename(fn);
+		mcrsym_filename = strdup(fn);
 	}
 
 	return 0;

@@ -1,5 +1,3 @@
-#include "usim.h"
-
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -16,6 +14,7 @@
 #include <sys/poll.h>
 #include <sys/uio.h>
 
+#include "usim.h"
 #include "ucode.h"
 #include "chaos.h"
 
@@ -42,7 +41,7 @@ int chaos_rcv_buffer_empty;
 
 int chaos_fd;
 int chaos_need_reconnect;
-static int reconnect_delay;
+int reconnect_delay;
 void chaos_force_reconect(void);
 int chaos_send_to_chaosd(char *buffer, int size);
 int chaos_reconnect(void);
@@ -64,27 +63,27 @@ int chaos_reconnect(void);
 
 // RFC1071: Compute Internet Checksum for COUNT bytes beginning at
 // location ADDR.
-	static unsigned short
-	ch_checksum(const unsigned char *addr, int count)
-	{
-		long sum = 0;
-
-		while (count > 1) {
-			sum += *(addr) << 8 | *(addr + 1);
-			addr += 2;
-			count -= 2;
-		}
-
-		// Add left-over byte, if any.
-		if (count > 0)
-			sum += *(unsigned char *) addr;
-
-		// Fold 32-bit sum to 16 bits.
-		while (sum >> 16)
-			sum = (sum & 0xffff) + (sum >> 16);
-
-		return (~sum) & 0xffff;
+unsigned short
+ch_checksum(const unsigned char *addr, int count)
+{
+	long sum = 0;
+	
+	while (count > 1) {
+		sum += *(addr) << 8 | *(addr + 1);
+		addr += 2;
+		count -= 2;
 	}
+	
+// Add left-over byte, if any.
+	if (count > 0)
+		sum += *(unsigned char *) addr;
+	
+// Fold 32-bit sum to 16 bits.
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	
+	return (~sum) & 0xffff;
+}
 
 void
 chaos_rx_pkt(void)
@@ -128,7 +127,7 @@ char *opcodetable[256] = {
 	"UNKNOWN",
 };
 
-static void
+void
 dumpbuffer(unsigned short *buffer, int size)
 {
 	int j;
@@ -140,7 +139,7 @@ dumpbuffer(unsigned short *buffer, int size)
 	int cnt = (buffer[1] & 0x0fff);
 	int opcode = (buffer[0] & 0xff00) >> 8;
 
-	size = size - (int) (8 * sizeof(short)); // Subtract off the size of packet header.
+	size = size - (int) (8 * sizeof(short));	// Subtract off the size of packet header.
 	if (size < cnt)
 		printf("ERROR: packet size mismatch: size %d < cnt %d\n", size, cnt);
 	else if (size > cnt) {
@@ -213,8 +212,8 @@ chaos_xmit_pkt(void)
 
 	// Dest is already in the buffer.
 
-	chaos_xmit_buffer[chaos_xmit_buffer_size++] = (unsigned short) chaos_addr; // Source.
-	chaos_xmit_buffer[chaos_xmit_buffer_size] = ch_checksum((u_char *) chaos_xmit_buffer, chaos_xmit_buffer_size * 2); // Checksum.
+	chaos_xmit_buffer[chaos_xmit_buffer_size++] = (unsigned short) chaos_addr;	// Source.
+	chaos_xmit_buffer[chaos_xmit_buffer_size] = ch_checksum((unsigned char *) chaos_xmit_buffer, chaos_xmit_buffer_size * 2);	// Checksum.
 	chaos_xmit_buffer_size++;
 
 	chaos_send_to_chaosd((char *) chaos_xmit_buffer, chaos_xmit_buffer_size * 2);
@@ -346,7 +345,7 @@ chaos_set_csr(int v)
 		chaos_rcv_buffer_ptr = 0;
 		chaos_csr &= ~(CHAOS_CSR_RESET | CHAOS_CSR_RECEIVE_DONE);
 		chaos_csr |= CHAOS_CSR_TRANSMIT_DONE;
-		reconnect_delay = 200; // Do it right away.
+		reconnect_delay = 200;	// Do it right away.
 		chaos_force_reconect();
 	}
 
@@ -392,11 +391,11 @@ chaos_force_reconect(void)
 {
 }
 
-static packet_queue *queuehead;
-static packet_queue *queuetail;
+packet_queue *queuehead;
+packet_queue *queuetail;
 int connectionstate = 0;
 
-static pthread_mutex_t recvqueue;
+pthread_mutex_t recvqueue;
 
 chaos_connection *connections[256];
 
@@ -781,7 +780,7 @@ chaos_poll(void)
 	memcpy(chaos_rcv_buffer, packet, (size_t) size * sizeof(unsigned short));
 	chaos_rcv_buffer[size] = dest_addr;
 	chaos_rcv_buffer[size + 1] = source_addr;
-	chaos_rcv_buffer[size + 2] = 0; // Unused checksum.
+	chaos_rcv_buffer[size + 2] = 0;	// Unused checksum.
 	size += 3;
 
 	// Ignore any packets not to us.
@@ -853,7 +852,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				answer = chaos_allocate_packet(conn, CHAOS_OPCODE_OPN, 2 * sizeof(unsigned short));
 				answer->acknowledgement = packet->number;
 				conn->lastacked = packet->number;
-				*(unsigned short *) &answer->data[0] = packet->number; // Last packed received.
+				*(unsigned short *) &answer->data[0] = packet->number;	// Last packed received.
 				*(unsigned short *) &answer->data[2] = conn->rwsize;
 				chaos_connection_queue(conn, answer);
 				conn->state = cs_rfc;
@@ -875,7 +874,7 @@ chaos_send_to_chaosd(char *buffer, int size)
 				answer = chaos_allocate_packet(conn, CHAOS_OPCODE_OPN, 2 * sizeof(unsigned short));
 				answer->acknowledgement = packet->number;
 				conn->lastacked = packet->number;
-				*(unsigned short *) &answer->data[0] = packet->number; // Last packed received.
+				*(unsigned short *) &answer->data[0] = packet->number;	// Last packed received.
 				*(unsigned short *) &answer->data[2] = conn->rwsize;
 				chaos_connection_queue(conn, answer);
 				conn->state = cs_rfc;

@@ -51,7 +51,7 @@ read32(int fd)
 }
 
 int
-read_i_mem(int fd, int start, int size)
+dump_i_mem(int fd, int start, int size)
 {
 	int i;
 	int loc;
@@ -84,7 +84,7 @@ read_i_mem(int fd, int start, int size)
 }
 
 int
-read_d_mem(int fd, int start, int size)
+dump_d_mem(int fd, int start, int size)
 {
 	int i;
 
@@ -97,7 +97,7 @@ read_d_mem(int fd, int start, int size)
 }
 
 int
-read_a_mem(int fd, int start, int size)
+dump_a_mem(int fd, int start, int size)
 {
 	int i;
 	unsigned int v;
@@ -116,7 +116,7 @@ read_a_mem(int fd, int start, int size)
 }
 
 int
-read_main_mem(int fd, int start, int size)
+dump_main_mem(int fd, int start, int size)
 {
 	read32(fd);
 	printf("start %d, size %d\n", start, size);
@@ -193,19 +193,19 @@ main(int argc, char *argv[])
 			switch (code) {
 			case 1:
 				printf("i-memory\n");
-				read_i_mem(fd, start, size);
+				dump_i_mem(fd, start, size);
 				break;
 			case 2:
 				printf("d-memory\n");
-				read_d_mem(fd, start, size);
+				dump_d_mem(fd, start, size);
 				break;
 			case 3:
 				printf("main-memory\n");
-				read_main_mem(fd, start, size);
+				dump_main_mem(fd, start, size);
 				break;
 			case 4:
 				printf("a-memory\n");
-				read_a_mem(fd, start, size);
+				dump_a_mem(fd, start, size);
 				done = 1;
 				break;
 			}

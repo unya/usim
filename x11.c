@@ -8,17 +8,11 @@
 #include <stdint.h>
 #include <signal.h>
 
-extern unsigned char kb_old_table[64][3];
-extern unsigned short kb_to_scancode[256][4];
+#include "usim.h"
 
-extern int run_ucode_flag;
-extern void iob_key_event(int code, int extra);
-extern void iob_mouse_event(int x, int y, int buttons);
-
-static unsigned int video_width = 768;
-static unsigned int video_height = 897;
-
-unsigned int tv_bitmap[(768 * 1024)];
+#include "tv.h"
+#include "kbd.h"
+#include "mouse.h"
 
 typedef struct DisplayState {
 	unsigned char *data;
@@ -30,11 +24,11 @@ typedef struct DisplayState {
 
 Display *display;
 Window window;
-static int bitmap_order;
-static int color_depth;
-static Visual *visual = NULL;
-static GC gc;
-static XImage *ximage;
+int bitmap_order;
+int color_depth;
+Visual *visual = NULL;
+GC gc;
+XImage *ximage;
 
 #define USIM_EVENT_MASK ExposureMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | KeyPressMask | KeyReleaseMask
 
@@ -51,13 +45,13 @@ static XImage *ximage;
 unsigned long Black;
 unsigned long White;
 
-static int old_run_state;
+int old_run_state;
 
-static XComposeStatus status;
+XComposeStatus status;
 
 // Takes E, converts it into a LM keycode and sends it to the
 // IOB KBD.
-static void
+void
 process_key(XEvent *e, int keydown)
 {
 	KeySym keysym;
@@ -121,10 +115,10 @@ process_key(XEvent *e, int keydown)
 		case XK_Break:
 			lmcode = 0;
 			break;
-		case XK_BackSpace: // Rubout.
+		case XK_BackSpace:	// Rubout.
 			lmcode = 046;
 			break;
-		case XK_Return: // Return.
+		case XK_Return:	// Return.
 			lmcode = 50;
 			break;
 		case XK_Tab:
@@ -150,23 +144,27 @@ process_key(XEvent *e, int keydown)
 
 		lmcode |= 0xffff0000;
 
-		iob_key_event(lmcode, keydown);
+		kbd_key_event(lmcode, keydown);
 
 	}
 }
 
 void
-display_poll(void)
+x11_event(void)
 {
 	XEvent e;
 	void send_accumulated_updates(void);
+
+	if (ximage == NULL)
+		return;
 
 	send_accumulated_updates();
 
 	while (XCheckWindowEvent(display, window, USIM_EVENT_MASK, &e)) {
 		switch (e.type) {
 		case Expose:
-			XPutImage(display, window, gc, ximage, 0, 0, 0, 0, video_width, video_height);
+			if (ximage)
+				XPutImage(display, window, gc, ximage, 0, 0, 0, 0, tv_width, tv_height);
 			XFlush(display);
 			break;
 		case KeyPress:
@@ -186,30 +184,6 @@ display_poll(void)
 	}
 	if (old_run_state != run_ucode_flag) {
 		old_run_state = run_ucode_flag;
-	}
-}
-
-void
-video_read(int offset, unsigned int *pv)
-{
-	if (ximage) {
-		unsigned long bits;
-		int i;
-
-		offset *= 32;
-
-		if (offset > video_width * video_height) {
-			printf("video: video_read past end; " "offset %o\n", offset);
-			*pv = 0;
-			return;
-		}
-
-		bits = 0;
-		for (i = 0; i < 32; i++) {
-			if (tv_bitmap[offset + i] == Black)
-				bits |= 1 << i;
-		}
-		*pv = bits;
 	}
 }
 
@@ -240,7 +214,8 @@ send_accumulated_updates(void)
 	hs = u_maxh - u_minh;
 	vs = u_maxv - u_minv;
 	if (u_minh != 0x7fffffff && u_minv != 0x7fffffff && u_maxh && u_maxv) {
-		XPutImage(display, window, gc, ximage, u_minh, u_minv, u_minh, u_minv, hs, vs);
+		if (ximage)
+			XPutImage(display, window, gc, ximage, u_minh, u_minv, u_minh, u_minv, hs, vs);
 		XFlush(display);
 	}
 
@@ -250,30 +225,8 @@ send_accumulated_updates(void)
 	u_maxv = 0;
 }
 
-void
-video_write(int offset, unsigned int bits)
-{
-	if (ximage) {
-		int i;
-		int h;
-		int v;
-
-		offset *= 32;
-
-		v = offset / video_width;
-		h = offset % video_width;
-
-		for (i = 0; i < 32; i++) {
-			tv_bitmap[offset + i] = (bits & 1) ? Black : White;
-			bits >>= 1;
-		}
-
-		accumulate_update(h, v, 32, 1);
-	}
-}
-
 int
-display_init(void)
+x11_init(void)
 {
 	char *displayname;
 	unsigned long bg_pixel = 0L;
@@ -307,7 +260,7 @@ display_init(void)
 
 	root = RootWindow(display, xscreen);
 	attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-	window = XCreateWindow(display, root, 0, 0, video_width, video_height, 0, color_depth, InputOutput, visual, CWBorderPixel | CWEventMask, &attr);
+	window = XCreateWindow(display, root, 0, 0, tv_width, tv_height, 0, color_depth, InputOutput, visual, CWBorderPixel | CWEventMask, &attr);
 	if (window == None) {
 		fprintf(stderr, "usim: failed to open window.\n");
 		exit(-1);
@@ -321,14 +274,16 @@ display_init(void)
 		pIconName = NULL;
 	}
 
-	if ((size_hints = XAllocSizeHints()) != NULL) {
+	size_hints = XAllocSizeHints();
+	if (size_hints != NULL) {
 		// The window will not be resizable.
 		size_hints->flags = PMinSize | PMaxSize;
-		size_hints->min_width = size_hints->max_width = video_width;
-		size_hints->min_height = size_hints->max_height = video_height;
+		size_hints->min_width = size_hints->max_width = tv_width;
+		size_hints->min_height = size_hints->max_height = tv_height;
 	}
 
-	if ((wm_hints = XAllocWMHints()) != NULL) {
+	wm_hints = XAllocWMHints();
+	if (wm_hints != NULL) {
 		wm_hints->initial_state = NormalState;
 		wm_hints->input = True;
 		wm_hints->flags = StateHint | InputHint;
@@ -342,7 +297,7 @@ display_init(void)
 	// Fill window with the specified background color.
 	bg_pixel = 0;
 	XSetForeground(display, gc, bg_pixel);
-	XFillRectangle(display, window, gc, 0, 0, video_width, video_height);
+	XFillRectangle(display, window, gc, 0, 0, tv_width, tv_height);
 
 	// Wait for first Expose event to do any drawing, then flush.
 	do {
@@ -351,7 +306,7 @@ display_init(void)
 	while (e.type != Expose || e.xexpose.count);
 
 	XFlush(display);
-	ximage = XCreateImage(display, visual, (unsigned) color_depth, ZPixmap, 0, (char *) tv_bitmap, video_width, video_height, 32, 0);
+	ximage = XCreateImage(display, visual, (unsigned) color_depth, ZPixmap, 0, (char *) tv_bitmap, tv_width, tv_height, 32, 0);
 	ximage->byte_order = LSBFirst;
 
 	return 0;

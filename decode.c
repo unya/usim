@@ -293,7 +293,7 @@ disassemble_ucode_loc(ucw_t u)
 		printf("popj; ");
 
 	switch ((u >> 43) & 03) {
-	case 0:			// ALU.
+	case 0:		// ALU.
 		printf("(alu) ");
 
 		if ((u & NOP_MASK) == 0) {
@@ -365,7 +365,7 @@ disassemble_ucode_loc(ucw_t u)
 		}
 		disassemble_dest(dest);
 		break;
-	case 1:			// JUMP.
+	case 1:		// JUMP.
 		printf("(jump) ");
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -382,7 +382,7 @@ disassemble_ucode_loc(ucw_t u)
 		if (n_bit)	// INHIBIT-XCT-NEXT
 			printf("!next ");
 
-		if (u & (1 << 6)) // INVERT-JUMP-SENSE
+		if (u & (1 << 6))	// INVERT-JUMP-SENSE
 			printf("!jump ");
 
 		if (u & (1 << 5)) {
@@ -414,7 +414,7 @@ disassemble_ucode_loc(ucw_t u)
 			printf("m-rot<< %o", (int) u & 037);
 		}
 		break;
-	case 2:			// DISPATCH.
+	case 2:		// DISPATCH.
 		printf("(dispatch) ");
 		disp_cont = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -433,7 +433,7 @@ disassemble_ucode_loc(ucw_t u)
 
 		printf("disp-const %o, disp-addr %o, map %o, len %o, rot %o ", disp_cont, disp_addr, map, len, rot);
 		break;
-	case 3:			// BYTE.
+	case 3:		// BYTE.
 		printf("(byte) ");
 		a_src = (u >> 32) & 01777;
 		m_src = (u >> 26) & 077;
@@ -449,13 +449,13 @@ disassemble_ucode_loc(ucw_t u)
 		switch (mr_sr_bits) {
 		case 0:
 			break;
-		case 1:		// LDB.
+		case 1:	// LDB.
 			printf("ldb pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
 		case 2:
 			printf("sel dep (a<-m&mask) pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
-		case 3:		// DPB.
+		case 3:	// DPB.
 			printf("dpb pos=%o, width=%o ", pos, widthm1 + 1);
 			break;
 		}
@@ -487,19 +487,19 @@ disassemble_prom(void)
 
 // ---!!! See about merging with diskmaker.
 
-static int partoff;
-static int bnum = -1;
-static unsigned int buf[256];
+int partoff;
+int bnum = -1;
+unsigned int buf[256];
 
 extern int disk_fd;
 
-static unsigned int
+unsigned int
 str4(char *s)
 {
 	return (unsigned int) ((s[3] << 24) | (s[2] << 16) | (s[1] << 8) | s[0]);
 }
 
-static int
+int
 find_disk_partition_table(int fd)
 {
 	off_t ret;
@@ -538,7 +538,7 @@ find_disk_partition_table(int fd)
 	return 0;
 }
 
-static unsigned int
+unsigned int
 read_virt(int fd, unsigned int addr, unsigned int *pv)
 {
 	int b;
@@ -570,7 +570,7 @@ read_virt(int fd, unsigned int addr, unsigned int *pv)
 	return 0;
 }
 
-static char *
+char *
 read_string(unsigned int loc)
 {
 	unsigned int v;
@@ -601,7 +601,7 @@ read_string(unsigned int loc)
 	return (char *) 0;
 }
 
-static char *
+char *
 show_string(unsigned int loc)
 {
 	char *s;
@@ -728,16 +728,16 @@ show_list(void)
 	}
 }
 
-static void showstr(char *buffer, unsigned int a, int cr);
-static void show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width);
-static unsigned int get(unsigned int a);
+void showstr(char *buffer, unsigned int a, int cr);
+void show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width);
+unsigned int get(unsigned int a);
 
 #include "macroops.h"
 
 char *disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsigned int width);
 extern int read_mem(int vaddr, unsigned int *pv);
 
-static char *
+char *
 disassemble_address(unsigned int reg, unsigned int delta)
 {
 	static char addr[256];
@@ -832,8 +832,8 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	sprintf(buffer, "%011o%c %06o ", loc, even ? 'e' : 'o', inst);
 
 	switch (op) {
-	case 0:			// CALL
-	case 1:			// CALL0
+	case 0:		// CALL
+	case 1:		// CALL0
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
 		sprintf(&buffer[strlen(buffer)], "%s", disassemble_address(reg, delta));
@@ -858,12 +858,12 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 			}
 		}
 		break;
-	case 2:			// MOVE.
-	case 3:			// CAR.
-	case 4:			// CDR.
-	case 5:			// CADR.
-	case 6:			// CDDR.
-	case 7:			// CDAR.
+	case 2:		// MOVE.
+	case 3:		// CAR.
+	case 4:		// CDR.
+	case 5:		// CADR.
+	case 6:		// CDDR.
+	case 7:		// CDAR.
 	case 010:		// CAAR.
 		sprintf(&buffer[strlen(buffer)], "%s", call_names[op]);
 		sprintf(&buffer[strlen(buffer)], " %s ", dest_names[dest]);
@@ -913,7 +913,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 	return buffer;
 }
 
-static void
+void
 showstr(char *buffer, unsigned int a, int cr)
 {
 	int j;
@@ -938,7 +938,7 @@ showstr(char *buffer, unsigned int a, int cr)
 		sprintf(&buffer[strlen(buffer)], " <break> ");
 }
 
-static void
+void
 show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 {
 	unsigned int n;
@@ -961,7 +961,7 @@ show_fef_func_name(char *buffer, unsigned int fefptr, unsigned int width)
 	}
 }
 
-static unsigned int
+unsigned int
 get(unsigned int a)
 {
 	unsigned int v = 0;

@@ -1,3 +1,6 @@
+#ifndef USIM_KBD_H
+#define USIM_KBD_H
+
 // See SYS:LMIO;RDDEFS LISP for details.
 #define LM_K_NULL 0200
 #define LM_K_BREAK 0201
@@ -19,75 +22,13 @@
 #define LM_K_NETWORK 0236
 #define LM_K_SP 040
 
-// See SYS:LMWIN;COLD LISP for details.
-//
-// Keyboard translate table is a 3 X 64 array.
-// 3 entries for each of 100 keys.  First is vanilla, second shift, third top.
-unsigned char kb_old_table[64][3] = {
-	{LM_K_BREAK, LM_K_BREAK, LM_K_NETWORK},
-	{LM_K_ESC, LM_K_ESC, LM_K_SYSTEM},
-	{'1', '!', '!'},
-	{'2', '"', '"'},
-	{'3', '#', '#'},
-	{'4', '$', '$'},
-	{'5', '%', '%'},
-	{'6', '&', '&'},
-	{'7', '\'', '\''},
-	{'8', '(', '('},
-	{'9', ')', ')'},
-	{'0', '_', '_'},
-	{'-', '=', '='},
-	{'@', '`', '`'},
-	{'^', '~', '~'},
-	{LM_K_BS, LM_K_BS, LM_K_BS},
-	{LM_K_CALL, LM_K_CALL, LM_K_ABORT},
-	{LM_K_CLEAR, LM_K_CLEAR, LM_K_CLEAR},
-	{LM_K_TAB, LM_K_TAB, LM_K_TAB},
-	{'', '', ''},
-	{'q', 'Q', ''},
-	{'w', 'W', ''},
-	{'e', 'E', ''},
-	{'r', 'R', ''},
-	{'t', 'T', ''},
-	{'y', 'Y', ''},
-	{'u', 'U', ''},
-	{'i', 'I', ''},
-	{'o', 'O', ''},
-	{'p', 'P', ''},
-	{'[', '{', '{'},
-	{']', '}', '}'},
-	{'\\', '|', '|'},
-	{'/', '', ''},
-	{'', LM_K_CR, LM_K_NULL},
-	{LM_K_CR, LM_K_TAB, LM_K_TAB},
-	{LM_K_FORM, LM_K_FORM, LM_K_FORM},
-	{LM_K_VT, LM_K_VT, LM_K_VT},
-	{LM_K_RUBOUT, LM_K_RUBOUT, LM_K_RUBOUT},
-	{'a', 'A', ''},
-	{'s', 'S', ''},
-	{'d', 'D', ''},
-	{'f', 'F', ''},
-	{'g', 'G', ''},
-	{'h', 'H', LM_K_HELP},
-	{'j', 'J', ''},
-	{'k', 'K', ''},
-	{'l', 'L', ''},
-	{';', '+', '+'},
-	{':', '*', '*'},
-	{LM_K_CR, LM_K_CR, LM_K_END},
-	{LM_K_LINE, LM_K_LINE, LM_K_LINE},
-	{LM_K_BACK_NEXT, LM_K_BACK_NEXT, LM_K_BACK_NEXT},
-	{'z', 'Z', ''},
-	{'x', 'X', ''},
-	{'c', 'C', ''},
-	{'v', 'V', ''},
-	{'b', 'B', ''},
-	{'n', 'N', ''},
-	{'m', 'M', ''},
-	{',', '<', '<'},
-	{'.', '>', '>'},
-	{'/', '?', '?'},
-	{LM_K_SP, LM_K_SP, LM_K_SP},
-};
+extern unsigned char kb_old_table[64][3];
+extern unsigned short kb_to_scancode[256][4];
 
-unsigned short kb_to_scancode[256][4];
+extern void kbd_key_event(int code, int keydown);
+extern void kbd_init(void);
+extern void kbd_warm_boot_key(void);
+
+extern unsigned int kbd_key_scan;
+
+#endif
