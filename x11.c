@@ -132,7 +132,7 @@ process_key(XEvent *e, int keydown)
 				printf("unknown keycode: %d\n", keysym);
 				return;
 			}
-			lmcode = kb_to_scancode[keysym][(extra & (3 << 6)) ? 1 : 0];
+			lmcode = okb_to_scancode[keysym][(extra & (3 << 6)) ? 1 : 0];
 			break;
 		}
 
@@ -145,7 +145,6 @@ process_key(XEvent *e, int keydown)
 		lmcode |= 0xffff0000;
 
 		kbd_key_event(lmcode, keydown);
-
 	}
 }
 

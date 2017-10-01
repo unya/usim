@@ -23,7 +23,7 @@
 #define LM_K_SP 040
 
 extern unsigned char kb_old_table[64][3];
-extern unsigned short kb_to_scancode[256][4];
+extern unsigned short okb_to_scancode[256][4];
 
 extern void kbd_key_event(int code, int keydown);
 extern void kbd_init(void);
