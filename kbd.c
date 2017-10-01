@@ -207,11 +207,11 @@ kbd_init(void)
 	kb_to_scancode['('][1] = 011 | (3 << 6);
 	kb_to_scancode[')'][1] = 012 | (3 << 6);
 	kb_to_scancode['_'][1] = 013 | (3 << 6);
-
+	kb_to_scancode['~'][1] = 016 | (3 << 6);
 	kb_to_scancode['@'][1] = 13;
 	kb_to_scancode['^'][1] = 14;
 
-	kb_to_scancode['Q'][1] = 20| (3 << 6);
+	kb_to_scancode['Q'][1] = 20 | (3 << 6);
 	kb_to_scancode['W'][1] = 21 | (3 << 6);
 	kb_to_scancode['E'][1] = 22 | (3 << 6);
 	kb_to_scancode['R'][1] = 23 | (3 << 6);
