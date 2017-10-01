@@ -7,7 +7,7 @@ USIM_LDFLAGS = -lpthread -lX11
 
 all: TAGS usim readmcr diskmaker lod lmfs cc
 
-usim: usim.o ucode.o mem.o iob.o mouse.o kbd.o tv.o x11.o chaos.o Files.o disk.o uart.o decode.o syms.o glob.o
+usim: usim.o ucode.o mem.o iob.o mouse.o kbd.o tv.o x11.o chaos.o Files.o disk.o lashup.o uart.o decode.o syms.o glob.o
 	$(CC) $(CFLAGS) -o $@ $^ $(USIM_LDFLAGS)
 
 readmcr: readmcr.o

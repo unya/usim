@@ -18,6 +18,7 @@
 #include "uart.h"
 #include "chaos.h"
 #include "disk.h"
+#include "lashup.h"
 
 ucw_t prom_ucode[512];
 
@@ -184,6 +185,14 @@ read_mem(int vaddr, unsigned int *pv)
 			traceio("unibus: read error status\n");
 			*pv = 0;
 			return 0;
+		case 0100:
+		case 0104:
+		case 0110:
+		case 0114:
+			traceio("unibus: cadr debugee read (%o)\n", offset, pv);
+			lashup_unibus_read(offset, pv);
+			*pv = 0;
+			return 0;
 		}
 	}
 
@@ -325,7 +334,8 @@ write_mem(int vaddr, unsigned int v)
 		case 0104:
 		case 0110:
 		case 0114:
-			printf("unibus: cadr debugee (%o) v %o\n", offset, v);
+			printf("unibus: cadr debugee write (%o) v %o\n", offset, v);
+			lashup_unibus_write(offset, v);
 			return 0;
 		default:
 			if (offset >= 0140 && offset <= 0176) {
