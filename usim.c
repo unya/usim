@@ -10,6 +10,7 @@
 
 #include "usim.h"
 #include "ucode.h"
+#include "lashup.h"
 #include "iob.h"
 #include "tv.h"
 #include "kbd.h"
@@ -30,6 +31,9 @@ bool warm_boot_flag = false;
 bool stop_after_prom_flag = false;
 bool prom_enabled_flag = true;
 
+bool lashup_flag = false;
+char *lashup_port = "/dev/ttyUSB0";
+
 void
 usage(void)
 {
@@ -41,6 +45,7 @@ usage(void)
 	fprintf(stderr, "  -S             save state\n");
 	fprintf(stderr, "  -s             halt after prom runs\n");
 	fprintf(stderr, "  -w             warm boot\n");
+	fprintf(stderr, "  -l             lashup\n");
 	exit(1);
 }
 
@@ -53,7 +58,7 @@ main(int argc, char *argv[])
 
 	printf("CADR emulator v0.9\n");
 
-	while ((c = getopt(argc, argv, "ab:B:c:dC:i:l:nmp:q:rtT:sSw")) != -1) {
+	while ((c = getopt(argc, argv, "i:rSswl")) != -1) {
 		switch (c) {
 		case 'i':
 			disk_filename = strdup(optarg);
@@ -77,10 +82,16 @@ main(int argc, char *argv[])
 		case 'w':
 			warm_boot_flag = 1;
 			break;
+		case 'l':
+			lashup_flag = 1;
+			break;
 		default:
 			usage();
 		}
 	}
+
+	if (lashup_flag)
+		lashup_init(lashup_port);
 
 	tv_init();
 	tv_poll();
@@ -93,13 +104,11 @@ main(int argc, char *argv[])
 	iob_init();
 	chaos_init();
 
-	if (warm_boot_flag) {
+	if (warm_boot_flag)
 		kbd_warm_boot_key();
-	}
 
-	while (run()) {
+	while (run())
 		tv_poll();
-	}
 
 	exit(0);
 }
