@@ -58,7 +58,8 @@ process_key(XEvent *e, int keydown)
 	unsigned char buffer[5];
 	int extra;
 	int lmcode;
-
+	int newkbd = 0;
+	
 	extra = 0;
 	if (e->xkey.state & X_META)
 		extra |= 3 << 12;
@@ -127,6 +128,22 @@ process_key(XEvent *e, int keydown)
 		case XK_Escape:
 			lmcode = 1;
 			break;
+		case XK_Left:
+			newkbd = 1;
+			lmcode = 0117;
+			break;
+		case XK_Right:
+			newkbd = 1;
+			lmcode = 017;
+			break;
+		case XK_Up:
+			newkbd = 1;
+			lmcode = 0106;
+			break;
+		case XK_Down:
+			newkbd = 1;
+			lmcode = 0176;
+			break;
 		default:
 			if (keysym > 255) {
 				printf("unknown keycode: %d\n", keysym);
@@ -142,7 +159,10 @@ process_key(XEvent *e, int keydown)
 		if (extra & (17 << 10))
 			lmcode |= extra;
 
-		lmcode |= 0xffff0000;
+		if (newkbd)
+			lmcode |= 1 << 16;
+		else
+			lmcode |= 0xffff0000;
 
 		kbd_key_event(lmcode, keydown);
 	}
