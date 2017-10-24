@@ -1,14 +1,14 @@
 VERSION = 0.9-ams
 
-CC = gcc
-CFLAGS = -g3 -O3 -std=gnu99
+CC = gcc -std=gnu99
+CC += -Wall -Wextra -fsanitize=undefined
 
-USIM_LDFLAGS = -lpthread -lX11
+CFLAGS = -g3 -O3
 
 all: TAGS usim readmcr diskmaker lod lmfs cc
 
 usim: usim.o ucode.o mem.o iob.o mouse.o kbd.o tv.o x11.o chaos.o Files.o disk.o lashup.o uart.o decode.o syms.o glob.o
-	$(CC) $(CFLAGS) -o $@ $^ $(USIM_LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ -lpthread -lX11
 
 readmcr: readmcr.o
 	$(CC) $(CFLAGS) -o $@ $^
@@ -24,9 +24,6 @@ lod: lod.o
 
 cc: cc.o decode.o
 	$(CC) $(CFLAGS) -o $@ $^
-
-disk.img: diskmaker
-	./diskmaker -c
 
 clean:
 	rm -f *.o
