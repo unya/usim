@@ -483,8 +483,8 @@ advance_lc(int *ppc)
 	}
 
 	// NEED-FETCH?
-	if (lc & (1 << 31)) {
-		lc &= ~(1 << 31);
+	if (lc & (1UL << 31UL)) {
+		lc &= ~(1UL << 31UL);
 		vma = old_lc >> 2;
 		if (read_mem(old_lc >> 2, &new_md)) {
 		}
@@ -511,7 +511,7 @@ advance_lc(int *ppc)
 		tracef("lc0b %d, lc1 %d, last_byte_in_word %d\n", lc0b, lc1, last_byte_in_word);
 		if (last_byte_in_word)
 			// Set NEED-FETCH.
-			lc |= (1 << 31);
+			lc |= (1UL << 31UL);
 	}
 }
 
@@ -538,7 +538,7 @@ write_dest(int dest, unsigned int out_bus)
 		}
 
 		// Set NEED-FETCH.
-		lc |= (1 << 31);
+		lc |= (1UL << 31UL);
 		break;
 	case 2:		// Interrrupt Control <29-26>.
 		tracef("writing IC <- %o\n", out_bus);

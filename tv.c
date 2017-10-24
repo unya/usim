@@ -87,7 +87,7 @@ tv_read(int offset, unsigned int *pv)
 	bits = 0;
 	for (i = 0; i < 32; i++) {
 		if (tv_bitmap[offset + i] == Black)
-			bits |= 1 << i;
+			bits |= 1UL << i;
 	}
 	*pv = bits;
 }
