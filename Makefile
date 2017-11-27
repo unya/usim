@@ -34,6 +34,10 @@ clean:
 TAGS:
 	find . -type f -iname "*.[ch]" | etags -
 
+.PHONY: format-source
+format-source:
+	find -name "*.[ch]" -exec ./format-source {} \;
+
 dist:
 	rm -rf usim-$(VERSION)
 	svn export . usim-$(VERSION)

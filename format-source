@@ -1,0 +1,112 @@
+#!/bin/sh
+# format-source --- format (C) source code according to coding style
+#
+# Usage: format-source [-v] [-n] [FILE|DIRECTORY]...
+#
+# Note: The indent options assume GNU indent v2.2.10, so if you have
+#	an older indent the options may not match what is expected.
+#
+# Any marked block comment blocks have to be moved to align manually after
+# the reformatting has been completed as marking a block causes indent to 
+# not move it at all ...
+#
+
+PATH=/usr/local/bin:/bin:/usr/bin:$PATH
+export PATH
+HERE="`dirname $0`"
+
+set -e
+
+if [ $# -eq 0 ]; then
+    echo "usage: $0 [-v] [-n] [-c] [sourcefile|sourcedir] ..." >&2
+    exit 1
+fi
+
+VERBOSE=false
+DONT=false
+STOPARGS=false
+CHANGED=false
+DEBUG=""
+
+# For this exercise, we want to force the style, so we roll our own
+# indent profile, which is at a well known location.
+INDENT_PROFILE="$HERE/indent.pro"
+export INDENT_PROFILE
+if [ ! -f "$INDENT_PROFILE" ]; then
+    echo "$0: unable to locate the indent.pro file" >&2
+    exit 1
+fi
+
+# Extra arguments; for adding the comment-formatting
+INDENT_ARGS=""
+for i; do
+    if [ "$STOPARGS" != "true" ]; then
+	case $i in
+	    --) STOPARGS="true"; continue;;
+	    -n) DONT="true"; continue;;
+	    -v) VERBOSE="true"; 
+		echo "INDENT_PROFILE=$INDENT_PROFILE";
+		continue;;
+	    -c) COMMENTS="true"; 
+      		INDENT_ARGS="-fc1 -fca -cdb -sc"; 
+		continue;;
+	    -nc) COMMENTS="true";
+		 continue;;
+	    -d) DEBUG='eval tee "$j.pre" |'
+		continue;;
+	esac
+    fi
+
+    if [ -d "$i" ]; then
+	LIST=`find "$i" -name '*.[ch]' -print`
+    else 
+	if [ ! -f "$i" ]; then
+	    echo "$0: source file not found: $i" >&2
+	    exit 1
+	fi
+	LIST="$i"
+    fi
+    
+    for j in $LIST; do
+	# Ignore symlinks - we only ever process the base file - so if we
+	# expand a directory tree we need to ignore any located symlinks.
+	if [ -d "$i" ]; then
+	    if [ -h "$j" ]; then
+		continue;
+	    fi
+	fi
+
+	if [ "$DONT" = "false" ]; then
+	    tmp=$(mktemp /tmp/indent.XXXXXX)
+	    trap 'rm -f "$tmp"' HUP INT TERM EXIT
+
+	    case `basename $j` in 
+		*)
+		    cat "$j" | indent $INDENT_ARGS > "$tmp"
+		    if cmp -s "$tmp" "$j"; then
+			if [ "$VERBOSE" = "true" ]; then
+			    echo "$j unchanged"
+			fi
+			rm "$tmp"
+		    else
+			if [ "$VERBOSE" = "true" ]; then
+			    echo "$j changed"
+			fi
+			CHANGED=true
+			mv "$tmp" "$j"
+		    fi
+		    ;;
+	    esac
+	fi
+    done
+done
+
+
+if [ "$VERBOSE" = "true" ]; then
+    echo
+    if [ "$CHANGED" = "true" ]; then
+	echo "SOURCE WAS MODIFIED"
+    else
+	echo "SOURCE WAS NOT MODIFIED"
+    fi
+fi
