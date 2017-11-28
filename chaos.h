@@ -116,7 +116,7 @@ extern void chaos_delete_connection(chaos_connection *conn);
 extern chaos_connection *chaos_find_connection(unsigned short index);
 extern int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet);
 extern chaos_packet *chaos_connection_dequeue(chaos_connection *conn);
-extern chaos_connection *chaos_open_connection(int co_host, char *contact, int rwsize);
+extern chaos_connection *chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize);
 extern chaos_packet *chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len);
 extern void chaos_dump_connection(chaos_connection *conn);
 extern void chaos_interrupt_connection(chaos_connection *conn);

@@ -15,7 +15,6 @@
 #include "tv.h"
 #include "kbd.h"
 #include "chaos.h"
-#include "Files.h"
 #include "disk.h"
 
 #include "syms.h"
@@ -41,7 +40,6 @@ usage(void)
 	fprintf(stderr, "CADR simulator\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  -i FILE        set disk image\n");
-	fprintf(stderr, "  -r             map /tree to ../sys\n");
 	fprintf(stderr, "  -S             save state\n");
 	fprintf(stderr, "  -s             halt after prom runs\n");
 	fprintf(stderr, "  -w             warm boot\n");
@@ -63,15 +61,6 @@ main(int argc, char *argv[])
 		case 'i':
 			disk_filename = strdup(optarg);
 			break;
-		case 'r':
-		{
-			char *p = "../sys";
-			char newpath[PATH_MAX];
-
-			realpath(p, newpath);
-			dcanon(newpath, 0);
-			settreeroot(newpath);
-		}
 		break;
 		case 'S':
 			save_state_flag = 1;
