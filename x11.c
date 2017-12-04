@@ -173,11 +173,13 @@ x11_event(void)
 {
 	XEvent e;
 	void send_accumulated_updates(void);
+	void dequeue_key_event(void);
 
 	if (ximage == NULL)
 		return;
 
 	send_accumulated_updates();
+	dequeue_key_event();
 
 	while (XCheckWindowEvent(display, window, USIM_EVENT_MASK, &e)) {
 		switch (e.type) {
