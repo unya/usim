@@ -62,7 +62,6 @@ main(int argc, char *argv[])
 		case 'i':
 			disk_filename = strdup(optarg);
 			break;
-		break;
 		case 'S':
 			save_state_flag = 1;
 			break;
