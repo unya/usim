@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 
 	printf("CADR emulator v0.9\n");
 
-	while ((c = getopt(argc, argv, "i:rSswl")) != -1) {
+	while ((c = getopt(argc, argv, "i:Sswl")) != -1) {
 		switch (c) {
 		case 'i':
 			disk_filename = strdup(optarg);
