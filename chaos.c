@@ -96,8 +96,9 @@ chaos_rx_pkt(void)
 		chaos_csr |= CHAOS_CSR_RECEIVE_DONE;
 		if (chaos_csr & CHAOS_CSR_RECEIVE_ENABLE)
 			assert_unibus_interrupt(0270);
-	} else
+	} else {
 		tracenet("chaos_rx_pkt: called, but no data in buffer\n");
+	}
 }
 
 void
