@@ -1,0 +1,14 @@
+*~
+
+*.o
+
+cc
+diskmaker
+lmfs
+lod
+readmcr
+usim
+
+*.img
+
+TAGS
