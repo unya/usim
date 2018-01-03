@@ -395,42 +395,6 @@ chaos_set_csr(int v)
 
 static struct sockaddr_un unix_addr;
 
-chaos_packet *
-chaos_allocate_packet(chaos_connection *conn, int opcode, ssize_t len)
-{
-    return 0;
-}
-
-void
-chaos_queue(chaos_packet *packet)
-{
-}
-
-chaos_packet *chaos_connection_dequeue(chaos_connection *conn)
-{
-    return 0;
-}
-
-chaos_connection *
-chaos_open_connection(int co_host, char *contact, int mode, int async, int rwsize)
-{
-    return 0;
-}
-
-int chaos_connection_queue(chaos_connection *conn, chaos_packet *packet)
-{    
-    return 0;
-}
-
-void
-chaos_delete_connection(chaos_connection *conn)
-{
-}
-
-void chaos_interrupt_connection(chaos_connection *conn)
-{
-}
-
 void
 chaos_force_reconect(void)
 {
