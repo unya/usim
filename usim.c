@@ -85,6 +85,11 @@ main(int argc, char *argv[])
 	argc -= optind;
         argv += optind;
 
+	if (argc > 0) {
+		usage();
+		exit(1);
+	}
+	
 	if (lashup_flag)
 		lashup_init(lashup_port);
 
