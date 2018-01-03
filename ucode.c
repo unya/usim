@@ -1283,14 +1283,14 @@ run(void)
 
 			// Tweak DISPATCH-ADDR with L2 map bits.
 			if (map) {
-				int l2_map;
+				int l2_map_bits;
 				int bit18;
 				int bit19;
 
-				l2_map = map_vtop(md, (int *) 0, (int *) 0);
-				bit19 = ((l2_map >> 19) & 1) ? 1 : 0;
-				bit18 = ((l2_map >> 18) & 1) ? 1 : 0;
-				tracef("md %o, l2_map %o, b19 %o, b18 %o\n", md, l2_map, bit19, bit18);
+				l2_map_bits = map_vtop(md, (int *) 0, (int *) 0);
+				bit19 = ((l2_map_bits >> 19) & 1) ? 1 : 0;
+				bit18 = ((l2_map_bits >> 18) & 1) ? 1 : 0;
+				tracef("md %o, l2_map_bits %o, b19 %o, b18 %o\n", md, l2_map_bits, bit19, bit18);
 				switch (map) {
 				case 1:
 					disp_addr |= bit18;
