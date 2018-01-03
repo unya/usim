@@ -976,7 +976,6 @@ main(int argc, char *argv[])
 {
 	int ret;
 	int done;
-	int r;
 	struct termios oldtio;
 	struct termios newtio;
 
@@ -1020,7 +1019,6 @@ main(int argc, char *argv[])
 	done = 0;
 	while (!done) {
 		int c;
-		int i;
 		int arg;
 		uint32_t PC;
 		uint32_t v;
@@ -1055,7 +1053,7 @@ main(int argc, char *argv[])
 			cc_report_pc_and_ir(&PC);
 			break;
 		case 's':	// Step.
-			for (i = 0; i < arg; i++) {
+			for (int i = 0; i < arg; i++) {
 				cc_clock();
 				cc_report_status();
 				cc_report_pc(&PC);
@@ -1086,7 +1084,7 @@ main(int argc, char *argv[])
 			cc_report_ide_regs();
 			break;
 		case 'R':
-			for (r = 0; r < 027; r++) {
+			for (int r = 0; r < 027; r++) {
 				uint16_t v;
 				v = cc_get(r);
 				printf("spy reg %o = %06o (0x%x)\n", r, v, v);
@@ -1136,7 +1134,7 @@ main(int argc, char *argv[])
 			printf("@0 MD=%011o (0x%x)\n", v, v);
 			break;
 		case 'G':
-			for (i = 0; i < 4; i++) {
+			for (int i = 0; i < 4; i++) {
 				cc_write_a_mem(2, i);
 				verbose = 1;
 				cc_execute_r(04000100042310050ULL);	// (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
@@ -1144,7 +1142,7 @@ main(int argc, char *argv[])
 				v = cc_read_md();
 				printf("@%o MD=%011o (0x%x)\n", i, v, v);
 			}
-			for (i = 0776; i < 01000; i++) {
+			for (int i = 0776; i < 01000; i++) {
 				cc_write_a_mem(2, i);
 				cc_execute_r(04000100042310050ULL);	// (alu) SETA a=2 m=0 m[0] C=0 alu-> ->VMA,start-read ,m[6]
 				v = cc_read_md();
@@ -1165,13 +1163,13 @@ main(int argc, char *argv[])
 			printf("VMA= %011o\n", cc_read_vma());
 			break;
 		case 'A':
-			for (r = 0; r < 010; r++) {
+			for (int r = 0; r < 010; r++) {
 				v = cc_read_a_mem(r);
 				printf("A[%o] = %011o (0x%x)\n", r, v, v);
 			}
 			break;
 		case 'M':
-			for (r = 0; r < 010; r++) {
+			for (int r = 0; r < 010; r++) {
 				v = cc_read_m_mem(r);
 				printf("M[%o] = %011o (0x%x)\n", r, v, v);
 			}
