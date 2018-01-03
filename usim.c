@@ -45,7 +45,7 @@ usage(void)
 	fprintf(stderr, "  -s             halt after prom runs\n");
 	fprintf(stderr, "  -w             warm boot\n");
 	fprintf(stderr, "  -l             lashup\n");
-	exit(1);
+	fprintf(stderr, "  -h             help message\n");
 }
 
 extern char *optarg;
@@ -74,10 +74,16 @@ main(int argc, char *argv[])
 		case 'l':
 			lashup_flag = 1;
 			break;
+		case 'h':
+			usage();
+			exit(0);
 		default:
 			usage();
+			exit(1);
 		}
 	}
+	argc -= optind;
+        argv += optind;
 
 	if (lashup_flag)
 		lashup_init(lashup_port);
