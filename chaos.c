@@ -398,9 +398,8 @@ static struct sockaddr_un unix_addr;
 void
 chaos_force_reconect(void)
 {
-#if CHAOS_DEBUG || 1
-	printf("chaos: forcing reconnect to chaosd\n");
-#endif
+	tracenet("chaos: forcing reconnect to chaosd\n");
+
 	close(chaos_fd);
 	chaos_fd = 0;
 	chaos_need_reconnect = 1;
@@ -429,10 +428,8 @@ chaos_poll(void)
 
 	ret = poll(pfd, nfds, timeout);
 	if (ret < 0) {
-#if CHAOS_DEBUG
-		printf("chaos: Polling, nothing there (RDN=%o)\n",
+		tracenet("chaos: Polling, nothing there (RDN=%o)\n",
 		       chaos_csr & CHAOS_CSR_RECEIVE_DONE);
-#endif
 		chaos_need_reconnect = 1;
 		return -1;
 	}
@@ -453,18 +450,14 @@ chaos_poll(void)
 			 * Toss packets arriving when buffer is already in use
 			 * they will be resent
 			 */
-#if CHAOS_DEBUG
-			printf("chaos: polling, unread data, drop "
+			tracenet("chaos: polling, unread data, drop "
 			       "(RDN=%o, lost %d)\n",
 			       chaos_csr & CHAOS_CSR_RECEIVE_DONE,
 			       chaos_lost_count);
-#endif
 			chaos_lost_count++;
 			read(chaos_fd, lenbytes, 4);
 			len = (lenbytes[0] << 8) | lenbytes[1];
-#if CHAOS_DEBUG
-			printf("chaos: tossing packet of %d bytes\n", len);
-#endif
+			tracenet("chaos: tossing packet of %d bytes\n", len);
 			if (len > sizeof(chaos_rcv_buffer_toss)) {
 				printf("chaos packet won't fit");
 				chaos_force_reconect();
@@ -504,9 +497,7 @@ chaos_poll(void)
 			return -1;
 		}
 
-#if CHAOS_DEBUG
-		printf("chaos: polling; got chaosd packet %d\n", ret);
-#endif
+		tracenet("chaos: polling; got chaosd packet %d\n", ret);
 
 		if (ret > 0) {
 		  int dest_addr;
@@ -531,9 +522,7 @@ chaos_poll(void)
 		    return 0;
 		  }
 
-#if CHAOS_DEBUG
-            printf("chaos rx: to %o, my %o\n", dest_addr, chaos_addr);
-#endif
+            tracenet("chaos rx: to %o, my %o\n", dest_addr, chaos_addr);
             
 #if CHAOS_DEBUG_PKT
             dumpbuffer(chaos_rcv_buffer, chaos_rcv_buffer_size * 2);
@@ -579,10 +568,8 @@ chaos_send_to_chaosd(char *buffer, int size)
 	}
 #endif
 
-#if CHAOS_DEBUG
-	printf("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n", 
+	tracenet("chaos tx: dest_addr = %o, chaos_addr=%o, size %d, wcount %d\n", 
 	       dest_addr, chaos_addr, size, wcount);
-#endif
 
 	/* recieve packets address to ourselves */
 	if (dest_addr == chaos_addr) {
@@ -715,9 +702,7 @@ chaos_reconnect(void)
 	}
 	reconnect_time = time(NULL);
 
-# if CHAOS_DEBUG || 1
-	printf("chaos: reconnecting to chaosd\n");
-#endif
+	tracenet("chaos: reconnecting to chaosd\n");
 	if (chaos_init() == 0) {
 		printf("chaos: reconnected\n");
 		chaos_need_reconnect = 0;
