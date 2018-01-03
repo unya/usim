@@ -968,30 +968,49 @@ cc_test_ir(void)
 	return 0;
 }
 
-char *serial_devicename1 = "/dev/ttyUSB1";
-char *serial_devicename2 = "/dev/ttyUSB2";
+char *serial_devicename = "/dev/ttyUSB1";
+
+void
+usage(void)
+{
+	fprintf(stderr, "usage: cc [OPTION]...\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "  -d             extra debug output\n");
+}
 
 int
 main(int argc, char *argv[])
 {
 	int ret;
 	int done;
+	int c;
 	struct termios oldtio;
 	struct termios newtio;
 
-	if (argc > 1)
-		debug++;
+	while ((c = getopt(argc, argv, "dh")) != -1) {
+		switch (c) {
+		case 'd':
+			debug++;
+			break;
+		case 'h':
+			usage();
+			exit(0);
+		default:
+			continue;
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
-	fd = open(serial_devicename1, O_RDWR | O_NONBLOCK);
+	if (argc > 0)
+		serial_devicename = strdup (argv[0]);
+
+	fd = open(serial_devicename, O_RDWR | O_NONBLOCK);
 	if (debug)
 		printf("fd %d\n", fd);
 	if (fd < 0) {
-		perror(serial_devicename1);
-		fd = open(serial_devicename2, O_RDWR | O_NONBLOCK);
-		if (fd < 0) {
-			perror(serial_devicename2);
-			exit(1);
-		}
+		perror(serial_devicename);
+		exit(1);
 	}
 
 	// Get current port settings.
