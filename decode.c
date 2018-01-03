@@ -67,7 +67,7 @@ read_prom_files(void)
 	printf("prom (%s): code: %d, start: %d, size: %d\n", name, code, start, size);
 
 	int loc = start;
-	for (int i = 0; i < size; i++) {
+	for (unsigned int i = 0; i < size; i++) {
 		unsigned int w1;
 		unsigned int w2;
 		unsigned int w3;
@@ -91,9 +91,7 @@ read_prom_files(void)
 int
 show_prom(void)
 {
-	int i;
-
-	for (i = 0; i < 512; i++) {
+	for (int i = 0; i < 512; i++) {
 		printf("%03o %016llo", i, prom_ucode[i]);
 		printf("\n");
 	}
@@ -471,14 +469,13 @@ done:
 void
 disassemble_prom(void)
 {
-	unsigned int i;
 	unsigned int start;
 	unsigned int finish;
 
 	start = 0;
 	finish = 512;
 
-	for (i = start; i < finish; i++) {
+	for (unsigned int i = start; i < finish; i++) {
 		ucw_t u = prom_ucode[i];
 		printf("%03o %016llo ", i, prom_ucode[i]);
 		disassemble_ucode_loc(u);
@@ -506,7 +503,6 @@ find_disk_partition_table(int fd)
 	unsigned int p;
 	unsigned int count;
 	unsigned int nw;
-	unsigned int i;
 	off_t offset;
 
 	printf("looking for partition\n");
@@ -525,7 +521,7 @@ find_disk_partition_table(int fd)
 	count = buf[p++];
 	nw = buf[p++];
 
-	for (i = 0; i < count; i++) {
+	for (unsigned int i = 0; i < count; i++) {
 		if (buf[p] == str4("LOD1")) {
 			partoff = (int) buf[p + 1];
 			break;
@@ -574,16 +570,18 @@ char *
 read_string(unsigned int loc)
 {
 	unsigned int v;
-	unsigned int t;
-	unsigned int i;
-	unsigned int j;
 	static char s[256];
 
 	if (read_virt(disk_fd, loc, &v) == 0) {
+		unsigned int j;
+		unsigned int t;
+	
 		t = v & 0xff;
 		j = 0;
-		for (i = 0; i < t; i += 4) {
+
+		for (unsigned int i = 0; i < t; i += 4) {
 			unsigned int l;
+
 			l = loc + 1 + (i / 4);
 			if (read_virt(disk_fd, l, &v))
 				return "<read-failed>";
@@ -616,7 +614,6 @@ show_string(unsigned int loc)
 char *
 find_function_name(unsigned int the_lc)
 {
-	int i;
 	int tag = 0;
 	unsigned int loc = (unsigned int) (the_lc >> 2);
 	unsigned int v;
@@ -626,7 +623,7 @@ find_function_name(unsigned int the_lc)
 	}
 
 	// Search backward to find the function header.
-	for (i = 0; i < 512; i++) {
+	for (int i = 0; i < 512; i++) {
 		if (read_virt(disk_fd, loc, &v))
 			break;
 		tag = (v >> 24) & 077;
@@ -661,12 +658,11 @@ show_list(void)
 	unsigned int loc;
 	unsigned int l1;
 	unsigned int v = 0;
-	int i;
 
 	loc = 030301442405;
 	read_virt(disk_fd, loc, &v);
 
-	for (i = 0; i < 10; i++) {
+	for (int i = 0; i < 10; i++) {
 		int tag;
 		int cdr;
 		int addr;
@@ -749,9 +745,7 @@ disassemble_address(unsigned int reg, unsigned int delta)
 		static int done = 0;
 
 		if (!done) {
-			int i;
-
-			for (i = 0; i < 1024; i++) {
+			for (int i = 0; i < 1024; i++) {
 				char *sym;
 				extern unsigned int a_memory[1024];
 
@@ -793,7 +787,6 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 
 	// Search for FEF pointer.
 	{
-		int i;
 		int tag = 0;
 		unsigned int addr = (unsigned int) (loc >> 2);
 		unsigned int v;
@@ -803,7 +796,7 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 		}
 
 		// Search backward to find the function header.
-		for (i = 0; i < 512; i++) {
+		for (int i = 0; i < 512; i++) {
 			if (read_virt(disk_fd, addr, &v))
 				break;
 			tag = (v >> width) & 037;
@@ -814,10 +807,9 @@ disass(unsigned int fefptr, unsigned int loc, int even, unsigned int inst, unsig
 		fefptr = addr;
 	}
 	if (!misc_inst_vector_setup) {
-		int i;
 		int index;
 
-		for (i = 0; i < 1024; i++) {
+		for (int i = 0; i < 1024; i++) {
 			if (misc_inst[i].name == 0)
 				break;
 			index = misc_inst[i].value;
@@ -917,14 +909,15 @@ void
 showstr(char *buffer, unsigned int a, int cr)
 {
 	int j;
-	unsigned int i;
 	unsigned int t;
-	unsigned int n;
 	char s[256];
 
 	t = get(a) & 0xff;
 	j = 0;
-	for (i = 0; i < t; i += 4) {
+
+	for (unsigned int i = 0; i < t; i += 4) {
+		unsigned int n;
+
 		n = get(a + 1 + (i / 4));
 		s[j++] = (char) (n >> 0);
 		s[j++] = (char) (n >> 8);
