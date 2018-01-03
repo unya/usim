@@ -1,5 +1,5 @@
-#ifndef CHAOS_X11_H
-#define CHAOS_X11_H
+#ifndef USIM_X11_H
+#define USIM_X11_H
 
 extern void x11_event(void);
 extern int x11_init(void);
