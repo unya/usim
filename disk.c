@@ -96,7 +96,6 @@ int
 disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 {
 	int block_no;
-	int i;
 	unsigned int buffer[256];
 
 	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
@@ -105,7 +104,7 @@ disk_read_block(unsigned int vma, int unit, int cyl, int head, int block)
 			printf("disk_read_block: error reading block_no %d\n", block_no);
 			return -1;
 		}
-		for (i = 0; i < 256; i++) {
+		for (int i = 0; i < 256; i++) {
 			write_phy_mem(vma + i, buffer[i]);
 		}
 		return 0;
@@ -138,13 +137,12 @@ int
 disk_write_block(unsigned int vma, int cyl, int head, int block)
 {
 	int block_no;
-	int i;
 	unsigned int buffer[256];
 
 	block_no = (cyl * blocks_per_track * heads) + (head * blocks_per_track) + block;
 
 	if (disk_fd) {
-		for (i = 0; i < 256; i++) {
+		for (int i = 0; i < 256; i++) {
 			read_phy_mem(vma + i, &buffer[i]);
 		}
 		_disk_write(block_no, buffer);
@@ -226,12 +224,11 @@ disk_start_read(void)
 {
 	unsigned int ccw;
 	unsigned int vma;
-	int i;
 
 	disk_decode_addr();
 
 	// Process CCW's.
-	for (i = 0; i < 65535; i++) {
+	for (int i = 0; i < 65535; i++) {
 		int f;
 
 		f = read_phy_mem(disk_clp, &ccw);
@@ -280,12 +277,11 @@ disk_start_write(void)
 {
 	unsigned int ccw;
 	unsigned int vma;
-	int i;
 
 	disk_decode_addr();
 
 	// Process CCW's.
-	for (i = 0; i < 65535; i++) {
+	for (int i = 0; i < 65535; i++) {
 		int f;
 
 		f = read_phy_mem(disk_clp, &ccw);
