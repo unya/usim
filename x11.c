@@ -30,6 +30,9 @@ Visual *visual = NULL;
 GC gc;
 XImage *ximage;
 
+char *appname = "CADR";
+char *appclass = "CADR";
+
 #define USIM_EVENT_MASK ExposureMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | KeyPressMask | KeyReleaseMask
 
 #define MOUSE_EVENT_LBUTTON 1
@@ -59,7 +62,7 @@ process_key(XEvent *e, int keydown)
 	int extra;
 	int lmcode;
 	int newkbd = 0;
-	
+
 	extra = 0;
 	if (e->xkey.state & X_META)
 		extra |= 3 << 12;
@@ -264,6 +267,7 @@ x11_init(void)
 	XWMHints *wm_hints;
 	char *window_name = (char *) "CADR";
 	char *icon_name = (char *) "CADR";
+        XClassHint *classHint;
 
 	displayname = getenv("DISPLAY");
 	display = XOpenDisplay(displayname);
@@ -311,7 +315,15 @@ x11_init(void)
 	}
 
 	XSetWMProperties(display, window, pWindowName, pIconName, NULL, 0, size_hints, wm_hints, NULL);
-	XMapWindow(display, window);
+	classHint = XAllocClassHint();
+	if (classHint)
+	{
+		classHint->res_name = appname;
+		classHint->res_class = appclass;
+
+	}
+	XSetClassHint(display, window, classHint);
+        XMapWindow(display, window);
 
 	gc = XCreateGC(display, window, 0, &gcvalues);
 
